@@ -40,14 +40,7 @@ export const generateVectorPDF = async (svgContent: string, filename: string = '
       x: 0,
       y: 0,
       width: 595.28, // A4 width in points
-      height: 841.89, // A4 height in points
-      fontFamilyMapping: {
-        'BrushATF-Book': 'BrushATF-Book',
-        'Helvetica': 'Helvetica',
-        'Arial': 'Helvetica',
-        'sans-serif': 'Helvetica'
-      },
-      preserveAspectRatio: 'xMidYMid meet'
+      height: 841.89 // A4 height in points
     });
 
     // Save the PDF

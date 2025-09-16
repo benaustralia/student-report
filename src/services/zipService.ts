@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { jsPDF } from 'jspdf';
 import 'svg2pdf.js';
-import type { ReportData } from './pdfService';
+import type { ReportData } from '../types';
 import { loadAndProcessSVG } from '../utils/svgUtils';
 import { loadBrushATFFont } from './fontService';
 
@@ -121,16 +121,9 @@ const generateVectorPDFData = async (reportData: ReportData): Promise<Uint8Array
     x: 0,
     y: 0,
     width: 595.28, // A4 width in points
-    height: 841.89, // A4 height in points
-    fontFamilyMapping: {
-      'BrushATF-Book': 'BrushATF-Book',
-      'Helvetica': 'Helvetica',
-      'Arial': 'Helvetica',
-      'sans-serif': 'Helvetica'
-    },
-    preserveAspectRatio: 'xMidYMid meet'
+    height: 841.89 // A4 height in points
   });
   
-  // Return PDF as array buffer
-  return pdf.output('arraybuffer');
+  // Return PDF as Uint8Array
+  return new Uint8Array(pdf.output('arraybuffer'));
 };
