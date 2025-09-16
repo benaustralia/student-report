@@ -53,3 +53,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+@font-face {
+  font-family: 'BrushATF-Book';
+  src: url('/BrushATF-Book.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
