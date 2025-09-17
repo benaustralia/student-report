@@ -15,8 +15,17 @@ export const loadBrushATFFont = async (): Promise<string> => {
     }
     const fontArrayBuffer = await fontResponse.arrayBuffer();
     
-    // Convert to base64
-    fontBase64 = btoa(String.fromCharCode(...new Uint8Array(fontArrayBuffer)));
+    // Convert to base64 using a more efficient method
+    const uint8Array = new Uint8Array(fontArrayBuffer);
+    let binary = '';
+    const chunkSize = 8192; // Process in chunks to avoid stack overflow
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    
+    fontBase64 = btoa(binary);
     console.log('Font base64 length:', fontBase64.length);
     
     console.log('BrushATF-Book font loaded successfully');

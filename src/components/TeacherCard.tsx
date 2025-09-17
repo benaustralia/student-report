@@ -47,13 +47,13 @@ export const TeacherCard: React.FC<TeacherCardProps> = ({
           <CardContent className="space-y-3">
         {Object.entries(classes).map(([classKey, classData]) => (
           <Collapsible key={classKey} open={expanded.has(classKey)} onOpenChange={() => onToggle(classKey)}>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="flex-1 justify-between h-auto p-3">
-                  <div className="flex items-center gap-2">
-                    {expanded.has(classKey) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    <span>{classData.class}</span>
-                    <Badge variant="outline">{classData.reports.length}</Badge>
+                <Button variant="ghost" className="flex-1 justify-between h-auto p-3 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {expanded.has(classKey) ? <ChevronDown className="w-4 h-4 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 flex-shrink-0" />}
+                    <span className="truncate">{classData.class}</span>
+                    <Badge variant="outline" className="flex-shrink-0">{classData.reports.length}</Badge>
                   </div>
                 </Button>
               </CollapsibleTrigger>
@@ -73,26 +73,39 @@ export const TeacherCard: React.FC<TeacherCardProps> = ({
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <CardContent className="pt-0 space-y-3">
-                        <ReportThumbnail
-                          data={{
-                            studentName: report.student,
-                            classLevel: report.class.split(' - ')[0] || report.grade,
-                            classLocation: report.class.split(' - ')[1] || '',
-                            comments: report.comments,
-                            teacher: report.teacher,
-                            date: new Date().toLocaleDateString()
-                          }}
-                          className="max-w-sm"
-                          onClick={() => onOpenReportModal(report)}
-                        />
-                        <Button 
-                          className="max-w-xs" 
-                          onClick={() => onDownloadPDF(report)}
-                          disabled={isGeneratingPDF}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          {isGeneratingPDF ? 'Generating...' : 'Download Report'}
-                        </Button>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <div className="flex-1">
+                            <ReportThumbnail
+                              data={{
+                                studentName: report.student,
+                                classLevel: report.class.split(' - ')[0] || report.grade,
+                                classLocation: report.class.split(' - ')[1] || '',
+                                comments: report.comments,
+                                teacher: report.teacher,
+                                date: new Date().toLocaleDateString()
+                              }}
+                              className="w-full max-w-sm mx-auto sm:mx-0"
+                              onClick={() => onOpenReportModal(report)}
+                            />
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
+                            <Button 
+                              className="w-full sm:w-auto" 
+                              onClick={() => onOpenReportModal(report)}
+                              variant="outline"
+                            >
+                              View Report
+                            </Button>
+                            <Button 
+                              className="w-full sm:w-auto" 
+                              onClick={() => onDownloadPDF(report)}
+                              disabled={isGeneratingPDF}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
+                            </Button>
+                          </div>
+                        </div>
                       </CardContent>
                     </CollapsibleContent>
                   </Card>

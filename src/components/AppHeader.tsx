@@ -27,12 +27,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-3xl font-bold">NSA Student Report-o-matic</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">NSA Student Report-o-matic</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
           <ThemeToggle />
         </div>
@@ -51,9 +51,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       ) : (
         <>
           <p className="text-sm text-muted-foreground mb-4">Last updated: {new Date().toLocaleDateString()}</p>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Select value={teacher} onValueChange={onTeacherChange}>
-              <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:flex-1"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Teachers</SelectItem>
                 {teachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -63,7 +63,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               placeholder="Search students..." 
               value={search} 
               onChange={(e) => onSearchChange(e.target.value)} 
-              className="flex-1" 
+              className="w-full sm:flex-1" 
             />
           </div>
         </>

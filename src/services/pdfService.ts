@@ -56,15 +56,38 @@ export const downloadReportAsPDF = async (
   filename?: string
 ): Promise<void> => {
   try {
+    // Validate input data
+    if (!reportData.studentName?.trim()) {
+      throw new Error('Student name is required');
+    }
+    
     // Get the processed SVG content directly
     const svgContent = await loadAndProcessSVG(reportData);
+    
+    if (!svgContent || svgContent.trim().length === 0) {
+      throw new Error('Failed to generate report content');
+    }
     
     // Generate vector PDF
     const defaultFilename = `${reportData.studentName.replace(/\s+/g, '_')}_Report.pdf`;
     await generateVectorPDF(svgContent, filename || defaultFilename);
   } catch (error) {
     console.error('Error generating PDF:', error);
-    throw new Error('Failed to generate PDF');
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('font') || error.message.includes('Failed to fetch font')) {
+        throw new Error('Failed to load font. Please try again.');
+      } else if (error.message.includes('SVG') || error.message.includes('Failed to load SVG template')) {
+        throw new Error('Failed to process report template. Please try again.');
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      } else if (error.message.includes('Could not parse SVG content')) {
+        throw new Error('Invalid SVG content. Please try again.');
+      }
+    }
+    
+    throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 

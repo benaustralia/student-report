@@ -45,21 +45,8 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
       <div 
         ref={containerRef}
         className={`bg-white ${className}`}
-        style={{ 
-          width: '595px', 
-          height: '842px',
-          aspectRatio: '595/842'
-        }}
-      >
-        <div
-          dangerouslySetInnerHTML={{ __html: svgContent }}
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'block'
-          }}
-        />
-      </div>
+        dangerouslySetInnerHTML={{ __html: svgContent }}
+      />
   );
 };
 

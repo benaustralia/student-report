@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { fetchStudentReportsFromCSV } from './services/csvService';
 import { GOOGLE_SHEET_ID } from './config/sheets';
 import { downloadReportAsPDF } from './services/pdfService';
@@ -63,6 +63,8 @@ export default function TeacherReports() {
   const handleDownloadPDF = useCallback(async (report: Report) => {
     try {
       setIsGeneratingPDF(true);
+      setError(null);
+      
       const [classLevel, classLocation] = report.class.split(' - ');
       await downloadReportAsPDF({
         studentName: report.student,
@@ -73,7 +75,8 @@ export default function TeacherReports() {
         date: new Date().toLocaleDateString()
       });
     } catch (error) {
-      setError('Failed to generate PDF. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF. Please try again.';
+      setError(errorMessage);
       console.error('Error generating PDF:', error);
     } finally {
       setIsGeneratingPDF(false);
@@ -97,7 +100,7 @@ export default function TeacherReports() {
   }, [teacher, search, reports]);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
       <AppHeader
         loading={loading}
         error={error}
@@ -127,11 +130,16 @@ export default function TeacherReports() {
           </CardContent>
         </Card>
       )}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto p-0">
+      <Drawer open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DrawerContent className="max-h-[96vh]">
+          <DrawerHeader>
+            <DrawerTitle>
+              {selectedReport ? `${selectedReport.student} - Report` : 'Student Report'}
+            </DrawerTitle>
+          </DrawerHeader>
           {selectedReport && (
-            <div className="w-full h-full flex items-center justify-center p-6 min-h-[80vh]">
-              <div className="scale-75 origin-center">
+            <div className="px-4 pb-4 overflow-auto">
+              <div className="flex justify-center">
                 <ReportTemplate 
                   data={{
                     studentName: selectedReport.student,
@@ -141,13 +149,13 @@ export default function TeacherReports() {
                     teacher: selectedReport.teacher,
                     date: new Date().toLocaleDateString()
                   }}
-                  className="shadow-lg"
+                  className="max-w-full shadow-lg"
                 />
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
