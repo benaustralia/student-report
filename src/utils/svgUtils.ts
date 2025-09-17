@@ -37,10 +37,38 @@ export const loadAndProcessSVG = async (data: ReportData): Promise<string> => {
       `<text id="date" class="st6" transform="translate(340 746.74)"><tspan x="0" y="0">${data.date || new Date().toLocaleDateString()}</tspan></text>`
     );
 
+    // Handle artwork image if provided
+    if (data.artwork && data.artwork.trim()) {
+      // Convert Google Drive URL to direct image URL if needed
+      const imageUrl = convertGoogleDriveUrl(data.artwork);
+      
+      // Add image element to SVG
+      const imageElement = `<image id="artwork" href="${imageUrl}" x="50" y="400" width="100" height="100" preserveAspectRatio="xMidYMid meet" />`;
+      
+      // Insert image before the closing </svg> tag
+      svgText = svgText.replace('</svg>', `${imageElement}\n</svg>`);
+    }
+
     return svgText;
   } catch (error) {
     console.error('Error loading SVG template:', error);
     throw new Error('Failed to load SVG template');
   }
 };
+
+// Helper function to convert Google Drive URLs to direct image URLs
+function convertGoogleDriveUrl(url: string): string {
+  // If it's already a direct image URL, return as is
+  if (url.includes('drive.google.com/file/d/')) {
+    // Extract file ID from Google Drive URL
+    const match = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    if (match) {
+      const fileId = match[1];
+      return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    }
+  }
+  
+  // If it's already a direct image URL or other format, return as is
+  return url;
+}
 

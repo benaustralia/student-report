@@ -22,4 +22,5 @@ export interface ReportData {
   comments: string;
   teacher: string;
   date?: string;
+  artwork?: string; // Image URL for student artwork
 }

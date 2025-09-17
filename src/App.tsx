@@ -72,7 +72,8 @@ export default function TeacherReports() {
         classLocation: classLocation || '',
         comments: report.comments,
         teacher: report.teacher,
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString(),
+        artwork: report.Artwork || '' // Pass the artwork URL from the Artwork column
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF. Please try again.';
