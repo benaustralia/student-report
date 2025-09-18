@@ -235,9 +235,6 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
             </div>
           )}
           <div className="space-y-4">
-            <div className="text-center text-sm text-muted-foreground">
-              Sign in with your Google account:
-            </div>
             <div ref={(el) => setButtonElement(el)} className="flex justify-center">
               {/* Google Sign-In button will be rendered here */}
             </div>
@@ -247,9 +244,6 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
                 <span className="text-sm text-muted-foreground">Loading sign-in button...</span>
               </div>
             )}
-            <div className="text-xs text-muted-foreground text-center">
-              Debug: oneTapInitialized = {oneTapInitialized.toString()}, Google loaded = {window.google ? 'yes' : 'no'}, Button element = {buttonElement ? 'yes' : 'no'}
-            </div>
           </div>
         </CardContent>
       </Card>
