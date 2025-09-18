@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
- @theme {
+@theme {
   --color-background: 0 0% 100%;
   --color-foreground: 222.2 84% 4.9%;
   --color-card: 0 0% 100%;
@@ -47,10 +47,10 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-gray-200;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-gray-900;
   }
 }
 

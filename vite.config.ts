@@ -40,16 +40,17 @@ export default defineConfig({
           // Other utilities
           'utils-vendor': ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge', 'vaul']
         }
-      },
-      // Externalize problematic optional dependencies
-      external: (id) => {
-        if (id.includes('@rollup/rollup-linux-x64-gnu')) {
-          return true;
-        }
-        return false;
       }
     },
     // Increase chunk size warning limit to 1000kb temporarily
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
+    // Use esbuild for faster builds and avoid Rollup issues
+    minify: 'esbuild',
+    // Target modern browsers to avoid Rollup compatibility issues
+    target: 'esnext'
+  },
+  // Optimize dependencies to avoid Rollup issues
+  optimizeDeps: {
+    exclude: ['@rollup/rollup-linux-x64-gnu']
   }
 })
