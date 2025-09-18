@@ -97,20 +97,17 @@ export const onAuthStateChange = (callback: (user: User | null) => void) => {
 
 // Check if user is whitelisted
 export const isUserWhitelisted = async (email: string): Promise<boolean> => {
-  // Temporary hardcoded whitelist until Firestore is set up
-  const whitelistedEmails = ['bahinton@gmail.com', 'Wenli11651@gmail.com'];
-  return whitelistedEmails.includes(email);
-  
-  // TODO: Replace with Firestore query once whitelisted users are added
-  // try {
-  //   const usersRef = collection(db, 'whitelistedUsers');
-  //   const q = query(usersRef, where('email', '==', email));
-  //   const querySnapshot = await getDocs(q);
-  //   return !querySnapshot.empty;
-  // } catch (error) {
-  //   console.error('Error checking whitelist:', error);
-  //   return false;
-  // }
+  try {
+    const usersRef = collection(db, 'whitelistedUsers');
+    const q = query(usersRef, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking whitelist:', error);
+    // Fallback to hardcoded list if Firestore fails
+    const whitelistedEmails = ['bahinton@gmail.com', 'Wenli11651@gmail.com'];
+    return whitelistedEmails.includes(email);
+  }
 };
 
 // Image upload/delete functions moved to cloudinaryService.ts
@@ -207,6 +204,26 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;
+  }
+};
+
+// Get user display name from admin users collection
+export const getUserDisplayName = async (email: string): Promise<string | null> => {
+  try {
+    const adminRef = collection(db, 'adminUsers');
+    const q = query(adminRef, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      return `${userData.firstName} ${userData.lastName}`.trim();
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting user display name:', error);
+    return null;
   }
 };
 

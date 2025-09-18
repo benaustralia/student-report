@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { signOutUser, onAuthStateChange, isUserWhitelisted } from '@/services/firebaseService';
+import { signOutUser, onAuthStateChange, isUserWhitelisted, getUserDisplayName } from '@/services/firebaseService';
 import { auth } from '@/config/firebase';
 import type { User } from 'firebase/auth';
 import { Loader2, LogOut, User as UserIcon, AlertCircle } from 'lucide-react';
@@ -32,6 +32,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
   const [error, setError] = useState<string | null>(null);
   const [oneTapInitialized, setOneTapInitialized] = useState<boolean>(false);
   const [buttonElement, setButtonElement] = useState<HTMLDivElement | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const retryCountRef = useRef<number>(0);
 
   useEffect(() => {
@@ -43,8 +44,12 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
       
       if (user) {
         try {
-          const whitelisted = await isUserWhitelisted(user.email || '');
+          const [whitelisted, userDisplayName] = await Promise.all([
+            isUserWhitelisted(user.email || ''),
+            getUserDisplayName(user.email || '')
+          ]);
           setIsWhitelisted(whitelisted);
+          setDisplayName(userDisplayName);
           onAuthChange(user, whitelisted);
         } catch (err) {
           console.error('Error checking whitelist:', err);
@@ -54,6 +59,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
         }
       } else {
         setIsWhitelisted(false);
+        setDisplayName(null);
         onAuthChange(null, false);
       }
     });
@@ -287,7 +293,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
         <div className="flex items-center gap-3">
           <UserIcon className="h-5 w-5 text-muted-foreground" />
           <div>
-            <p className="font-medium">{user.displayName}</p>
+            <p className="font-medium">{displayName || user.displayName || 'User'}</p>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
         </div>
