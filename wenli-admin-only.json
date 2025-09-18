@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "email": "wenli.zhang@example.com",
+      "firstName": "Wenli",
+      "lastName": "Zhang",
+      "isAdmin": true
+    }
+  ],
+  "classes": [],
+  "students": []
+}

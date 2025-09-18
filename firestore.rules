@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        request.auth.token.email in ['bahinton@gmail.com', 'Wenli11651@gmail.com'];
+    }
+    
+    // Whitelisted users collection - only specific emails can read/write
+    match /whitelistedUsers/{userId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Reports collection - users can only access reports they created, admins can access all
+    match /reports/{reportId} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.email == resource.data.teacherEmail ||
+        isAdmin()
+      );
+      allow create: if request.auth != null && 
+        request.auth.token.email == request.resource.data.teacherEmail;
+    }
+    
+    // Classes collection - users can only access their own classes, admins can access all
+    match /classes/{classId} {
+      allow read: if request.auth != null && (
+        request.auth.token.email == resource.data.teacherEmail ||
+        isAdmin()
+      );
+      allow write: if request.auth != null && (
+        request.auth.token.email == resource.data.teacherEmail ||
+        isAdmin()
+      );
+      allow create: if request.auth != null && 
+        request.auth.token.email == request.resource.data.teacherEmail;
+    }
+    
+    // Students collection - authenticated users can access all students
+    match /students/{studentId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Admin users collection - allow project owner to read/write, then only admins
+    match /adminUsers/{userId} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.email == 'bahinton@gmail.com' ||
+        isAdmin()
+      );
+    }
+  }
+}

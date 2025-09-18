@@ -1,0 +1,128 @@
+{
+  "users": [
+    {
+      "email": "wenli.zhang@example.com",
+      "firstName": "Wenli",
+      "lastName": "Zhang",
+      "isAdmin": true
+    },
+    {
+      "email": "sarah.johnson@example.com",
+      "firstName": "Sarah",
+      "lastName": "Johnson",
+      "isAdmin": false
+    },
+    {
+      "email": "mike.chen@example.com",
+      "firstName": "Mike",
+      "lastName": "Chen",
+      "isAdmin": false
+    }
+  ],
+  "classes": [
+    {
+      "teacherEmail": "wenli.zhang@example.com",
+      "teacherFirstName": "Wenli",
+      "teacherLastName": "Zhang",
+      "classDay": "Wednesday",
+      "classTime": "4:00 PM",
+      "classLocation": "Glen Waverley Primary School",
+      "classLevel": "Wednesday Class"
+    },
+    {
+      "teacherEmail": "sarah.johnson@example.com",
+      "teacherFirstName": "Sarah",
+      "teacherLastName": "Johnson",
+      "classDay": "Saturday",
+      "classTime": "10:30 AM",
+      "classLocation": "Mount Waverley",
+      "classLevel": "Saturday Class"
+    },
+    {
+      "teacherEmail": "mike.chen@example.com",
+      "teacherFirstName": "Mike",
+      "teacherLastName": "Chen",
+      "classDay": "Monday",
+      "classTime": "3:30 PM",
+      "classLocation": "Clayton Community Centre",
+      "classLevel": "Monday Class"
+    }
+  ],
+  "students": [
+    {
+      "firstName": "Alice",
+      "lastName": "Smith",
+      "classId": "class-wednesday-1"
+    },
+    {
+      "firstName": "Bobby",
+      "lastName": "Johnson",
+      "classId": "class-wednesday-1"
+    },
+    {
+      "firstName": "Charlie",
+      "lastName": "Brown",
+      "classId": "class-wednesday-1"
+    },
+    {
+      "firstName": "Diana",
+      "lastName": "Davis",
+      "classId": "class-wednesday-1"
+    },
+    {
+      "firstName": "Ethan",
+      "lastName": "Wilson",
+      "classId": "class-wednesday-1"
+    },
+    {
+      "firstName": "Fiona",
+      "lastName": "Miller",
+      "classId": "class-saturday-1"
+    },
+    {
+      "firstName": "George",
+      "lastName": "Garcia",
+      "classId": "class-saturday-1"
+    },
+    {
+      "firstName": "Hannah",
+      "lastName": "Martinez",
+      "classId": "class-saturday-1"
+    },
+    {
+      "firstName": "Ian",
+      "lastName": "Anderson",
+      "classId": "class-saturday-1"
+    },
+    {
+      "firstName": "Julia",
+      "lastName": "Taylor",
+      "classId": "class-saturday-1"
+    },
+    {
+      "firstName": "Kevin",
+      "lastName": "Thomas",
+      "classId": "class-monday-1"
+    },
+    {
+      "firstName": "Lily",
+      "lastName": "Jackson",
+      "classId": "class-monday-1"
+    },
+    {
+      "firstName": "Marcus",
+      "lastName": "White",
+      "classId": "class-monday-1"
+    },
+    {
+      "firstName": "Nina",
+      "lastName": "Harris",
+      "classId": "class-monday-1"
+    },
+    {
+      "firstName": "Oscar",
+      "lastName": "Martin",
+      "classId": "class-monday-1"
+    }
+  ]
+}

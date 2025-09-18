@@ -1,0 +1,193 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { TypographyH1, TypographyH2, TypographyMuted } from '@/components/ui/typography';
+import { Loader2, Users, Shield, LogOut } from 'lucide-react';
+import { 
+  getClassesForTeacher, 
+  getAllClasses, 
+  isUserAdmin
+} from '@/services/firebaseService';
+import type { Class } from '@/types';
+import type { User } from 'firebase/auth';
+import { ClassCard } from './ClassCard';
+import { TeacherCard } from './TeacherCard';
+import { AdminPanel } from './AdminPanel';
+import { signOutUser } from '@/services/firebaseService';
+
+interface RBAAppProps {
+  user: User;
+}
+
+export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Check if user is admin
+        const adminStatus = await isUserAdmin(user.email || '');
+        setIsAdmin(adminStatus);
+
+        // Load classes based on role
+        if (adminStatus) {
+          console.log('Loading all classes for admin user');
+          const allClasses = await getAllClasses();
+          setClasses(allClasses);
+        } else {
+          console.log('Loading classes for teacher:', user.email);
+          const teacherClasses = await getClassesForTeacher(user.email || '');
+          setClasses(teacherClasses);
+        }
+      } catch (err) {
+        console.error('Error loading data:', err);
+        setError('Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin mr-2" />
+            <span>Loading your data...</span>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto p-4 sm:p-6">
+        <Card className="border-destructive">
+          <CardContent className="text-destructive py-4">
+            {error}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <TypographyH1>Student Reports</TypographyH1>
+          <TypographyMuted>
+            {isAdmin ? 'Management View - All Classes' : 'Teacher View - Your Classes'}
+          </TypographyMuted>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {isAdmin ? (
+              <>
+                <Shield className="h-4 w-4" />
+                <span>Admin</span>
+              </>
+            ) : (
+              <>
+                <Users className="h-4 w-4" />
+                <span>Teacher</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Panel */}
+      {isAdmin && (
+        <AdminPanel user={user} />
+      )}
+
+      {/* Classes List */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <TypographyH2>
+            {isAdmin ? 'All Classes' : 'Your Classes'} ({classes.length})
+          </TypographyH2>
+        </div>
+        
+        {classes.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">
+                {isAdmin 
+                  ? 'No classes found in the system.' 
+                  : 'No classes assigned to you yet. Contact your administrator.'
+                }
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {isAdmin ? (
+              // Group classes by teacher for admin view
+              (() => {
+                const classesByTeacher = classes.reduce((acc, classData) => {
+                  const teacherKey = `${classData.teacherEmail}`;
+                  if (!acc[teacherKey]) {
+                    acc[teacherKey] = {
+                      teacherName: `${classData.teacherFirstName} ${classData.teacherLastName}`,
+                      teacherEmail: classData.teacherEmail,
+                      classes: []
+                    };
+                  }
+                  acc[teacherKey].classes.push(classData);
+                  return acc;
+                }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>);
+
+                return Object.values(classesByTeacher).map((teacherData) => (
+                  <TeacherCard
+                    key={teacherData.teacherEmail}
+                    teacherName={teacherData.teacherName}
+                    teacherEmail={teacherData.teacherEmail}
+                    classes={teacherData.classes}
+                    user={user}
+                    isAdmin={isAdmin}
+                  />
+                ));
+              })()
+            ) : (
+              // Show classes directly for teacher view
+              classes.map((classData) => (
+                <ClassCard
+                  key={classData.id}
+                  classData={classData}
+                  user={user}
+                  isAdmin={isAdmin}
+                />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

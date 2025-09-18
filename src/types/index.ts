@@ -1,3 +1,4 @@
+// Legacy types (keeping for compatibility)
 export interface Report {
   id: number;
   teacher: string;
@@ -15,12 +16,51 @@ export interface ClassData {
 
 export type GroupedReports = Record<string, Record<string, ClassData>>;
 
-export interface ReportData {
+// Legacy ReportData interface for backward compatibility
+export interface LegacyReportData {
   studentName: string;
   classLevel: string;
   classLocation: string;
   comments: string;
   teacher: string;
-  date?: string;
-  artwork?: string; // Image URL for student artwork
+  date: string;
+  artwork?: string;
+}
+
+// New RBA structure - Normalized
+export interface Class {
+  id: string;
+  teacherEmail: string;
+  classDay: string;
+  classTime: string;
+  classLocation: string;
+  classLevel: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Student {
+  id: string;
+  classId: string;
+  firstName: string;
+  lastName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ReportData {
+  id: string;
+  studentId: string;
+  classId: string;
+  teacherEmail: string;
+  reportText: string;
+  artworkUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Admin user type
+export interface AdminUser {
+  email: string;
+  isAdmin: boolean;
 }

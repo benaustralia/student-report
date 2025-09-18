@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Images can only be accessed by authenticated users
+    // Users can only access their own images
+    match /images/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid == userId;
+    }
+    
+    // Allow access to student images for authenticated users
+    match /images/students/{studentId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
