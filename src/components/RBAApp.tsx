@@ -37,11 +37,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
 
         // Load classes based on role
         if (adminStatus) {
-          console.log('Loading all classes for admin user');
           const allClasses = await getAllClasses();
           setClasses(allClasses);
         } else {
-          console.log('Loading classes for teacher:', user.email);
           const teacherClasses = await getClassesForTeacher(user.email || '');
           setClasses(teacherClasses);
         }

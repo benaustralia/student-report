@@ -6,20 +6,17 @@ import { RBAApp } from './components/RBAApp';
 import type { User } from 'firebase/auth';
 
 export default function TeacherReports() {
-  console.log('App: Component rendering');
   const [user, setUser] = useState<User | null>(null);
   const [isWhitelisted, setIsWhitelisted] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
   const handleAuthChange = (user: User | null, whitelisted: boolean) => {
-    console.log('App: Auth change received', { user: user?.email, whitelisted });
     setUser(user);
     setIsWhitelisted(whitelisted);
     setLoading(false);
   };
 
   if (!user || !isWhitelisted) {
-    console.log('App: Rendering auth component', { user: user?.email, isWhitelisted });
     return (
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
         <AuthComponent onAuthChange={handleAuthChange} />

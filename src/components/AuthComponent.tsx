@@ -35,9 +35,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
   const retryCountRef = useRef<number>(0);
 
   useEffect(() => {
-    console.log('AuthComponent: Setting up auth state listener');
     const unsubscribe = onAuthStateChange(async (user) => {
-      console.log('AuthComponent: Auth state changed', user ? 'User logged in' : 'User logged out');
       setUser(user);
       setLoading(false);
       // Reset retry count when user state changes
@@ -45,9 +43,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
       
       if (user) {
         try {
-          console.log('AuthComponent: Checking whitelist for', user.email);
           const whitelisted = await isUserWhitelisted(user.email || '');
-          console.log('AuthComponent: Whitelist result', whitelisted);
           setIsWhitelisted(whitelisted);
           onAuthChange(user, whitelisted);
         } catch (err) {
@@ -57,14 +53,12 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
           onAuthChange(user, false);
         }
       } else {
-        console.log('AuthComponent: No user, setting whitelisted to false');
         setIsWhitelisted(false);
         onAuthChange(null, false);
       }
     });
 
     return () => {
-      console.log('AuthComponent: Cleaning up auth state listener');
       unsubscribe();
     };
   }, [onAuthChange]);

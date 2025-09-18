@@ -591,7 +591,6 @@ export const getAllUsers = async (): Promise<any[]> => {
       id: doc.id,
       ...doc.data()
     }));
-    console.log('getAllUsers: Found admin users:', users);
     return users;
   } catch (error) {
     console.error('Error getting all admin users:', error);

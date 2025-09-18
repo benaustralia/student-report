@@ -44,10 +44,8 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   // Auto-upload when file is set
   useEffect(() => {
     if (imageUpload.file) {
-      console.log('StudentCard: File detected, starting upload:', imageUpload.file.name);
       imageUpload.upload().then((imageUrl) => {
         if (imageUrl) {
-          console.log('StudentCard: Upload successful, saving report with imageUrl:', imageUrl);
           saveReport(imageUrl);
         }
       });
@@ -56,7 +54,6 @@ export const StudentCard: React.FC<StudentCardProps> = ({
 
   const loadReports = useCallback(async () => {
     if (hasLoadedRef.current) {
-      console.log('loadReports: Already loaded, skipping');
       return;
     }
     
@@ -73,14 +70,10 @@ export const StudentCard: React.FC<StudentCardProps> = ({
       if (reportsData.length > 0) {
         const latestReport = reportsData[0]; // Most recent report
         setReportText(latestReport.reportText || '');
-        console.log('loadReports: Latest report data:', latestReport);
-        console.log('loadReports: Artwork URL from report:', latestReport.artworkUrl);
-        console.log('loadReports: Initializing with image URL', latestReport.artworkUrl ? 'present' : 'none');
         imageUpload.initializeWithUrl(latestReport.artworkUrl || null);
       } else {
         // No reports, clear the form
         setReportText('');
-        console.log('loadReports: No reports, clearing image');
         imageUpload.initializeWithUrl(null);
       }
     } catch (error) {
@@ -104,7 +97,6 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   };
 
   const saveReport = async (imageUrl?: string | null, isAutoSave: boolean = false) => {
-    console.log('saveReport: Called with imageUrl:', imageUrl);
     if (!reportText.trim() && !imageUrl) return;
     
     try {
@@ -116,11 +108,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
         ...(imageUrl && { artworkUrl: imageUrl })
       };
 
-      console.log('saveReport: Saving report data:', reportData);
-
-      console.log('saveReport: About to save report with imageUrl:', imageUrl);
       await createOrUpdateReport(reportData);
-      console.log('saveReport: Report saved successfully');
       
       // Wait a moment for the database to be updated (shorter for auto-save)
       await new Promise(resolve => setTimeout(resolve, isAutoSave ? 500 : 1000));
@@ -128,7 +116,6 @@ export const StudentCard: React.FC<StudentCardProps> = ({
       // Only reload if this was a manual save (not auto-save)
       if (!isAutoSave) {
         hasLoadedRef.current = false;
-        console.log('saveReport: Reloading reports after manual save');
         await loadReports();
       }
       
@@ -149,7 +136,6 @@ export const StudentCard: React.FC<StudentCardProps> = ({
     const timeoutId = setTimeout(() => {
       // Only auto-save if we're not currently uploading
       if (!imageUpload.uploading) {
-        console.log('StudentCard: Auto-saving text with current imageUrl:', imageUpload.currentImageUrl);
         saveReport(imageUpload.currentImageUrl, true); // Pass isAutoSave = true
       }
     }, 2000); // Auto-save after 2 seconds of no typing
