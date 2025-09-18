@@ -16,7 +16,9 @@ export default function TeacherReports() {
     setLoading(false);
   };
 
-  if (!user || !isWhitelisted) {
+  // Show AuthComponent if no user, or if user exists but whitelist check failed
+  // Don't show it while whitelist check is in progress (loading state)
+  if (!user || (user && !isWhitelisted && !loading)) {
     return (
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
         <AuthComponent onAuthChange={handleAuthChange} />

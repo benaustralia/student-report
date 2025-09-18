@@ -39,12 +39,13 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
     const unsubscribe = onAuthStateChange(async (user) => {
       console.log('AuthComponent: Auth state changed, user:', user?.email);
       setUser(user);
-      setLoading(false);
       setError(null);
       // Reset retry count when user state changes
       retryCountRef.current = 0;
       
       if (user) {
+        // Keep loading state true while checking whitelist
+        setLoading(true);
         try {
           console.log('AuthComponent: Checking whitelist for:', user.email);
           const [whitelisted, userDisplayName] = await Promise.all([
@@ -60,11 +61,14 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
           setError('Failed to verify user access');
           setIsWhitelisted(false);
           onAuthChange(user, false);
+        } finally {
+          setLoading(false);
         }
       } else {
         console.log('AuthComponent: User signed out, clearing state');
         setIsWhitelisted(false);
         setDisplayName(null);
+        setLoading(false);
         onAuthChange(null, false);
       }
     });
