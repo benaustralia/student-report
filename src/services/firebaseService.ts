@@ -104,9 +104,7 @@ export const isUserWhitelisted = async (email: string): Promise<boolean> => {
     return !querySnapshot.empty;
   } catch (error) {
     console.error('Error checking whitelist:', error);
-    // Fallback to hardcoded list if Firestore fails
-    const whitelistedEmails = ['bahinton@gmail.com', 'Wenli11651@gmail.com'];
-    return whitelistedEmails.includes(email);
+    return false;
   }
 };
 
