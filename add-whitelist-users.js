@@ -1,5 +1,5 @@
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, doc, setDoc } = require('firebase/firestore');
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, doc, setDoc } from 'firebase/firestore';
 
 // Firebase config
 const firebaseConfig = {
