@@ -37,17 +37,21 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (user) => {
+      console.log('AuthComponent: Auth state changed, user:', user?.email);
       setUser(user);
       setLoading(false);
+      setError(null);
       // Reset retry count when user state changes
       retryCountRef.current = 0;
       
       if (user) {
         try {
+          console.log('AuthComponent: Checking whitelist for:', user.email);
           const [whitelisted, userDisplayName] = await Promise.all([
             isUserWhitelisted(user.email || ''),
             getUserDisplayName(user.email || '')
           ]);
+          console.log('AuthComponent: Whitelist result:', whitelisted, 'Display name:', userDisplayName);
           setIsWhitelisted(whitelisted);
           setDisplayName(userDisplayName);
           onAuthChange(user, whitelisted);
@@ -58,6 +62,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
           onAuthChange(user, false);
         }
       } else {
+        console.log('AuthComponent: User signed out, clearing state');
         setIsWhitelisted(false);
         setDisplayName(null);
         onAuthChange(null, false);
@@ -205,7 +210,10 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
     try {
       setLoading(true);
       setError(null);
+      console.log('AuthComponent: Starting sign out process');
       await signOutUser();
+      console.log('AuthComponent: Sign out completed');
+      // The auth state change listener will handle updating the UI
     } catch (err) {
       console.error('Sign out error:', err);
       setError('Failed to sign out. Please try again.');

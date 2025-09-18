@@ -7,12 +7,9 @@ service cloud.firestore {
         request.auth.token.email in ['bahinton@gmail.com', 'Wenli11651@gmail.com'];
     }
     
-    // Whitelisted users collection - allow bahinton@gmail.com to write during setup
+    // Whitelisted users collection - allow bahinton@gmail.com full access during setup
     match /whitelistedUsers/{userId} {
-      allow read, write: if request.auth != null && (
-        request.auth.token.email == 'bahinton@gmail.com' ||
-        isAdmin()
-      );
+      allow read, write: if request.auth != null && request.auth.token.email == 'bahinton@gmail.com';
     }
     
     // Reports collection - users can only access reports they created, admins can access all

@@ -56,7 +56,10 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
 
   const handleSignOut = async () => {
     try {
+      console.log('RBAApp: Starting sign out process');
       await signOutUser();
+      console.log('RBAApp: Sign out completed');
+      // The auth state change listener will handle updating the UI
     } catch (error) {
       console.error('Error signing out:', error);
     }
