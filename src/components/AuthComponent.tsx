@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { signOutUser, onAuthStateChange, isUserWhitelisted, getUserDisplayName } from '@/services/firebaseService';
+import { onAuthStateChange, isUserWhitelisted, getUserDisplayName } from '@/services/firebaseService';
 import { auth } from '@/config/firebase';
 import type { User } from 'firebase/auth';
-import { Loader2, LogOut, User as UserIcon, AlertCircle } from 'lucide-react';
+import { Loader2, User as UserIcon, AlertCircle } from 'lucide-react';
 
 // Google One Tap types
 declare global {
@@ -37,7 +37,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (user) => {
-      console.log('AuthComponent: Auth state changed, user:', user?.email);
+      console.log('AuthComponent: Auth state changed, user:', user?.email || 'null');
       setUser(user);
       setError(null);
       // Reset retry count when user state changes
@@ -74,6 +74,7 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
     });
 
     return () => {
+      console.log('AuthComponent: Cleaning up auth state listener');
       unsubscribe();
     };
   }, [onAuthChange]);
@@ -210,20 +211,6 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
 
   // One Tap will handle sign-in automatically
 
-  const handleSignOut = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log('AuthComponent: Starting sign out process');
-      await signOutUser();
-      console.log('AuthComponent: Sign out completed');
-      // The auth state change listener will handle updating the UI
-    } catch (err) {
-      console.error('Sign out error:', err);
-      setError('Failed to sign out. Please try again.');
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -279,18 +266,9 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
             <AlertCircle className="h-4 w-4" />
             <span>Your account is not authorized to access this application.</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground text-center">
             Please contact the administrator to request access.
           </p>
-          <Button 
-            onClick={handleSignOut} 
-            variant="outline" 
-            className="w-full"
-            disabled={loading}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
         </CardContent>
       </Card>
     );
@@ -315,15 +293,9 @@ export const AuthComponent: React.FC<AuthComponentProps> = ({ onAuthChange }) =>
             {error}
           </div>
         )}
-        <Button 
-          onClick={handleSignOut} 
-          variant="outline" 
-          className="w-full"
-          disabled={loading}
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign Out
-        </Button>
+        <p className="text-sm text-muted-foreground text-center">
+          Redirecting to your dashboard...
+        </p>
       </CardContent>
     </Card>
   );

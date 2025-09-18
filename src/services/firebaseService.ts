@@ -83,7 +83,9 @@ export const signInWithGoogle = async () => {
 
 export const signOutUser = async () => {
   try {
+    console.log('signOutUser: Starting sign out process');
     await signOut(auth);
+    console.log('signOutUser: Sign out completed successfully');
   } catch (error) {
     console.error('Error signing out:', error);
     throw error;
