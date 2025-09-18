@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographyMuted } from '@/components/ui/typography';
 import { ChevronDown, ChevronRight, Users, Download } from 'lucide-react';
-import { getStudentsForClass, getReportsForClass } from '@/services/firebaseService';
+import { getStudentsForClass, getReportsForClass, getTeacherByEmail } from '@/services/firebaseService';
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
 import { generateClassZIP, type ClassReport } from '@/services/zipService';
@@ -47,17 +47,25 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classData, user, isAdmin =
     try {
       const reports = await getReportsForClass(classData.id);
       
-      // Convert to ClassReport format for existing ZIP function
-      const classReports: ClassReport[] = reports.map(report => ({
-        studentName: `${report.studentFirstName} ${report.studentLastName}`,
-        classLevel: report.classLevel,
-        classLocation: report.classLocation,
-        comments: report.reportText,
-        teacher: `${report.teacherFirstName} ${report.teacherLastName}`,
-        date: report.createdAt.toLocaleDateString()
-      }));
+      // Get student and teacher data for reports
+      const students = await getStudentsForClass(classData.id);
+      const teacher = await getTeacherByEmail(classData.teacherEmail);
       
-      await generateClassZIP(classReports, classData.classLevel, classData.teacherLastName);
+      // Convert to ClassReport format for existing ZIP function
+      const classReports: ClassReport[] = reports.map(report => {
+        const student = students.find(s => s.id === report.studentId);
+        return {
+          studentName: student ? `${student.firstName} ${student.lastName}` : 'Unknown Student',
+          classLevel: classData.classLevel,
+          classLocation: classData.classLocation,
+          comments: report.reportText,
+          teacher: teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher',
+          date: report.createdAt.toLocaleDateString()
+        };
+      });
+      
+      const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher';
+      await generateClassZIP(classReports, classData.classLevel, teacherName);
     } catch (error) {
       console.error('Error downloading class ZIP:', error);
     } finally {
@@ -99,7 +107,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classData, user, isAdmin =
               </div>
             </div>
             <TypographyMuted className="ml-6">
-              {classData.teacherFirstName} {classData.teacherLastName}
+              {classData.teacherEmail}
             </TypographyMuted>
           </CardHeader>
         </CollapsibleTrigger>

@@ -34,7 +34,7 @@ export interface ClassReport {
   date: string;
 }
 
-export const downloadClassAsZIP = async (reports: ReportData[], className: string) => {
+export const downloadClassAsZIP = async (reports: ReportData[], className: string, students: any[], teacher: any) => {
   try {
     const zip = new JSZip();
     const folder = zip.folder(className);
@@ -46,13 +46,18 @@ export const downloadClassAsZIP = async (reports: ReportData[], className: strin
     // Process each report
     for (const report of reports) {
       try {
+        // Find student and teacher data
+        const student = students.find(s => s.id === report.studentId);
+        const studentName = student ? `${student.firstName} ${student.lastName}` : 'Unknown Student';
+        const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher';
+        
         // Convert to legacy format for PDF generation
         const legacyReportData = {
-          studentName: `${report.studentFirstName} ${report.studentLastName}`,
-          classLevel: report.classLevel,
-          classLocation: report.classLocation,
+          studentName,
+          classLevel: className, // Use className as classLevel
+          classLocation: 'Unknown Location', // This would need to be passed in
           comments: report.reportText,
-          teacher: `${report.teacherFirstName} ${report.teacherLastName}`,
+          teacher: teacherName,
           date: toDate(report.createdAt).toLocaleDateString(),
           artwork: report.artworkUrl || ''
         };
@@ -61,10 +66,10 @@ export const downloadClassAsZIP = async (reports: ReportData[], className: strin
         const pdfBlob = await generatePDFBlob(legacyReportData);
         
         // Add to ZIP
-        const fileName = `${report.studentFirstName}_${report.studentLastName}_${toDate(report.createdAt).toISOString().split('T')[0]}.pdf`;
+        const fileName = `${student.firstName || 'Unknown'}_${student.lastName || 'Student'}_${toDate(report.createdAt).toISOString().split('T')[0]}.pdf`;
         folder.file(fileName, pdfBlob);
       } catch (error) {
-        console.error(`Error processing report for ${report.studentFirstName} ${report.studentLastName}:`, error);
+        console.error(`Error processing report for student ${report.studentId}:`, error);
         // Continue with other reports even if one fails
       }
     }

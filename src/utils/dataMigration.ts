@@ -14,8 +14,6 @@ import type { Class, Student } from '../types';
 export const sampleClasses: Omit<Class, 'id' | 'createdAt' | 'updatedAt'>[] = [
   {
     teacherEmail: 'Wenli11651@gmail.com',
-    teacherFirstName: 'Wenli',
-    teacherLastName: 'Zhang',
     classDay: 'Wednesday',
     classTime: '3:45 PM',
     classLocation: 'Glen Waverley Primary School',
@@ -23,8 +21,6 @@ export const sampleClasses: Omit<Class, 'id' | 'createdAt' | 'updatedAt'>[] = [
   },
   {
     teacherEmail: 'Wenli11651@gmail.com',
-    teacherFirstName: 'Wenli',
-    teacherLastName: 'Zhang',
     classDay: 'Thursday',
     classTime: '3:45 PM',
     classLocation: 'Box Hill North',
@@ -32,8 +28,6 @@ export const sampleClasses: Omit<Class, 'id' | 'createdAt' | 'updatedAt'>[] = [
   },
   {
     teacherEmail: 'Wenli11651@gmail.com',
-    teacherFirstName: 'Wenli',
-    teacherLastName: 'Zhang',
     classDay: 'Saturday',
     classTime: '10:30 AM',
     classLocation: 'Mount Waverley',

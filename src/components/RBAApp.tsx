@@ -154,7 +154,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
                   const teacherKey = `${classData.teacherEmail}`;
                   if (!acc[teacherKey]) {
                     acc[teacherKey] = {
-                      teacherName: `${classData.teacherFirstName} ${classData.teacherLastName}`,
+                      teacherName: classData.teacherEmail,
                       teacherEmail: classData.teacherEmail,
                       classes: []
                     };
