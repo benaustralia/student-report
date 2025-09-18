@@ -1,5 +1,10 @@
-import JSZip from 'jszip';
 import type { ReportData } from '@/types';
+
+// Dynamic import for JSZip to reduce initial bundle size
+const getJSZip = async () => {
+  const { default: JSZip } = await import('jszip');
+  return JSZip;
+};
 
 // Helper function to safely convert Firestore timestamps to Date objects
 const toDate = (dateValue: any): Date => {
@@ -36,6 +41,7 @@ export interface ClassReport {
 
 export const downloadClassAsZIP = async (reports: ReportData[], className: string, students: any[], teacher: any) => {
   try {
+    const JSZip = await getJSZip();
     const zip = new JSZip();
     const folder = zip.folder(className);
 
@@ -93,6 +99,7 @@ export const downloadClassAsZIP = async (reports: ReportData[], className: strin
 // Legacy function for existing ClassZIPButton
 export const generateClassZIP = async (reports: ClassReport[], className: string, teacherName: string) => {
   try {
+    const JSZip = await getJSZip();
     const zip = new JSZip();
     const folder = zip.folder(`${teacherName}_${className}`);
 
