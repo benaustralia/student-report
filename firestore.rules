@@ -4,7 +4,7 @@ service cloud.firestore {
     // Helper function to check if user is admin
     function isAdmin() {
       return request.auth != null && 
-        request.auth.token.email in ['bahinton@gmail.com', 'Wenli11651@gmail.com'];
+        request.auth.token.email in ['bahinton@gmail.com', 'Wenli11651@gmail.com', 'wenli11651@gmail.com'];
     }
     
     // Whitelisted users collection - allow bahinton@gmail.com full access during setup
