@@ -13,14 +13,12 @@ import type { Student, Class, ReportData } from '@/types';
 interface StudentCardProps {
   student: Student;
   classData: Class;
-  user: any; // User from Firebase Auth
   isAdmin?: boolean;
 }
 
 export const StudentCard: React.FC<StudentCardProps> = ({ 
   student, 
-  classData, 
-  user
+  classData
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -103,7 +101,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
       const reportData = {
         studentId: student.id,
         classId: classData.id,
-        teacherEmail: user.email || '',
+        teacherEmail: classData.teacherEmail, // Use class's teacher email, not current user's email
         reportText: reportText.trim(),
         ...(imageUrl && { artworkUrl: imageUrl })
       };

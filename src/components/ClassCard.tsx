@@ -11,11 +11,10 @@ import { generateClassZIP, type ClassReport } from '@/services/zipService';
 
 interface ClassCardProps {
   classData: Class;
-  user: any; // User from Firebase Auth
   isAdmin?: boolean;
 }
 
-export const ClassCard: React.FC<ClassCardProps> = ({ classData, user, isAdmin = false }) => {
+export const ClassCard: React.FC<ClassCardProps> = ({ classData, isAdmin = false }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -131,7 +130,6 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classData, user, isAdmin =
                       key={student.id}
                       student={student}
                       classData={classData}
-                      user={user}
                       isAdmin={isAdmin}
                     />
                   ))}

@@ -195,7 +195,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
                     teacherName={teacherData.teacherName}
                     teacherEmail={teacherData.teacherEmail}
                     classes={teacherData.classes}
-                    user={user}
                     isAdmin={isAdmin}
                   />
                 ));
@@ -206,7 +205,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
                 <ClassCard
                   key={classData.id}
                   classData={classData}
-                  user={user}
                   isAdmin={isAdmin}
                 />
               ))

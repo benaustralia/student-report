@@ -11,7 +11,6 @@ interface TeacherCardProps {
   teacherName: string;
   teacherEmail: string;
   classes: Class[];
-  user: any; // User from Firebase Auth
   isAdmin?: boolean;
 }
 
@@ -19,7 +18,6 @@ export const TeacherCard: React.FC<TeacherCardProps> = ({
   teacherName, 
   teacherEmail, 
   classes, 
-  user, 
   isAdmin = false 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -92,7 +90,6 @@ export const TeacherCard: React.FC<TeacherCardProps> = ({
                 <ClassCard
                   key={classData.id}
                   classData={classData}
-                  user={user}
                   isAdmin={isAdmin}
                 />
               ))}
