@@ -6,24 +6,28 @@ import { Loader2, Users, Shield, LogOut } from 'lucide-react';
 import { 
   getClassesForTeacher, 
   getAllClasses, 
-  isUserAdmin
+  isUserAdmin,
+  getUserDisplayName
 } from '@/services/firebaseService';
 import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
 import { ClassCard } from './ClassCard';
 import { TeacherCard } from './TeacherCard';
 import { AdminPanel } from './AdminPanel';
-import { signOutUser } from '@/services/firebaseService';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 interface RBAAppProps {
   user: User;
 }
 
 export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
+  const { signOut } = useAuthContext();
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [teacherDisplayNames, setTeacherDisplayNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const loadData = async () => {
@@ -39,6 +43,21 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         if (adminStatus) {
           const allClasses = await getAllClasses();
           setClasses(allClasses);
+          
+          // Fetch display names for all teachers
+          const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
+          const displayNamePromises = uniqueTeacherEmails.map(async (email) => {
+            const displayName = await getUserDisplayName(email);
+            return { email, displayName: displayName || 'Unknown Teacher' };
+          });
+          
+          const displayNames = await Promise.all(displayNamePromises);
+          const displayNameMap = displayNames.reduce((acc, { email, displayName }) => {
+            acc[email] = displayName;
+            return acc;
+          }, {} as Record<string, string>);
+          
+          setTeacherDisplayNames(displayNameMap);
         } else {
           const teacherClasses = await getClassesForTeacher(user.email || '');
           setClasses(teacherClasses);
@@ -55,10 +74,15 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   }, [user]);
 
   const handleSignOut = async () => {
+    if (isSigningOut) return; // Prevent multiple clicks
+    
     try {
-      await signOutUser();
+      setIsSigningOut(true);
+      await signOut();
     } catch (error) {
       console.error('Error signing out:', error);
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -98,9 +122,13 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
           </TypographyMuted>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Button variant="outline" onClick={handleSignOut}>
+          <Button 
+            variant="outline" 
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+          >
             <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
+            {isSigningOut ? 'Signing Out...' : 'Sign Out'}
           </Button>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {isAdmin ? (
@@ -152,7 +180,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
                   const teacherKey = `${classData.teacherEmail}`;
                   if (!acc[teacherKey]) {
                     acc[teacherKey] = {
-                      teacherName: classData.teacherEmail,
+                      teacherName: teacherDisplayNames[classData.teacherEmail] || 'Unknown Teacher',
                       teacherEmail: classData.teacherEmail,
                       classes: []
                     };

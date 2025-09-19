@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { FileInput } from '@/components/ui/file-input';
 import { Loader2, Database, CheckCircle, AlertCircle, Users, BookOpen, FileText, GraduationCap } from 'lucide-react';
 import { 
   getAllUsers, 
@@ -10,10 +10,7 @@ import {
   importUsers, 
   importClasses, 
   importStudents, 
-  removeDuplicateAdminUsers,
-  removeAdminUserByEmail,
-  isUserAdmin,
-  migrateDataStructure
+  isUserAdmin
 } from '@/services/firebaseService';
 import type { User } from 'firebase/auth';
 import type { Class, Student } from '@/types';
@@ -32,9 +29,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
-  const [removingDuplicates, setRemovingDuplicates] = useState(false);
-  const [removingUser, setRemovingUser] = useState(false);
-  const [migrating, setMigrating] = useState(false);
   const [data, setData] = useState<{
     users: any[];
     classes: Class[];
@@ -165,110 +159,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
     }
   };
 
-  const handleRemoveDuplicates = async () => {
-    setRemovingDuplicates(true);
-    setError(null);
-    setSuccess(null);
 
-    try {
-      console.log('AdminPanel: Starting duplicate removal');
-      const result = await removeDuplicateAdminUsers();
-      setSuccess(`Removed ${result.removed} duplicate admin users, kept ${result.kept} unique users`);
-      await loadData(); // Reload data to show changes
-    } catch (err) {
-      console.error('Error removing duplicates:', err);
-      setError('Failed to remove duplicates');
-    } finally {
-      setRemovingDuplicates(false);
-    }
-  };
-
-  const handleRemoveUser = async (email: string) => {
-    if (!confirm(`Are you sure you want to remove the admin user with email ${email}?`)) {
-      return;
-    }
-
-    setRemovingUser(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      console.log('AdminPanel: Removing user with email:', email);
-      const removed = await removeAdminUserByEmail(email);
-      if (removed) {
-        setSuccess(`Removed admin user: ${email}`);
-        await loadData(); // Reload data to show changes
-      } else {
-        setError(`No admin user found with email: ${email}`);
-      }
-    } catch (err) {
-      console.error('Error removing user:', err);
-      setError('Failed to remove user');
-    } finally {
-      setRemovingUser(false);
-    }
-  };
-
-  const handleMigrateData = async () => {
-    if (!confirm('Are you sure you want to migrate the data structure? This will remove redundant fields from classes and reports. This action cannot be undone.')) {
-      return;
-    }
-
-    setMigrating(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      console.log('AdminPanel: Starting data migration');
-      const result = await migrateDataStructure();
-      setSuccess(`Migration completed! Updated ${result.classesUpdated} classes and ${result.reportsUpdated} reports`);
-      await loadData(); // Reload data to show changes
-    } catch (err) {
-      console.error('Error migrating data:', err);
-      setError('Failed to migrate data structure');
-    } finally {
-      setMigrating(false);
-    }
-  };
-
-  const downloadSampleJSON = () => {
-    const sampleData = {
-      users: [
-        {
-          email: "teacher@example.com",
-          firstName: "John",
-          lastName: "Doe",
-          isAdmin: false
-        }
-      ],
-      classes: [
-        {
-          teacherEmail: "teacher@example.com",
-          classDay: "Monday",
-          classTime: "10:00 AM",
-          classLocation: "Main Studio",
-          classLevel: "Beginner"
-        }
-      ],
-      students: [
-        {
-          firstName: "Alice",
-          lastName: "Smith",
-          classId: "class-id-here"
-        }
-      ]
-    };
-
-    const blob = new Blob([JSON.stringify(sampleData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sample-data.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   if (loading) {
     return (
@@ -363,19 +254,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                           </div>
                         )}
                       </div>
-                      <Button
-                        onClick={() => handleRemoveUser(user.email)}
-                        variant="outline"
-                        size="sm"
-                        disabled={removingUser}
-                        className="self-start sm:self-center"
-                      >
-                        {removingUser ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          'Remove'
-                        )}
-                      </Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -424,33 +302,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <input
-                    id="json-import"
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    disabled={importing}
-                    className="hidden"
-                  />
-                  <Button
-                    onClick={() => document.getElementById('json-import')?.click()}
-                    variant="outline"
-                    disabled={importing}
-                    className="w-full justify-start"
-                  >
-                    Choose File
-                  </Button>
-                </div>
-                <Button
-                  onClick={downloadSampleJSON}
-                  variant="outline"
-                  disabled={importing}
-                >
-                  Download Sample
-                </Button>
-              </div>
+              <FileInput
+                accept=".json"
+                maxSize={10}
+                onFileChange={(file) => {
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                      try {
+                        JSON.parse(e.target?.result as string);
+                        handleFileUpload({ target: { files: [file] } } as any);
+                      } catch (error) {
+                        console.error('Error parsing JSON:', error);
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+                disabled={importing}
+              />
 
               {importing && (
                 <div className="flex items-center space-x-2 text-blue-600">
@@ -461,46 +331,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          <Card>
-            <CardContent className="flex flex-col sm:flex-row gap-2 p-4">
-              <Button
-                onClick={loadData}
-                variant="outline"
-                disabled={loading}
-                className="w-full sm:w-auto"
-              >
-                <Database className="h-4 w-4 mr-2" />
-                Refresh Data
-              </Button>
-              <Button
-                onClick={handleRemoveDuplicates}
-                variant="outline"
-                disabled={removingDuplicates || data.users.length === 0}
-                className="w-full sm:w-auto"
-              >
-                {removingDuplicates ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Users className="h-4 w-4 mr-2" />
-                )}
-                Remove Duplicates
-              </Button>
-              <Button
-                onClick={handleMigrateData}
-                variant="outline"
-                disabled={migrating}
-                className="w-full sm:w-auto"
-              >
-                {migrating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Database className="h-4 w-4 mr-2" />
-                )}
-                Migrate Data
-              </Button>
-            </CardContent>
-          </Card>
         </CardContent>
       </Card>
 
