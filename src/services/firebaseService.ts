@@ -1,4 +1,4 @@
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider } from 'firebase/auth';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, deleteField, writeBatch, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../config/firebase';
 import type { Class, Student, ReportData } from '../types';
@@ -19,7 +19,16 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: [string, an
 const updateDocById = async (collectionName: string, id: string, updates: any) => await updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
 const deleteDocById = async (collectionName: string, id: string) => await deleteDoc(doc(db, collectionName, id));
 
-export const signInWithGoogle = async () => (await signInWithPopup(auth, googleProvider)).user;
+export const signInWithGoogle = async (credential?: string) => {
+  if (credential) {
+    // Use Google Identity Services credential
+    const googleCredential = GoogleAuthProvider.credential(credential);
+    return (await signInWithCredential(auth, googleCredential)).user;
+  } else {
+    // Fallback to popup method
+    return (await signInWithPopup(auth, googleProvider)).user;
+  }
+};
 export const signOutUser = async () => await signOut(auth);
 export const onAuthStateChange = (callback: (user: any) => void) => onAuthStateChanged(auth, callback);
 export const isUserAdmin = async (email: string): Promise<boolean> => (await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]])).length > 0;
