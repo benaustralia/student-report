@@ -1,7 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
-import AuthComponent from './components/AuthComponent';
 import { RBAApp } from './components/RBAApp';
 
 // Force refresh - modern Firebase auth implementation
@@ -37,7 +36,17 @@ function AppContent() {
   if (!user) {
     return (
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <AuthComponent />
+        <Card>
+          <CardContent className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-4">Sign In Required</h2>
+            <p className="text-muted-foreground mb-4">
+              Please sign in with your Google account to access the student reports.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Authentication is handled automatically when you visit this page.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

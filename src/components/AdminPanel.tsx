@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRight } from 'lucide-react';
+import { TypographyH3, TypographySmall } from '@/components/ui/typography';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
 import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin } from '@/services/firebaseService';
@@ -34,7 +36,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
   useEffect(() => { !state.showDataBuilder && state.isAdmin && loadData(); }, [state.showDataBuilder, state.isAdmin]);
 
   if (state.loading) return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin mr-2" /><span>Loading admin panel...</span></div>;
-  if (!state.isAdmin) return <Card className="w-full max-w-2xl mx-auto"><CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-red-500" />Access Denied</CardTitle></CardHeader><CardContent><p>You don't have admin privileges to access this panel.</p></CardContent></Card>;
+  if (!state.isAdmin) return (
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-destructive" />
+          Access Denied
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p>You don't have admin privileges to access this panel.</p>
+      </CardContent>
+    </Card>
+  );
 
   return <div className="space-y-6"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Database className="h-5 w-5" />Admin Panel</CardTitle></CardHeader><CardContent className="space-y-4">
     <div className="flex flex-col sm:flex-row gap-4"><Button onClick={() => setState(prev => ({ ...prev, showDataBuilder: !prev.showDataBuilder }))} variant={state.showDataBuilder ? "default" : "outline"}><Settings className="h-4 w-4 mr-2" />{state.showDataBuilder ? 'Hide' : 'Show'} Data Builder</Button></div>
@@ -58,9 +72,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   <div className="flex flex-wrap gap-1"><Badge variant="default" className="text-xs">Admin</Badge>{state.data.teachers.some(t => t.email === u.email) && <Badge variant="outline" className="text-xs">Teacher</Badge>}</div>
                   <div className="min-w-0 flex-1">{u.firstName && u.lastName ? (
-                    <div className="space-y-1"><div className="font-medium truncate">{u.firstName} {u.lastName}</div><div className="text-sm text-muted-foreground truncate">{u.email}</div></div>
+                    <div className="space-y-1">
+                      <div className="font-medium truncate">{u.firstName} {u.lastName}</div>
+                      <TypographySmall className="text-muted-foreground truncate">{u.email}</TypographySmall>
+                    </div>
                   ) : (
-                    <div className="space-y-1"><div className="font-medium text-yellow-800 truncate">⚠️ {u.email}</div><div className="text-xs text-yellow-600">Missing name data</div></div>
+                    <div className="space-y-1">
+                      <div className="font-medium text-warning truncate">⚠️ {u.email}</div>
+                      <TypographySmall className="text-warning/80">Missing name data</TypographySmall>
+                    </div>
                   )}</div>
                 </div>
               </div>
@@ -76,9 +96,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     <div className="flex flex-wrap gap-1"><Badge variant="outline" className="text-xs">Teacher</Badge></div>
                     <div className="min-w-0 flex-1">{t.firstName && t.lastName ? (
-                      <div className="space-y-1"><div className="font-medium truncate">{t.firstName} {t.lastName}</div><div className="text-sm text-muted-foreground truncate">{t.email}</div></div>
+                      <div className="space-y-1">
+                        <div className="font-medium truncate">{t.firstName} {t.lastName}</div>
+                        <TypographySmall className="text-muted-foreground truncate">{t.email}</TypographySmall>
+                      </div>
                     ) : (
-                      <div className="space-y-1"><div className="font-medium text-yellow-800 truncate">⚠️ {t.email}</div><div className="text-xs text-yellow-600">Missing name data</div></div>
+                      <div className="space-y-1">
+                        <div className="font-medium text-warning truncate">⚠️ {t.email}</div>
+                        <TypographySmall className="text-warning/80">Missing name data</TypographySmall>
+                      </div>
                     )}</div>
                   </div>
                   {classCount > 0 && <div className="flex-shrink-0"><Badge variant="secondary" className="text-xs">{classCount} {classCount === 1 ? 'class' : 'classes'}</Badge></div>}
@@ -90,8 +116,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
       </Collapsible></Card>
     )}
     {state.data.users.length === 0 && state.data.classes.length === 0 && state.data.students.length === 0 && (
-      <Card><CardContent className="text-center p-8"><Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><h3 className="text-lg font-semibold mb-2">No Data Found</h3><p className="text-muted-foreground">Upload a JSON file to import admin users, classes, and students, or download the sample file to get started.</p></CardContent></Card>
+      <Card>
+        <CardContent className="text-center p-8">
+          <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <TypographyH3 className="mb-2">No Data Found</TypographyH3>
+          <p className="text-muted-foreground">Upload a JSON file to import admin users, classes, and students, or download the sample file to get started.</p>
+        </CardContent>
+      </Card>
     )}
-    {state.error && <Card className="border-red-200 bg-red-50"><CardContent className="flex items-center space-x-2 p-4"><AlertCircle className="h-5 w-5 text-red-500" /><span className="text-red-700">{state.error}</span></CardContent></Card>}
+    {state.error && (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>{state.error}</AlertDescription>
+      </Alert>
+    )}
   </CardContent></Card></div>;
 };

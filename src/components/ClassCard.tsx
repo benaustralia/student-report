@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographyMuted } from '@/components/ui/typography';
+import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, Users, Download } from 'lucide-react';
-import { getStudentsForClass, getReportsForClass, getTeacherByEmail } from '@/services/firebaseService';
+import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses } from '@/services/firebaseService';
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
 import { generateClassZIP, type ClassReport } from '@/services/zipService';
@@ -14,7 +15,7 @@ interface ClassCardProps {
   isAdmin?: boolean;
 }
 
-export const ClassCard: React.FC<ClassCardProps> = ({ classData, isAdmin = false }) => {
+export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, isAdmin = false }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,9 +37,19 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classData, isAdmin = false
     }
   };
 
-  // Load student count on mount to show accurate count
+  // Load student count on mount to show accurate count - optimized
   React.useEffect(() => {
-    loadStudents();
+    const loadStudentCount = async () => {
+      try {
+        const counts = await getStudentCountsForClasses([classData.id]);
+        setStudentCount(counts[classData.id] || 0);
+      } catch (error) {
+        console.error('Error loading student count:', error);
+        setStudentCount(0);
+      }
+    };
+    
+    loadStudentCount();
   }, [classData.id]);
 
   const handleDownloadClass = async () => {
@@ -86,28 +97,38 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classData, isAdmin = false
           <CardHeader 
             className="cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={handleToggle}
+            role="button"
+            tabIndex={0}
+            aria-expanded={isOpen}
+            aria-label={`${isOpen ? 'Collapse' : 'Expand'} class details for ${classData.classLevel}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggle();
+              }
+            }}
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {isOpen ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-                <CardTitle className="text-lg">
-                  {classData.classDay}, {classData.classTime} - {classData.classLocation}
-                </CardTitle>
-              </div>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>
-                  {studentCount === null ? '...' : studentCount}
-                </span>
-              </div>
+              <CardTitle>
+                {classData.classDay}, {classData.classTime} - {classData.classLocation}
+              </CardTitle>
+              {isOpen ? (
+                <ChevronDown className="h-4 w-4 flex-shrink-0" />
+              ) : (
+                <ChevronRight className="h-4 w-4 flex-shrink-0" />
+              )}
             </div>
-            <TypographyMuted className="ml-6">
+            <TypographyMuted className="ml-7">
               {classData.teacherEmail}
             </TypographyMuted>
+            <div className="flex items-center gap-6 ml-7">
+              <StatisticItem
+                icon={Users}
+                value={studentCount === null ? '...' : studentCount}
+                label="Students"
+                loading={studentCount === null}
+              />
+            </div>
           </CardHeader>
         </CollapsibleTrigger>
         
@@ -143,6 +164,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classData, isAdmin = false
                       size="sm"
                       onClick={handleDownloadClass}
                       disabled={isDownloading}
+                      aria-label={`Download ZIP file for ${classData.classLevel} class`}
                     >
                       <Download className="h-4 w-4 mr-2" />
                       {isDownloading ? 'Downloading...' : 'Download ZIP'}
@@ -156,4 +178,4 @@ export const ClassCard: React.FC<ClassCardProps> = ({ classData, isAdmin = false
       </Collapsible>
     </Card>
   );
-};
+});

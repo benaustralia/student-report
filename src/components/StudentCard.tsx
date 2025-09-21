@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { TypographySmall } from '@/components/ui/typography';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
@@ -12,7 +13,7 @@ import type { Student, Class, ReportData } from '@/types';
 
 interface StudentCardProps { student: Student; classData: Class; isAdmin?: boolean; }
 
-export const StudentCard: React.FC<StudentCardProps> = ({ student, classData }) => {
+export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData }) => {
   const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false });
   const hasLoadedRef = useRef(false);
 
@@ -99,11 +100,24 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student, classData }) 
     <Card className="w-full">
       <Collapsible open={state.isOpen} onOpenChange={(open) => setState(prev => ({ ...prev, isOpen: open }))}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={handleToggle}>
+          <CardHeader 
+            className="cursor-pointer hover:bg-muted/50 transition-colors" 
+            onClick={handleToggle}
+            role="button"
+            tabIndex={0}
+            aria-expanded={state.isOpen}
+            aria-label={`${state.isOpen ? 'Collapse' : 'Expand'} student details for ${student.firstName} ${student.lastName}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggle();
+              }
+            }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {state.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <CardTitle className="text-base">{student.firstName} {student.lastName}</CardTitle>
+                <CardTitle>{student.firstName} {student.lastName}</CardTitle>
               </div>
             </div>
           </CardHeader>
@@ -147,9 +161,9 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student, classData }) 
                   />
                 </div>
                 <div className="flex justify-center pt-2">
-                  <div className={`text-xs transition-opacity duration-200 ${state.showAutoSave ? 'text-green-600 opacity-100' : 'text-muted-foreground opacity-0'}`}>
+                  <TypographySmall className={`transition-opacity duration-200 ${state.showAutoSave ? 'text-green-600 opacity-100' : 'text-muted-foreground opacity-0'}`}>
                     {state.showAutoSave ? '✓ Saved' : 'Auto-saves as you type'}
-                  </div>
+                  </TypographySmall>
                 </div>
                 <div className="pt-4">
                   <ReportPreview
@@ -167,4 +181,4 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student, classData }) 
       </Collapsible>
     </Card>
   );
-};
+});

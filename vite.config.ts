@@ -34,8 +34,6 @@ export default defineConfig({
             '@radix-ui/react-slot'
           ],
           
-          // Form libraries
-          'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
           
           // Other utilities
           'utils-vendor': ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge', 'vaul']

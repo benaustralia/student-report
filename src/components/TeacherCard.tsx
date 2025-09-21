@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographyMuted } from '@/components/ui/typography';
+import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, User, BookOpen, Users } from 'lucide-react';
 import type { Class } from '@/types';
 import { ClassCard } from './ClassCard';
-import { getStudentsForClass } from '@/services/firebaseService';
+import { getStudentCountsForClasses } from '@/services/firebaseService';
 
 interface TeacherCardProps {
   teacherName: string;
@@ -14,7 +15,7 @@ interface TeacherCardProps {
   isAdmin?: boolean;
 }
 
-export const TeacherCard: React.FC<TeacherCardProps> = ({ 
+export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({ 
   teacherName, 
   teacherEmail, 
   classes, 
@@ -23,15 +24,13 @@ export const TeacherCard: React.FC<TeacherCardProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
 
-  // Load student counts for all classes to calculate total
+  // Load student counts for all classes to calculate total - optimized with single query
   useEffect(() => {
     const loadStudentCounts = async () => {
       try {
-        const studentCountPromises = classes.map(classData => 
-          getStudentsForClass(classData.id).then(students => students.length)
-        );
-        const studentCounts = await Promise.all(studentCountPromises);
-        const total = studentCounts.reduce((sum, count) => sum + count, 0);
+        const classIds = classes.map(classData => classData.id);
+        const studentCounts = await getStudentCountsForClasses(classIds);
+        const total = Object.values(studentCounts).reduce((sum, count) => sum + count, 0);
         setTotalStudents(total);
       } catch (error) {
         console.error('Error loading student counts:', error);
@@ -51,35 +50,46 @@ export const TeacherCard: React.FC<TeacherCardProps> = ({
           <CardHeader 
             className="cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => setIsOpen(!isOpen)}
+            role="button"
+            tabIndex={0}
+            aria-expanded={isOpen}
+            aria-label={`${isOpen ? 'Collapse' : 'Expand'} teacher details for ${teacherName}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsOpen(!isOpen);
+              }
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isOpen ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
                 <User className="h-5 w-5" />
-                <CardTitle className="text-lg">
+                <CardTitle>
                   {teacherName}
                 </CardTitle>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <BookOpen className="h-4 w-4" />
-                  <span>{classes.length}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span>
-                    {totalStudents === null ? '...' : totalStudents}
-                  </span>
-                </div>
-              </div>
+              {isOpen ? (
+                <ChevronDown className="h-4 w-4 flex-shrink-0" />
+              ) : (
+                <ChevronRight className="h-4 w-4 flex-shrink-0" />
+              )}
             </div>
-            <TypographyMuted className="ml-6">
+            <TypographyMuted className="ml-7">
               {teacherEmail}
             </TypographyMuted>
+            <div className="flex items-center gap-6 ml-7">
+              <StatisticItem
+                icon={BookOpen}
+                value={classes.length}
+                label="Classes"
+              />
+              <StatisticItem
+                icon={Users}
+                value={totalStudents === null ? '...' : totalStudents}
+                label="Students"
+                loading={totalStudents === null}
+              />
+            </div>
           </CardHeader>
         </CollapsibleTrigger>
         
@@ -99,4 +109,4 @@ export const TeacherCard: React.FC<TeacherCardProps> = ({
       </Collapsible>
     </Card>
   );
-};
+});

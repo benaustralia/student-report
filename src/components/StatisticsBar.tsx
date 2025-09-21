@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatisticItem } from '@/components/ui/statistic-item';
 import { Users, BookOpen, GraduationCap, FileText } from 'lucide-react';
 
 interface StatisticsBarProps {
@@ -22,43 +23,35 @@ export const StatisticsBar: React.FC<StatisticsBarProps> = ({
   return (
     <Card className={className}>
       <CardContent className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="flex items-center space-x-3">
-            <Users className="h-8 w-8 text-blue-600" />
-            <div>
-              <div className="text-2xl font-bold">
-                {loading ? '...' : adminCount}
-              </div>
-              <div className="text-sm text-muted-foreground">Admin</div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <GraduationCap className="h-8 w-8 text-orange-600" />
-            <div>
-              <div className="text-2xl font-bold">
-                {loading ? '...' : teacherCount}
-              </div>
-              <div className="text-sm text-muted-foreground">Teachers</div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <BookOpen className="h-8 w-8 text-green-600" />
-            <div>
-              <div className="text-2xl font-bold">
-                {loading ? '...' : classCount}
-              </div>
-              <div className="text-sm text-muted-foreground">Classes</div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <FileText className="h-8 w-8 text-purple-600" />
-            <div>
-              <div className="text-2xl font-bold">
-                {loading ? '...' : studentCount}
-              </div>
-              <div className="text-sm text-muted-foreground">Students</div>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8">
+          <StatisticItem
+            icon={Users}
+            value={adminCount}
+            label="Admin"
+            loading={loading}
+            iconColor="text-primary"
+          />
+          <StatisticItem
+            icon={GraduationCap}
+            value={teacherCount}
+            label="Teachers"
+            loading={loading}
+            iconColor="text-orange-600"
+          />
+          <StatisticItem
+            icon={BookOpen}
+            value={classCount}
+            label="Classes"
+            loading={loading}
+            iconColor="text-green-600"
+          />
+          <StatisticItem
+            icon={FileText}
+            value={studentCount}
+            label="Students"
+            loading={loading}
+            iconColor="text-purple-600"
+          />
         </div>
       </CardContent>
     </Card>

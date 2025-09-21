@@ -91,7 +91,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           <div className="space-y-2">
             <img
               src={value}
-              alt="Preview"
+              alt="Preview of uploaded image"
               className="mx-auto h-20 w-20 object-cover rounded"
             />
             <p className="text-sm text-muted-foreground">Click to change</p>
