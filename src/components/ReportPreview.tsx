@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, Loader2 } from 'lucide-react';
@@ -66,6 +67,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Report Preview - {studentName}</DialogTitle>
+          <DialogDescription>
+            Preview and download the generated report for {studentName} from {classData.classLevel} at {classData.classLocation}.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex justify-center p-4">
           {loading ? (

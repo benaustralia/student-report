@@ -14,6 +14,7 @@ import type { User } from 'firebase/auth';
 import { ClassCard } from './ClassCard';
 import { TeacherCard } from './TeacherCard';
 import { AdminPanel } from './AdminPanel';
+import { ThemeToggle } from './theme-toggle';
 import { useAuthContext } from '@/contexts/AuthContext';
 
 interface RBAAppProps {
@@ -122,14 +123,17 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
           </TypographyMuted>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleSignOut}
-            disabled={isSigningOut}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            {isSigningOut ? 'Signing Out...' : 'Sign Out'}
-          </Button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Button 
+              variant="outline" 
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+            </Button>
+          </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {isAdmin ? (
               <>

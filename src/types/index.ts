@@ -35,6 +35,8 @@ export interface Class {
   classTime: string;
   classLocation: string;
   classLevel: string;
+  teacherFirstName?: string;  // Added for import compatibility
+  teacherLastName?: string;   // Added for import compatibility
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +46,7 @@ export interface Student {
   classId: string;
   firstName: string;
   lastName: string;
+  teacherEmail?: string;  // Added for simplified import structure
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +58,7 @@ export interface ReportData {
   teacherEmail: string;
   reportText: string;
   artworkUrl?: string;
+  studentName?: string;  // Added for simplified import structure
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,5 +66,9 @@ export interface ReportData {
 // Admin user type
 export interface AdminUser {
   email: string;
+  firstName: string;
+  lastName: string;
   isAdmin: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }

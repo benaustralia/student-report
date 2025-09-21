@@ -1,10 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is admin
+    // Helper function to check if user is admin by email
     function isAdmin() {
       return request.auth != null && 
-        request.auth.token.email in ['bahinton@gmail.com', 'Wenli11651@gmail.com', 'wenli11651@gmail.com'];
+        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Alternative admin check by email (if UID doesn't match)
+    function isAdminByEmail() {
+      return request.auth != null && 
+        request.auth.token.email in ['bahinton@gmail.com', 'yoc31397@gmail.com'];
     }
     
     // Whitelisted users collection - allow bahinton@gmail.com full access during setup
@@ -16,11 +23,11 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow read, write: if request.auth != null && (
         request.auth.token.email == resource.data.teacherEmail ||
-        isAdmin()
+        isAdmin() || isAdminByEmail()
       );
       // Allow creation if user is admin OR if the report's teacherEmail matches a class they teach
       allow create: if request.auth != null && (
-        isAdmin() ||
+        isAdmin() || isAdminByEmail() ||
         request.auth.token.email == request.resource.data.teacherEmail
       );
     }
@@ -29,11 +36,11 @@ service cloud.firestore {
     match /classes/{classId} {
       allow read: if request.auth != null && (
         request.auth.token.email == resource.data.teacherEmail ||
-        isAdmin()
+        isAdmin() || isAdminByEmail()
       );
       allow write: if request.auth != null && (
         request.auth.token.email == resource.data.teacherEmail ||
-        isAdmin()
+        isAdmin() || isAdminByEmail()
       );
       allow create: if request.auth != null && 
         request.auth.token.email == request.resource.data.teacherEmail;
@@ -44,11 +51,21 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
     
-    // Admin users collection - allow project owner to read/write, then only admins
+    // Admin users collection - allow authenticated users to read for admin checks, but only admins can write
     match /adminUsers/{userId} {
-      allow read, write: if request.auth != null && (
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
         request.auth.token.email == 'bahinton@gmail.com' ||
-        isAdmin()
+        isAdmin() || isAdminByEmail()
+      );
+    }
+    
+    // Teachers collection - authenticated users can read, admins can write
+    match /teachers/{teacherId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'bahinton@gmail.com' ||
+        isAdmin() || isAdminByEmail()
       );
     }
   }
