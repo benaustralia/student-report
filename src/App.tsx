@@ -61,20 +61,32 @@ function AppContent() {
           callback: handleCredentialResponse,
         });
         
-        // Render the button after a short delay to ensure DOM is ready
-        setTimeout(() => {
+        // Try multiple times to render the button
+        const renderButton = () => {
           const buttonElement = document.getElementById('g_id_signin');
+          console.log('Looking for button element:', buttonElement);
           if (buttonElement && window.google.accounts.id) {
-            window.google.accounts.id.renderButton(buttonElement, {
-              type: 'standard',
-              size: 'large',
-              theme: 'outline',
-              text: 'sign_in_with',
-              shape: 'rectangular',
-              logo_alignment: 'left'
-            });
+            console.log('Rendering Google Sign-In button...');
+            try {
+              window.google.accounts.id.renderButton(buttonElement, {
+                type: 'standard',
+                size: 'large',
+                theme: 'outline',
+                text: 'sign_in_with',
+                shape: 'rectangular',
+                logo_alignment: 'left'
+              });
+              console.log('Google Sign-In button rendered successfully');
+            } catch (renderError) {
+              console.error('Error rendering button:', renderError);
+            }
+          } else {
+            console.log('Button element not found, retrying...');
+            setTimeout(renderButton, 500);
           }
-        }, 200);
+        };
+        
+        setTimeout(renderButton, 200);
       } catch (error) {
         console.error('Failed to initialize Google Identity Services:', error);
       }
