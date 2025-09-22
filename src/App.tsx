@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { RBAApp } from './components/RBAApp';
@@ -108,32 +108,30 @@ function AppContent() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-8 max-w-md mx-auto px-4">
-          <div>
-            <h2 className="text-3xl font-bold text-white mb-4">Sign In Required</h2>
-            <p className="text-gray-300 text-lg">
-              Please sign in with your Google account to access the student reports.
-            </p>
-          </div>
-          {googleLoaded ? (
-            <div 
-              id="g_id_signin"
-              data-type="standard"
-              data-size="large"
-              data-theme="outline"
-              data-text="sign_in_with"
-              data-shape="rectangular"
-              data-logo_alignment="left"
-              className="flex justify-center"
-            />
-          ) : (
-            <div className="flex items-center justify-center text-white">
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              <span>Loading Google Sign-In...</span>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Card className="mx-auto max-w-sm border-2 border-gray-300">
+          <CardHeader>
+            <CardTitle className="text-2xl text-black">Welcome back</CardTitle>
+            <CardDescription className="text-gray-600">
+              Login with your Google account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6">
+              {googleLoaded ? (
+                <div 
+                  id="g_id_signin"
+                  className="w-full flex justify-center"
+                />
+              ) : (
+                <div className="flex items-center justify-center text-black">
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <span>Loading Google Sign-In...</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
