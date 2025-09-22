@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { RBAApp } from './components/RBAApp';
 import { signInWithGoogle } from './services/firebaseService';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 // TypeScript declaration for Google Identity Services
 declare global {
@@ -24,16 +24,18 @@ declare global {
 function AppContent() {
   const { user, loading, error } = useAuthContext();
   const [googleLoaded, setGoogleLoaded] = useState(false);
-  const buttonRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
-    // Load Google Identity Services
+    console.log('Loading Google Identity Services script...');
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    script.onload = () => setGoogleLoaded(true);
+    script.onload = () => {
+      console.log('Google Identity Services script loaded successfully');
+      setGoogleLoaded(true);
+    };
     script.onerror = (error) => {
       console.error('Failed to load Google Identity Services script:', error);
     };
@@ -56,22 +58,16 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (googleLoaded && window.google && buttonRef.current) {
+    console.log('useEffect triggered - googleLoaded:', googleLoaded, 'window.google:', !!window.google);
+    
+    if (googleLoaded && window.google) {
       try {
+        console.log('Initializing Google Identity Services...');
         window.google.accounts.id.initialize({
           client_id: '1089251772494-s8a9lafg8ju91vvaq426bkvj5mon7vm9.apps.googleusercontent.com',
           callback: handleCredentialResponse,
         });
-        
-        // Render the button using the ref
-        window.google.accounts.id.renderButton(buttonRef.current, {
-          type: 'standard',
-          size: 'large',
-          theme: 'outline',
-          text: 'sign_in_with',
-          shape: 'rectangular',
-          logo_alignment: 'left'
-        });
+        console.log('Google Identity Services initialized successfully');
       } catch (error) {
         console.error('Failed to initialize Google Identity Services:', error);
       }
@@ -114,7 +110,13 @@ function AppContent() {
             </p>
             {googleLoaded ? (
               <div 
-                ref={buttonRef}
+                id="g_id_signin"
+                data-type="standard"
+                data-size="large"
+                data-theme="outline"
+                data-text="sign_in_with"
+                data-shape="rectangular"
+                data-logo_alignment="left"
                 className="flex justify-center"
               />
             ) : (
