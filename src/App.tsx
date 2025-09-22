@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { RBAApp } from './components/RBAApp';
 import { signInWithGoogle } from './services/firebaseService';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // TypeScript declaration for Google Identity Services
 declare global {
@@ -24,6 +24,7 @@ declare global {
 function AppContent() {
   const { user, loading, error } = useAuthContext();
   const [googleLoaded, setGoogleLoaded] = useState(false);
+  const buttonRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
@@ -55,29 +56,22 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (googleLoaded && window.google) {
+    if (googleLoaded && window.google && buttonRef.current) {
       try {
         window.google.accounts.id.initialize({
           client_id: '1089251772494-s8a9lafg8ju91vvaq426bkvj5mon7vm9.apps.googleusercontent.com',
           callback: handleCredentialResponse,
         });
         
-        // Render the button after initialization
-        setTimeout(() => {
-          if (window.google && window.google.accounts && window.google.accounts.id) {
-            window.google.accounts.id.renderButton(
-              document.getElementById('g_id_signin'),
-              {
-                type: 'standard',
-                size: 'large',
-                theme: 'outline',
-                text: 'sign_in_with',
-                shape: 'rectangular',
-                logo_alignment: 'left'
-              }
-            );
-          }
-        }, 100);
+        // Render the button using the ref
+        window.google.accounts.id.renderButton(buttonRef.current, {
+          type: 'standard',
+          size: 'large',
+          theme: 'outline',
+          text: 'sign_in_with',
+          shape: 'rectangular',
+          logo_alignment: 'left'
+        });
       } catch (error) {
         console.error('Failed to initialize Google Identity Services:', error);
       }
@@ -120,7 +114,7 @@ function AppContent() {
             </p>
             {googleLoaded ? (
               <div 
-                id="g_id_signin" 
+                ref={buttonRef}
                 className="flex justify-center"
               />
             ) : (
