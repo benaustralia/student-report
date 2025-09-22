@@ -27,15 +27,11 @@ function AppContent() {
 
 
   useEffect(() => {
-    console.log('Loading Google Identity Services script...');
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    script.onload = () => {
-      console.log('Google Identity Services script loaded successfully');
-      setGoogleLoaded(true);
-    };
+    script.onload = () => setGoogleLoaded(true);
     script.onerror = (error) => {
       console.error('Failed to load Google Identity Services script:', error);
     };
@@ -58,16 +54,27 @@ function AppContent() {
   };
 
   useEffect(() => {
-    console.log('useEffect triggered - googleLoaded:', googleLoaded, 'window.google:', !!window.google);
-    
     if (googleLoaded && window.google) {
       try {
-        console.log('Initializing Google Identity Services...');
         window.google.accounts.id.initialize({
           client_id: '1089251772494-s8a9lafg8ju91vvaq426bkvj5mon7vm9.apps.googleusercontent.com',
           callback: handleCredentialResponse,
         });
-        console.log('Google Identity Services initialized successfully');
+        
+        // Render the button after a short delay to ensure DOM is ready
+        setTimeout(() => {
+          const buttonElement = document.getElementById('g_id_signin');
+          if (buttonElement && window.google.accounts.id) {
+            window.google.accounts.id.renderButton(buttonElement, {
+              type: 'standard',
+              size: 'large',
+              theme: 'outline',
+              text: 'sign_in_with',
+              shape: 'rectangular',
+              logo_alignment: 'left'
+            });
+          }
+        }, 200);
       } catch (error) {
         console.error('Failed to initialize Google Identity Services:', error);
       }
@@ -101,32 +108,32 @@ function AppContent() {
 
   if (!user) {
     return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <Card>
-          <CardContent className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4">Sign In Required</h2>
-            <p className="text-muted-foreground mb-6">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-8 max-w-md mx-auto px-4">
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-4">Sign In Required</h2>
+            <p className="text-gray-300 text-lg">
               Please sign in with your Google account to access the student reports.
             </p>
-            {googleLoaded ? (
-              <div 
-                id="g_id_signin"
-                data-type="standard"
-                data-size="large"
-                data-theme="outline"
-                data-text="sign_in_with"
-                data-shape="rectangular"
-                data-logo_alignment="left"
-                className="flex justify-center"
-              />
-            ) : (
-              <div className="flex items-center justify-center">
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                <span>Loading Google Sign-In...</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+          {googleLoaded ? (
+            <div 
+              id="g_id_signin"
+              data-type="standard"
+              data-size="large"
+              data-theme="outline"
+              data-text="sign_in_with"
+              data-shape="rectangular"
+              data-logo_alignment="left"
+              className="flex justify-center"
+            />
+          ) : (
+            <div className="flex items-center justify-center text-white">
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              <span>Loading Google Sign-In...</span>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
