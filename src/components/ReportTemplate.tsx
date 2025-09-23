@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { jsPDF } from 'jspdf';
-import { svg2pdf } from 'svg2pdf.js';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
 import nsalogoPng from '@/assets/NSALogo.png?url';
 
@@ -146,24 +144,6 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
     processSvgTemplate();
   }, [studentName, classLevel, classLocation, comments, teacher, date, artwork]);
 
-  const generatePDF = async () => {
-    if (!svgRef.current) { alert('Error: Could not find SVG element'); return; }
-    try {
-      const svgElement = svgRef.current.querySelector('svg');
-      if (!svgElement) { alert('Error: Could not find SVG element in preview'); return; }
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-      svgElement.setAttribute('width', '595.28');
-      svgElement.setAttribute('height', '841.89');
-      svgElement.setAttribute('viewBox', '0 0 595.28 841.89');
-      await svg2pdf(svgElement, pdf);
-      const fileName = `${studentName.replace(/\s+/g, '_')}_report.pdf`;
-      pdf.save(fileName);
-      alert(`PDF downloaded successfully: ${fileName}`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert(`Error generating PDF: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
 
   return state.isLoading ? (
     <div className="flex items-center justify-center p-8">

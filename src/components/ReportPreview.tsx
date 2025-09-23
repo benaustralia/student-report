@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, Loader2, Download } from 'lucide-react';
@@ -32,7 +31,6 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
 }) => {
   const [teacher, setTeacher] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const reportTemplateRef = useRef<any>(null);
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Loading...';
