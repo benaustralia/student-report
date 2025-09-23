@@ -19,6 +19,7 @@ interface ReportPreviewProps {
   reportData?: ReportData;
   reportText: string;
   artworkUrl?: string | null;
+  isImageUploading?: boolean;
 }
 
 export const ReportPreview: React.FC<ReportPreviewProps> = ({
@@ -26,7 +27,8 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   classData,
   reportData,
   reportText,
-  artworkUrl
+  artworkUrl,
+  isImageUploading = false
 }) => {
   const [teacher, setTeacher] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -59,9 +61,22 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Eye className="h-4 w-4 mr-2" />
-          Preview Report
+        <Button 
+          variant="outline" 
+          size="sm" 
+          disabled={isImageUploading}
+        >
+          {isImageUploading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Uploading Image...
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4 mr-2" />
+              Preview Report
+            </>
+          )}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

@@ -54,7 +54,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
         if (!svgElement) throw new Error('Could not parse SVG template');
         const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
 
-        const addTextElement = (x: number, y: number, text: string, className: string = 'st2') => {
+        const addTextElement = (x: number, y: number, text: string, className: string = 'st5') => {
           const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
           textElement.setAttribute('class', className);
           textElement.setAttribute('transform', `translate(${x} ${y})`);
@@ -62,7 +62,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
           return textElement;
         };
 
-        const addWrappedTextElement = (x: number, y: number, text: string, className: string = 'st2', lineHeight: number = 20) => {
+        const addWrappedTextElement = (x: number, y: number, text: string, className: string = 'st5', lineHeight: number = 20) => {
           const wrappedLines = wrapText(text, 55);
           const textElements: SVGTextElement[] = [];
           wrappedLines.forEach((line, index) => {
@@ -83,14 +83,15 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
           { x: 327.71, y: 745.52, text: date }
         ];
 
-        svgClone.querySelectorAll('text.st2').forEach(text => {
-          if (text.textContent && /^[1256]$/.test(text.textContent.trim())) text.remove();
+        // Remove all numerical markers (1-6) from both st1 and st2 classes
+        svgClone.querySelectorAll('text.st1, text.st2').forEach(text => {
+          if (text.textContent && /^[123456]$/.test(text.textContent.trim())) text.remove();
         });
 
-        textElements.forEach(({ x, y, text }) => svgClone.appendChild(addTextElement(x, y, text, 'st2')));
+        textElements.forEach(({ x, y, text }) => svgClone.appendChild(addTextElement(x, y, text, 'st5')));
 
         if (comments?.trim()) {
-          addWrappedTextElement(179.27, 590.33, comments, 'st2', 20).forEach(element => svgClone.appendChild(element));
+          addWrappedTextElement(179.27, 590.33, comments, 'st5', 20).forEach(element => svgClone.appendChild(element));
         }
 
         if (artwork) {

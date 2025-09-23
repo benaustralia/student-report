@@ -216,6 +216,12 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     maxSize={5}
                     acceptedTypes={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
                   />
+                  {imageUpload.uploading && (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading image... Please wait before previewing report.
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="report">Report</Label>
@@ -259,7 +265,8 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     classData={classData}
                     reportData={state.reports.length > 0 ? state.reports[0] : undefined}
                     reportText={state.reportText}
-                    artworkUrl={imageUpload.preview}
+                    artworkUrl={imageUpload.uploading ? null : imageUpload.currentImageUrl}
+                    isImageUploading={imageUpload.uploading}
                   />
                 </div>
               </div>
