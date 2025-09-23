@@ -35,8 +35,8 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Loading...';
-  const date = reportData?.createdAt 
-    ? new Date(reportData.createdAt).toLocaleDateString()
+  const date = reportData?.updatedAt 
+    ? new Date(reportData.updatedAt).toLocaleDateString()
     : new Date().toLocaleDateString();
 
   // Fetch teacher information
