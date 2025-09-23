@@ -48,7 +48,7 @@ service cloud.firestore {
     
     // Students collection - authenticated users can access all students
     match /students/{studentId} {
-      allow read, write: if request.auth != null;
+      allow read, write, delete: if request.auth != null;
     }
     
     // Admin users collection - allow authenticated users to read for admin checks, but only admins can write

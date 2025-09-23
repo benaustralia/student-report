@@ -61,12 +61,13 @@ function AppContent() {
           callback: handleCredentialResponse,
         });
         
-        // Try multiple times to render the button
+        // Try to render the button with limited retries
+        let retryCount = 0;
+        const maxRetries = 10;
+        
         const renderButton = () => {
           const buttonElement = document.getElementById('g_id_signin');
-          console.log('Looking for button element:', buttonElement);
           if (buttonElement && window.google.accounts.id) {
-            console.log('Rendering Google Sign-In button...');
             try {
               window.google.accounts.id.renderButton(buttonElement, {
                 type: 'standard',
@@ -80,9 +81,11 @@ function AppContent() {
             } catch (renderError) {
               console.error('Error rendering button:', renderError);
             }
-          } else {
-            console.log('Button element not found, retrying...');
+          } else if (retryCount < maxRetries) {
+            retryCount++;
             setTimeout(renderButton, 500);
+          } else {
+            console.warn('Failed to render Google Sign-In button after maximum retries');
           }
         };
         

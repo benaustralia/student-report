@@ -1,5 +1,5 @@
 import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider } from 'firebase/auth';
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, deleteField, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, deleteField, writeBatch, setDoc, getDoc, enableNetwork, disableNetwork } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../config/firebase';
 import type { Class, Student, ReportData } from '../types';
 
@@ -14,10 +14,15 @@ const createDoc = async (collectionName: string, data: any, customId?: string) =
 };
 const getDocsByQuery = async <T>(collectionName: string, conditions: [string, any, any][] = []): Promise<T[]> => {
   const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
-  return (await getDocs(q)).docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+  const snapshot = await getDocs(q);
+  
+  // Always use Firestore document ID as the single source of truth
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
 };
 const updateDocById = async (collectionName: string, id: string, updates: any) => await updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
-const deleteDocById = async (collectionName: string, id: string) => await deleteDoc(doc(db, collectionName, id));
+const deleteDocById = async (collectionName: string, id: string) => {
+  return await deleteDoc(doc(db, collectionName, id));
+};
 
 export const signInWithGoogle = async (credential?: string) => {
   if (credential) {
@@ -82,7 +87,25 @@ export const getUserDisplayName = async (email: string): Promise<string | null> 
 };
 export const getAllUsers = async (): Promise<any[]> => await getDocsByQuery<any>('adminUsers').catch(() => []);
 export const getAllClasses = async (): Promise<Class[]> => await getDocsByQuery<Class>('classes').catch(() => []);
-export const getAllStudents = async (): Promise<Student[]> => await getDocsByQuery<Student>('students').catch(() => []);
+export const getAllStudents = async (): Promise<Student[]> => {
+  return await getDocsByQuery<Student>('students').catch(() => []);
+};
+
+// Force refresh function to clear cache and get fresh data from Firestore
+export const forceRefreshStudents = async (): Promise<Student[]> => {
+  try {
+    // Temporarily disable network to clear cache
+    await disableNetwork(db);
+    await enableNetwork(db);
+    
+    // Fetch fresh data from Firestore (single source of truth)
+    return await getDocsByQuery<Student>('students').catch(() => []);
+  } catch (error) {
+    console.error('Error refreshing students data:', error);
+    // Fallback to regular fetch
+    return await getAllStudents();
+  }
+};
 export const getAllTeachers = async (): Promise<any[]> => await getDocsByQuery<any>('teachers').catch(() => []);
 export const isUserWhitelisted = async (email: string): Promise<boolean> => (await getDocsByQuery('whitelistedUsers', [['email', '==', email]])).length > 0;
 
@@ -115,6 +138,17 @@ export const importStudents = async (studentsData: any[]): Promise<void> => {
     const studentData = { ...student, classId: classId || 'unknown', firstName: student.firstName, lastName: student.lastName };
     const studentId = `${student.firstName}-${student.lastName}-${classId?.split('-')[0] || 'unknown'}`;
     await createDoc('students', studentData, studentId);
+  }));
+};
+
+export const importTeachers = async (teachersData: any[]): Promise<void> => {
+  teachersData.forEach(teacher => { 
+    if (!teacher.firstName || !teacher.lastName || !teacher.email) 
+      throw new Error(`Invalid teacher data: ${JSON.stringify(teacher)}`); 
+  });
+  await Promise.all(teachersData.map(async teacher => {
+    const teacherId = `${teacher.firstName}-${teacher.lastName}-${teacher.email.split('@')[0]}`;
+    await createDoc('teachers', teacher, teacherId);
   }));
 };
 
@@ -243,6 +277,15 @@ export const updateStudent = async (studentId: string, updates: any): Promise<vo
 export const deleteStudent = async (studentId: string): Promise<void> => {
   await deleteDocById('students', studentId);
 };
+
+export const updateTeacher = async (teacherId: string, updates: any): Promise<void> => {
+  await updateDocById('teachers', teacherId, updates);
+};
+
+export const deleteTeacher = async (teacherId: string): Promise<void> => {
+  await deleteDocById('teachers', teacherId);
+};
+
 export const importReports = async (reportsData: any[]): Promise<void> => {
   const [students, classes] = await Promise.all([getAllStudents(), getAllClasses()]);
   await Promise.all(reportsData.map(async report => {

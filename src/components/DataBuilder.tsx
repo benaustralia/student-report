@@ -7,34 +7,34 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
 import { Plus, CheckCircle, Users, BookOpen, GraduationCap } from 'lucide-react';
-import { importUsers, importClasses, importStudents, getAllUsers, getAllClasses, getAllStudents, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, migrateToCustomIds } from '@/services/firebaseService';
+import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher } from '@/services/firebaseService';
 import { StatisticsBar } from './StatisticsBar';
 
-type DataType = 'users' | 'classes' | 'students';
+type DataType = 'users' | 'classes' | 'students' | 'teachers';
 type DataItem = Record<string, any>;
 
 const configs = {
-  users: { icon: Users, title: 'Users', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: false } },
+  users: { icon: Users, title: 'Admins', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: false } },
   classes: { icon: BookOpen, title: 'Classes', fields: ['classLevel', 'classDay', 'classTime', 'classLocation', 'teacherEmail'], empty: { classLevel: '', classDay: '', classTime: '', classLocation: '', teacherEmail: '' } },
-  students: { icon: GraduationCap, title: 'Students', fields: ['firstName', 'lastName', 'classId'], empty: { firstName: '', lastName: '', classId: '' } }
+  students: { icon: GraduationCap, title: 'Students', fields: ['firstName', 'lastName', 'classId'], empty: { firstName: '', lastName: '', classId: '' } },
+  teachers: { icon: Users, title: 'Teachers', fields: ['firstName', 'lastName', 'email'], empty: { firstName: '', lastName: '', email: '' } }
 };
 
-const importFns = { users: importUsers, classes: importClasses, students: importStudents };
-const updateFns = { users: updateUser, classes: updateClass, students: updateStudent };
-const deleteFns = { users: deleteUser, classes: deleteClass, students: deleteStudent };
+const importFns = { users: importUsers, classes: importClasses, students: importStudents, teachers: importTeachers };
+const updateFns = { users: updateUser, classes: updateClass, students: updateStudent, teachers: updateTeacher };
+const deleteFns = { users: deleteUser, classes: deleteClass, students: deleteStudent, teachers: deleteTeacher };
 
 export const DataBuilder = () => {
-  const [data, setData] = useState<Record<DataType, DataItem[]>>({ users: [], classes: [], students: [] });
-  const [newItems, setNewItems] = useState<Record<DataType, DataItem[]>>({ users: [], classes: [], students: [] });
+  const [data, setData] = useState<Record<DataType, DataItem[]>>({ users: [], classes: [], students: [], teachers: [] });
+  const [newItems, setNewItems] = useState<Record<DataType, DataItem[]>>({ users: [], classes: [], students: [], teachers: [] });
   const [editing, setEditing] = useState(new Set<string>());
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ users: true, classes: true, students: true });
-  const [isMigrating, setIsMigrating] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ users: true, classes: true, students: true, teachers: true });
 
   useEffect(() => {
-    Promise.all([getAllUsers(), getAllClasses(), getAllStudents()])
-      .then(([users, classes, students]) => setData({ users, classes, students }))
+    Promise.all([getAllUsers(), getAllClasses(), getAllStudents(), getAllTeachers()])
+      .then(([users, classes, students, teachers]) => setData({ users, classes, students, teachers }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -95,20 +95,6 @@ export const DataBuilder = () => {
     }
   };
 
-  const runMigration = async () => {
-    setIsMigrating(true);
-    try {
-      await migrateToCustomIds();
-      setMessage('Migration completed! Refreshing data...');
-      // Refresh data after migration
-      const [users, classes, students] = await Promise.all([getAllUsers(), getAllClasses(), getAllStudents()]);
-      setData({ users, classes, students });
-    } catch (error: any) {
-      setMessage(`Migration failed: ${error.message}`);
-    } finally {
-      setIsMigrating(false);
-    }
-  };
 
   const renderField = (type: DataType, item: DataItem, field: string, index: number, isNew = false) => {
     const value = item[field] || '';
@@ -157,7 +143,7 @@ export const DataBuilder = () => {
 
   const statistics = { 
     adminCount: data.users.filter(u => u.isAdmin).length, 
-    teacherCount: data.users.filter(u => !u.isAdmin).length,
+    teacherCount: data.teachers.length,
     classCount: data.classes.length, 
     studentCount: data.students.length 
   };
@@ -167,16 +153,6 @@ export const DataBuilder = () => {
       <StatisticsBar {...statistics} loading={loading} />
       {message && <Alert><CheckCircle className="h-4 w-4" /><AlertDescription>{message}</AlertDescription></Alert>}
       
-      <div className="flex gap-2">
-        <Button 
-          onClick={runMigration} 
-          disabled={isMigrating}
-          variant="outline"
-          className="bg-blue-50 text-blue-700 hover:bg-blue-100"
-        >
-          {isMigrating ? 'Migrating...' : 'Migrate to Custom IDs'}
-        </Button>
-      </div>
       
       {Object.entries(configs).map(([type, config]) => {
         const Icon = config.icon;
@@ -192,18 +168,12 @@ export const DataBuilder = () => {
             onToggle={(open) => setOpenSections(prev => ({ ...prev, [dataType]: open }))}
           >
               {data[dataType].map((item: DataItem, index: number) => {
-                // Debug: log duplicate IDs
-                if (dataType === 'students' && item.id) {
-                  const duplicateCount = data[dataType].filter(i => i.id === item.id).length;
-                  if (duplicateCount > 1) {
-                    console.warn(`Duplicate student ID found: ${item.id} (${duplicateCount} times)`);
-                  }
-                }
 
                 const getTitle = () => {
                   if (dataType === 'users') return `${item.firstName} ${item.lastName}`;
                   if (dataType === 'classes') return `${item.classDay} ${item.classTime}`;
                   if (dataType === 'students') return `${item.firstName} ${item.lastName}`;
+                  if (dataType === 'teachers') return `${item.firstName} ${item.lastName}`;
                   return item.id;
                 };
                 
@@ -211,6 +181,7 @@ export const DataBuilder = () => {
                   if (dataType === 'users') return item.email;
                   if (dataType === 'classes') return `${item.classLocation} • ${item.teacherEmail}`;
                   if (dataType === 'students') return `Class: ${item.classId?.slice(0, 8)}...`;
+                  if (dataType === 'teachers') return item.email;
                   return '';
                 };
 

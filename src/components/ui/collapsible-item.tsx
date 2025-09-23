@@ -58,7 +58,13 @@ export const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
             <Button size="sm" variant="outline" onClick={onEdit}>
               <Edit className="h-4 w-4" />
             </Button>
-            <Button size="sm" variant="destructive" onClick={onDelete}>
+            <Button 
+              size="sm" 
+              variant="destructive" 
+              onClick={onDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
