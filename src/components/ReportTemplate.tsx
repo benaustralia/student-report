@@ -58,6 +58,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
           const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
           textElement.setAttribute('class', className);
           textElement.setAttribute('transform', `translate(${x} ${y})`);
+          textElement.setAttribute('font-family', 'Arial, sans-serif');
           textElement.textContent = text;
           return textElement;
         };
@@ -69,6 +70,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
             const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
             textElement.setAttribute('class', className);
             textElement.setAttribute('transform', `translate(${x} ${y + (index * lineHeight)})`);
+            textElement.setAttribute('font-family', 'Arial, sans-serif');
             textElement.textContent = line;
             textElements.push(textElement);
           });
@@ -99,8 +101,8 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
             const dataUrl = await convertUrlToDataUrl(artwork);
             const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
             imageElement.setAttribute('href', dataUrl);
-            imageElement.setAttribute('x', ((595.28 - 400) / 2).toString());
-            imageElement.setAttribute('y', (278.45 + 30).toString());
+            imageElement.setAttribute('x', '97.64'); // Centered: (595.28 - 400) / 2
+            imageElement.setAttribute('y', '308.45'); // Below class location
             imageElement.setAttribute('width', '400');
             imageElement.setAttribute('height', '250');
             imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
@@ -122,7 +124,13 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
         svgClone.setAttribute('viewBox', '0 0 595.28 841.89');
 
         const styleElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
-        styleElement.textContent = 'text { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; color: black !important; } .st2 { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; }';
+        styleElement.textContent = `
+          text { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; color: black !important; } 
+          .st2 { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; }
+          @media (max-width: 768px) {
+            svg { max-width: 100%; height: auto; }
+          }
+        `;
         svgClone.appendChild(styleElement);
 
         setState(prev => ({ ...prev, processedSvg: new XMLSerializer().serializeToString(svgClone) }));
@@ -163,12 +171,18 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
       <span className="ml-2">Loading report template...</span>
     </div>
   ) : (
-    <div className="w-full max-w-4xl mx-auto bg-white">
-      <div className="mb-4 flex justify-end">
-        <button onClick={generatePDF} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Download PDF</button>
-      </div>
+    <div className="w-full bg-white">
       <div className="border rounded-lg overflow-hidden shadow-lg">
-        <div ref={svgRef} className="w-full" dangerouslySetInnerHTML={{ __html: state.processedSvg }} />
+        <div 
+          ref={svgRef} 
+          className="w-full overflow-auto"
+          style={{ 
+            maxHeight: 'calc(95vh - 80px)',
+            display: 'flex',
+            justifyContent: 'center'
+          }}
+          dangerouslySetInnerHTML={{ __html: state.processedSvg }} 
+        />
       </div>
     </div>
   );
