@@ -8,19 +8,25 @@ import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRi
 import { TypographyH3, TypographySmall } from '@/components/ui/typography';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
-import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin } from '@/services/firebaseService';
+import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts } from '@/services/firebaseService';
 import type { User } from 'firebase/auth';
 import type { Class, Student } from '@/types';
 
 interface AdminPanelProps { user: User; }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
-  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as any[], classes: [] as Class[], students: [] as Student[], teachers: [] as any[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true } });
+  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as any[], classes: [] as Class[], students: [] as Student[], teachers: [] as any[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }> });
 
   const loadData = async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      const [adminUsers, teachers, classes, students] = await Promise.all([getAllUsers().catch(() => []), getAllTeachers().catch(() => []), getAllClasses().catch(() => []), getAllStudents().catch(() => [])]);
+      const [adminUsers, teachers, classes, students, teacherReportStats] = await Promise.all([
+        getAllUsers().catch(() => []), 
+        getAllTeachers().catch(() => []), 
+        getAllClasses().catch(() => []), 
+        getAllStudents().catch(() => []),
+        getTeacherReportCounts().catch(() => ({}))
+      ]);
       const userMap = new Map();
       teachers.forEach(t => t.email && userMap.set(t.email, { ...t, isAdmin: t.isAdmin || false }));
       adminUsers.forEach(a => a.email && userMap.set(a.email, { ...a, isAdmin: a.isAdmin || false }));
@@ -28,7 +34,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
       const teacherMap = new Map();
       teachers.forEach(t => t.email && teacherMap.set(t.email, t));
       const uniqueTeachers = Array.from(teacherMap.values());
-      setState(prev => ({ ...prev, data: { users: allUsers, classes, students, teachers: uniqueTeachers, teacherCount: uniqueTeachers.length, adminCount: allUsers.filter(u => u.isAdmin).length }, loading: false }));
+      setState(prev => ({ 
+        ...prev, 
+        data: { users: allUsers, classes, students, teachers: uniqueTeachers, teacherCount: uniqueTeachers.length, adminCount: allUsers.filter(u => u.isAdmin).length }, 
+        teacherReportStats,
+        loading: false 
+      }));
     } catch (err) { setState(prev => ({ ...prev, loading: false })); }
   };
 
@@ -54,6 +65,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
     <div className="flex flex-col sm:flex-row gap-4"><Button onClick={() => setState(prev => ({ ...prev, showDataBuilder: !prev.showDataBuilder }))} variant={state.showDataBuilder ? "default" : "outline"}><Settings className="h-4 w-4 mr-2" />{state.showDataBuilder ? 'Hide' : 'Show'} Data Builder</Button></div>
     {state.showDataBuilder && <DataBuilder />}
     {!state.showDataBuilder && <StatisticsBar adminCount={state.data.adminCount} teacherCount={state.data.teacherCount} classCount={state.data.classes.length} studentCount={state.data.students.length} loading={state.loading} />}
+    
     {!state.showDataBuilder && (state.data.adminCount > 0 || state.data.teacherCount > 0) && (
       <Card><Collapsible open={state.openSections.users} onOpenChange={() => setState(prev => ({ ...prev, openSections: { ...prev.openSections, users: !prev.openSections.users } }))}>
         <CollapsibleTrigger asChild><CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
@@ -66,30 +78,51 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
           </div>
         </CardHeader></CollapsibleTrigger>
         <CollapsibleContent><CardContent className="space-y-2">
-          {state.data.users.filter(u => u.isAdmin).map((u, i) => (
-            <Card key={`admin-${i}`} className="p-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                  <div className="flex flex-wrap gap-1"><Badge variant="default" className="text-xs">Admin</Badge>{state.data.teachers.some(t => t.email === u.email) && <Badge variant="outline" className="text-xs">Teacher</Badge>}</div>
-                  <div className="min-w-0 flex-1">{u.firstName && u.lastName ? (
-                    <div className="space-y-1">
-                      <div className="font-medium truncate">{u.firstName} {u.lastName}</div>
-                      <TypographySmall className="text-muted-foreground truncate">{u.email}</TypographySmall>
+          {state.data.users.filter(u => u.isAdmin).map((u, i) => {
+            const isAlsoTeacher = state.data.teachers.some(t => t.email === u.email);
+            const teacherStats = isAlsoTeacher ? state.teacherReportStats[u.email] : null;
+            return (
+              <Card key={`admin-${i}`} className="p-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="flex flex-wrap gap-1"><Badge variant="default" className="text-xs">Admin</Badge>{isAlsoTeacher && <Badge variant="outline" className="text-xs">Teacher</Badge>}</div>
+                    <div className="min-w-0 flex-1">{u.firstName && u.lastName ? (
+                      <div className="space-y-1">
+                        <div className="font-medium truncate">{u.firstName} {u.lastName}</div>
+                        <TypographySmall className="text-muted-foreground truncate">{u.email}</TypographySmall>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="font-medium text-warning truncate">⚠️ {u.email}</div>
+                        <TypographySmall className="text-warning/80">Missing name data</TypographySmall>
+                      </div>
+                    )}</div>
+                  </div>
+                  {teacherStats && (
+                    <div className="text-center text-sm">
+                      <div className={`font-semibold text-lg ${
+                        teacherStats.studentCount === 0 
+                          ? 'text-muted-foreground' 
+                          : teacherStats.reportCount === teacherStats.studentCount 
+                            ? 'text-green-600 dark:text-green-400' 
+                            : teacherStats.reportCount / teacherStats.studentCount >= 0.75 
+                              ? 'text-yellow-600 dark:text-yellow-400' 
+                              : 'text-red-600 dark:text-red-400'
+                      }`}>
+                        {teacherStats.reportCount}/{teacherStats.studentCount}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-medium">Complete</div>
                     </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className="font-medium text-warning truncate">⚠️ {u.email}</div>
-                      <TypographySmall className="text-warning/80">Missing name data</TypographySmall>
-                    </div>
-                  )}</div>
+                  )}
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
           {state.data.teachers.map((t, i) => {
             const isAlsoAdmin = state.data.users.some(u => u.email === t.email && u.isAdmin);
             if (isAlsoAdmin) return null;
             const classCount = state.data.classes.filter(c => c.teacherEmail === t.email).length;
+            const teacherStats = state.teacherReportStats[t.email];
             return (
               <Card key={`teacher-${i}`} className="p-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -107,7 +140,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
                       </div>
                     )}</div>
                   </div>
-                  {classCount > 0 && <div className="flex-shrink-0"><Badge variant="secondary" className="text-xs">{classCount} {classCount === 1 ? 'class' : 'classes'}</Badge></div>}
+                  <div className="flex items-center gap-2">
+                    {teacherStats && (
+                      <div className="text-center text-sm">
+                        <div className={`font-semibold text-lg ${
+                          teacherStats.studentCount === 0 
+                            ? 'text-muted-foreground' 
+                            : teacherStats.reportCount === teacherStats.studentCount 
+                              ? 'text-green-600 dark:text-green-400' 
+                              : teacherStats.reportCount / teacherStats.studentCount >= 0.75 
+                                ? 'text-yellow-600 dark:text-yellow-400' 
+                                : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {teacherStats.reportCount}/{teacherStats.studentCount}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-medium">Complete</div>
+                      </div>
+                    )}
+                    {classCount > 0 && <div className="flex-shrink-0"><Badge variant="secondary" className="text-xs">{classCount} {classCount === 1 ? 'class' : 'classes'}</Badge></div>}
+                  </div>
                 </div>
               </Card>
             );

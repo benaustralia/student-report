@@ -322,6 +322,56 @@ export const getTeacherUserCount = async (): Promise<number> => {
 };
 export const getTeacherByEmail = async (email: string): Promise<any | null> => await getAdminUserByEmail(email);
 
+// Get report counts for all teachers (admin only)
+export const getTeacherReportCounts = async (): Promise<Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>> => {
+  const [allReports, allClasses, allStudents, allTeachers] = await Promise.all([
+    getAllReports(),
+    getAllClasses(),
+    getAllStudents(),
+    getAllTeachers()
+  ]);
+
+  const teacherMap = new Map(allTeachers.map(teacher => [teacher.email, teacher]));
+  const classMap = new Map(allClasses.map(cls => [cls.id, cls]));
+  
+  // Count reports by teacher email
+  const reportCounts: Record<string, number> = {};
+  allReports.forEach(report => {
+    const classData = classMap.get(report.classId);
+    if (classData) {
+      reportCounts[classData.teacherEmail] = (reportCounts[classData.teacherEmail] || 0) + 1;
+    }
+  });
+
+  // Count students by teacher email
+  const studentCounts: Record<string, number> = {};
+  allStudents.forEach(student => {
+    const classData = classMap.get(student.classId);
+    if (classData) {
+      studentCounts[classData.teacherEmail] = (studentCounts[classData.teacherEmail] || 0) + 1;
+    }
+  });
+
+  // Combine data
+  const result: Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }> = {};
+  
+  // Include all teachers (even those with 0 reports)
+  allClasses.forEach(cls => {
+    const teacherEmail = cls.teacherEmail;
+    if (!result[teacherEmail]) {
+      const teacher = teacherMap.get(teacherEmail);
+      result[teacherEmail] = {
+        teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : teacherEmail,
+        teacherEmail,
+        reportCount: reportCounts[teacherEmail] || 0,
+        studentCount: studentCounts[teacherEmail] || 0
+      };
+    }
+  });
+
+  return result;
+};
+
 export const migrateDataStructure = async (): Promise<{ classesUpdated: number; reportsUpdated: number }> => {
   const [classesSnapshot, reportsSnapshot] = await Promise.all([getDocs(collection(db, 'classes')), getDocs(collection(db, 'reports'))]);
   const classesBatch = writeBatch(db);

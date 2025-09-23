@@ -1,253 +1,230 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
-import { Plus, CheckCircle, Users, BookOpen, GraduationCap } from 'lucide-react';
+import { Plus, CheckCircle, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight } from 'lucide-react';
 import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher } from '@/services/firebaseService';
 import { StatisticsBar } from './StatisticsBar';
 
 type DataType = 'users' | 'classes' | 'students' | 'teachers';
-type DataItem = Record<string, any>;
+type ItemType = { id?: string; [key: string]: any };
 
-const configs = {
+const CONFIG = {
   users: { icon: Users, title: 'Admins', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: false } },
   classes: { icon: BookOpen, title: 'Classes', fields: ['classLevel', 'classDay', 'classTime', 'classLocation', 'teacherEmail'], empty: { classLevel: '', classDay: '', classTime: '', classLocation: '', teacherEmail: '' } },
   students: { icon: GraduationCap, title: 'Students', fields: ['firstName', 'lastName', 'classId'], empty: { firstName: '', lastName: '', classId: '' } },
   teachers: { icon: Users, title: 'Teachers', fields: ['firstName', 'lastName', 'email'], empty: { firstName: '', lastName: '', email: '' } }
 };
 
-const importFns = { users: importUsers, classes: importClasses, students: importStudents, teachers: importTeachers };
-const updateFns = { users: updateUser, classes: updateClass, students: updateStudent, teachers: updateTeacher };
-const deleteFns = { users: deleteUser, classes: deleteClass, students: deleteStudent, teachers: deleteTeacher };
+const OPS = { 
+  import: { users: importUsers, classes: importClasses, students: importStudents, teachers: importTeachers }, 
+  update: { users: updateUser, classes: updateClass, students: updateStudent, teachers: updateTeacher }, 
+  delete: { users: deleteUser, classes: deleteClass, students: deleteStudent, teachers: deleteTeacher }, 
+  getAll: [getAllUsers, getAllClasses, getAllStudents, getAllTeachers] 
+};
 
 export const DataBuilder = () => {
-  const [data, setData] = useState<Record<DataType, DataItem[]>>({ users: [], classes: [], students: [], teachers: [] });
-  const [newItems, setNewItems] = useState<Record<DataType, DataItem[]>>({ users: [], classes: [], students: [], teachers: [] });
-  const [editing, setEditing] = useState(new Set<string>());
+  const [data, setData] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [] });
+  const [newItems, setNewItems] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [] });
+  const [editing, setEditing] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ users: true, classes: true, students: true, teachers: true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    Promise.all([getAllUsers(), getAllClasses(), getAllStudents(), getAllTeachers()])
-      .then(([users, classes, students, teachers]) => setData({ users, classes, students, teachers }))
+    Promise.all(OPS.getAll.map(fn => fn()))
+      .then(([users, classes, students, teachers]) => setData({ users: users || [], classes: classes || [], students: students || [], teachers: teachers || [] }))
+      .catch(() => setData({ users: [], classes: [], students: [], teachers: [] }))
       .finally(() => setLoading(false));
   }, []);
 
-  const updateNewItem = (type: DataType, index: number, field: string, value: any) => 
-    setNewItems(prev => ({ ...prev, [type]: prev[type].map((item, i) => i === index ? { ...item, [field]: value } : item) }));
-
-  const updateExistingItem = (type: DataType, item: DataItem, field: string, value: any) => 
-    setData(prev => ({ ...prev, [type]: prev[type].map(i => i.id === item.id ? { ...i, [field]: value } : i) }));
-
-  const addNew = (type: DataType) => setNewItems(prev => ({ ...prev, [type]: [...prev[type], { ...configs[type].empty }] }));
-  
-  const removeNew = (type: DataType, index: number) => setNewItems(prev => ({ ...prev, [type]: prev[type].filter((_, i) => i !== index) }));
-
-  const submitNew = async (type: DataType) => {
-    if (!newItems[type].length) return;
-    try {
-      await importFns[type](newItems[type]);
-      setNewItems(prev => ({ ...prev, [type]: [] }));
-      setMessage(`Successfully imported ${newItems[type].length} ${type}!`);
-      
-      // Refresh data after successful import
-      const [users, classes, students] = await Promise.all([getAllUsers(), getAllClasses(), getAllStudents()]);
-      setData({ users, classes, students });
-    } catch (error: any) {
-      setMessage(`Failed to import ${type}: ${error.message}`);
-    }
+  const updateItem = (type: DataType, index: number | string, field: string, value: any, isNew = false) => {
+    const setter = isNew ? setNewItems : setData;
+    setter((prev: Record<DataType, ItemType[]>) => ({
+      ...prev,
+      [type]: prev[type].map((item, i) => (isNew ? i === index : item.id === index) ? { ...item, [field]: value } : item),
+    }));
   };
 
-  const saveExisting = async (type: DataType, item: DataItem) => {
+  const handleAction = async (action: 'add' | 'remove' | 'submit' | 'update' | 'delete', type: DataType, item: ItemType | null, index: number) => {
     try {
-      console.log(`Updating ${type} with ID: ${item.id}`, item);
-      
-      // Validate classId if updating a student
-      if (type === 'students' && item.classId) {
-        const classExists = data.classes.some(cls => cls.id === item.classId);
-        if (!classExists) {
-          setMessage(`Error: Selected class does not exist. Please select a valid class.`);
-          return;
-        }
+      if (action === 'add') setNewItems(prev => ({ ...prev, [type]: [...prev[type], { ...CONFIG[type].empty }] }));
+      else if (action === 'remove') setNewItems(prev => ({ ...prev, [type]: prev[type].filter((_, i) => i !== index) }));
+      else if (action === 'submit') {
+        await OPS.import[type](newItems[type]);
+        setNewItems(prev => ({ ...prev, [type]: [] }));
+        setMessage(`Imported ${newItems[type].length} ${type}!`);
+        const results = await Promise.all(OPS.getAll.map(fn => fn()));
+        setData({ users: results[0] || [], classes: results[1] || [], students: results[2] || [], teachers: results[3] || [] });
+      } else if (action === 'update' && item?.id) {
+        await OPS.update[type](item.id, item);
+        setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
+        setMessage(`Updated ${type.slice(0, -1)}!`);
+        // Refresh data after update to ensure UI reflects changes
+        const results = await Promise.all(OPS.getAll.map(fn => fn()));
+        setData({ users: results[0] || [], classes: results[1] || [], students: results[2] || [], teachers: results[3] || [] });
+      } else if (action === 'delete' && item?.id) {
+        await OPS.delete[type](item.id);
+        setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
+        setMessage(`Deleted ${type.slice(0, -1)}!`);
       }
-      
-      await updateFns[type](item.id, item);
-      setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
-      setMessage(`Successfully updated ${type.slice(0, -1)}!`);
-    } catch (error: any) {
-      console.error(`Error updating ${type}:`, error);
-      setMessage(`Failed to update: ${error.message}`);
-    }
+    } catch (error: any) { setMessage(`Failed: ${error.message}`); }
   };
 
-  const deleteExisting = async (type: DataType, item: DataItem) => {
-    try {
-      await deleteFns[type](item.id);
-      setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
-      setMessage(`Successfully deleted ${type.slice(0, -1)}!`);
-    } catch (error: any) {
-      setMessage(`Failed to delete: ${error.message}`);
-    }
+  const renderField = (type: DataType, item: ItemType, field: string, index: number, isNew: boolean) => 
+    field === 'classId' && type === 'students' ? (
+      <Select 
+        value={item[field] || ''} 
+        onValueChange={async (v) => {
+          // Update local state first
+          updateItem(type, isNew ? index : (item.id || ''), field, v, isNew);
+          
+          // If not a new item, automatically save to Firebase
+          if (!isNew && item.id) {
+            const updatedItem = { ...item, [field]: v };
+            try {
+              console.log('Auto-saving class assignment:', { type, updatedItem });
+              await OPS.update[type](item.id, updatedItem);
+              setMessage(`Student assigned to class!`);
+              // Refresh data to ensure UI reflects the change
+              const results = await Promise.all(OPS.getAll.map(fn => fn()));
+              setData({ users: results[0] || [], classes: results[1] || [], students: results[2] || [], teachers: results[3] || [] });
+            } catch (error: any) {
+              console.error('Failed to save class assignment:', error);
+              setMessage(`Failed to assign student: ${error.message}`);
+            }
+          }
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select class" />
+        </SelectTrigger>
+        <SelectContent>
+          {data.classes.map(cls => (
+            <SelectItem key={cls.id} value={cls.id || ''}>
+              {cls.classDay} {cls.classTime} - {cls.classLevel}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ) : (
+      <Input
+        value={item[field] || ''}
+        onChange={e =>
+          updateItem(
+            type,
+            isNew ? index : item.id || '',
+            field,
+            e.target.value,
+            isNew
+          )
+        }
+      />
+    );
+
+  const groupByTeacher = (items: ItemType[], getTeacher: (item: ItemType) => string, type: DataType) => 
+    items.reduce((groups: Record<string, ItemType[]>, item: ItemType) => {
+      const teacher = getTeacher(item) || (type === 'students' ? 'No Class Assigned' : 'No Teacher');
+      (groups[teacher] = groups[teacher] || []).push(item);
+      return groups;
+    }, {});
+
+  const getTeacherName = (email: string) => {
+    const teacher = data.teachers.find(t => t.email === email);
+    return teacher ? `${teacher.firstName} ${teacher.lastName}` : email;
   };
 
+  const renderGroupedItems = (type: DataType, items: ItemType[], config: any) => 
+    Object.entries(groupByTeacher(items, item => type === 'students' ? data.classes.find(c => c.id === item.classId)?.teacherEmail || '' : item.teacherEmail || '', type))
+      .map(([teacher, groupItems]: [string, ItemType[]]) => (
+        <div key={teacher} className="mb-4">
+          <div className="flex items-center cursor-pointer p-2 bg-gray-100 dark:bg-gray-800 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
+            {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
+            <span className="font-medium">{getTeacherName(teacher)}</span>
+            <span className="ml-2 text-sm text-gray-500">({groupItems.length})</span>
+          </div>
+          {openGroups[`${type}-${teacher}`] && (
+            <div className="ml-6 space-y-2">
+              {groupItems.map(item => (
+                <CollapsibleItem
+                  key={item.id}
+                  title={
+                    type === 'students'
+                      ? `${item.firstName} ${item.lastName}`
+                      : `${item.classDay} ${item.classTime}`
+                  }
+                  subtitle={
+                    type === 'students'
+                      ? data.classes.find(c => c.id === item.classId)?.classDay
+                      : item.classLocation
+                  }
+                  isEditing={editing.has(item.id!)}
+                  onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
+                  onSave={() =>
+                    handleAction(
+                      'update',
+                      type,
+                      item,
+                      0
+                    )
+                  }
+                  onCancel={() =>
+                    setEditing(prev =>
+                      new Set([...prev].filter(id => id !== item.id))
+                    )
+                  }
+                  onDelete={() => handleAction('delete', type, item, 0)}
+                >
+                  {editing.has(item.id!) && (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {config.fields.map((field: string) => (
+                        <div key={field}>
+                          <label className="text-sm font-medium">{field}</label>
+                          {renderField(type, item, field, 0, false)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CollapsibleItem>
+              ))}
+            </div>
+          )}
+        </div>
+      ));
 
-  const renderField = (type: DataType, item: DataItem, field: string, index: number, isNew = false) => {
-    const value = item[field] || '';
-    const onChange = isNew ? (e: any) => updateNewItem(type, index, field, e.target.value) : (e: any) => updateExistingItem(type, item, field, e.target.value);
-    
-    if (field === 'isAdmin') {
-      return (
-        <Select value={value ? 'true' : 'false'} onValueChange={(v: string) => isNew ? updateNewItem(type, index, field, v === 'true') : updateExistingItem(type, item, field, v === 'true')}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="true">Admin</SelectItem><SelectItem value="false">Teacher</SelectItem></SelectContent>
-        </Select>
-      );
-    }
-    
-    if (field === 'classId' && type === 'students') {
-      const selectedClass = data.classes.find((cls: DataItem) => cls.id === value);
-      const displayValue = selectedClass ? `${selectedClass.classDay} ${selectedClass.classTime}` : '';
-      
-      return (
-        <Select value={value} onValueChange={(v: string) => isNew ? updateNewItem(type, index, field, v) : updateExistingItem(type, item, field, v)}>
-          <SelectTrigger className="min-w-[200px] bg-background border-input text-foreground">
-            <SelectValue placeholder="Select a class">
-              {displayValue}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent className="bg-slate-900 text-white border-slate-700">
-            {data.classes.map((cls: DataItem) => (
-              <SelectItem 
-                key={cls.id} 
-                value={cls.id}
-                className="text-white hover:bg-slate-700 focus:bg-slate-700"
-              >
-                <div className="flex flex-col">
-                  <span className="font-medium text-white">{cls.classDay} {cls.classTime}</span>
-                  <span className="text-sm text-slate-300">{cls.classLocation}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-    }
-    
-    return <Input value={value} onChange={onChange} />;
-  };
-
-  const statistics = { 
-    adminCount: data.users.filter(u => u.isAdmin).length, 
-    teacherCount: data.teachers.length,
-    classCount: data.classes.length, 
-    studentCount: data.students.length 
-  };
+  const renderFlatItems = (type: DataType, items: ItemType[], config: any) => 
+    items.map(item => (
+      <CollapsibleItem key={item.id} title={`${item.firstName} ${item.lastName}`} subtitle={item.email} isEditing={editing.has(item.id!)} onEdit={() => setEditing(prev => new Set([...prev, item.id!]))} onSave={() => handleAction('update', type, item, 0)} onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))} onDelete={() => handleAction('delete', type, item, 0)}>
+        {editing.has(item.id!) && <div className="grid gap-4 md:grid-cols-2">{config.fields.map((field: string) => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(type, item, field, 0, false)}</div>)}</div>}
+      </CollapsibleItem>
+    ));
 
   return (
     <div className="space-y-6">
-      <StatisticsBar {...statistics} loading={loading} />
+      <StatisticsBar adminCount={data.users.filter(u => u.isAdmin).length} teacherCount={data.teachers.length} classCount={data.classes.length} studentCount={data.students.length} loading={loading} />
       {message && <Alert><CheckCircle className="h-4 w-4" /><AlertDescription>{message}</AlertDescription></Alert>}
       
-      
-      {Object.entries(configs).map(([type, config]) => {
+      {Object.entries(CONFIG).map(([type, config]) => {
         const Icon = config.icon;
         const dataType = type as DataType;
-        const isOpen = openSections[dataType];
+        const items = data[dataType] || [];
         return (
-          <CollapsibleCard
-            key={type}
-            title={config.title}
-            icon={Icon}
-            badge={`${newItems[dataType].length} new | ${data[dataType].length} existing`}
-            isOpen={isOpen}
-            onToggle={(open) => setOpenSections(prev => ({ ...prev, [dataType]: open }))}
-          >
-              {data[dataType].map((item: DataItem, index: number) => {
-
-                const getTitle = () => {
-                  if (dataType === 'users') return `${item.firstName} ${item.lastName}`;
-                  if (dataType === 'classes') return `${item.classDay} ${item.classTime}`;
-                  if (dataType === 'students') return `${item.firstName} ${item.lastName}`;
-                  if (dataType === 'teachers') return `${item.firstName} ${item.lastName}`;
-                  return item.id;
-                };
-                
-                const getSubtitle = () => {
-                  if (dataType === 'users') return item.email;
-                  if (dataType === 'classes') return `${item.classLocation} • ${item.teacherEmail}`;
-                  if (dataType === 'students') return `Class: ${item.classId?.slice(0, 8)}...`;
-                  if (dataType === 'teachers') return item.email;
-                  return '';
-                };
-
-                // Create a truly unique key
-                const uniqueKey = `${dataType}-${item.id || 'no-id'}-${index}-${item.firstName || ''}-${item.lastName || ''}`;
-
-                return (
-                  <CollapsibleItem
-                    key={uniqueKey}
-                    title={getTitle()}
-                    subtitle={getSubtitle()}
-                    isEditing={editing.has(item.id)}
-                    onEdit={() => setEditing(prev => new Set([...prev, item.id]))}
-                    onDelete={() => deleteExisting(dataType, item)}
-                    onSave={editing.has(item.id) ? () => saveExisting(dataType, item) : undefined}
-                    onCancel={editing.has(item.id) ? () => setEditing(prev => new Set([...prev].filter(id => id !== item.id))) : undefined}
-                  >
-                    {editing.has(item.id) && (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {config.fields.map(field => (
-                          <div key={field}><Label>{field}</Label>{renderField(dataType, item, field, 0)}</div>
-                        ))}
-                      </div>
-                    )}
-                  </CollapsibleItem>
-                );
-              })}
-
-              <div className="flex gap-2 flex-wrap">
-                <Button 
-                  onClick={() => addNew(dataType)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New
-                </Button>
+          <CollapsibleCard key={type} title={config.title} icon={Icon} badge={`${newItems[dataType]?.length || 0} new | ${items.length} existing`} isOpen={openSections[dataType]} onToggle={open => setOpenSections(prev => ({ ...prev, [dataType]: open }))}>
+            {['students', 'classes'].includes(dataType) ? renderGroupedItems(dataType, items, config) : renderFlatItems(dataType, items, config)}
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={() => handleAction('add', dataType, null, 0)} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" />Add New</Button>
+              {newItems[dataType]?.length > 0 && <Button onClick={() => handleAction('submit', dataType, null, 0)} className="bg-green-600 hover:bg-green-700 text-white">Submit {newItems[dataType].length} New {config.title}</Button>}
+            </div>
+            {newItems[dataType]?.map((item, index) => (
+              <div key={index} className="p-4 border rounded-lg space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">{config.fields.map(field => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(dataType, item, field, index, true)}</div>)}</div>
+                <Button onClick={() => handleAction('remove', dataType, null, index)} variant="destructive" size="sm">Remove</Button>
               </div>
-
-              {newItems[dataType].map((item: DataItem, index: number) => (
-                <div key={index} className="p-4 border rounded-lg space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {config.fields.map(field => (
-                      <div key={field}><Label>{field}</Label>{renderField(dataType, item, field, index, true)}</div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      onClick={() => removeNew(dataType, index)}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      Remove
-                    </Button>
-                    <Button 
-                      onClick={() => submitNew(dataType)}
-                      variant="default"
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Submit
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            ))}
           </CollapsibleCard>
         );
       })}

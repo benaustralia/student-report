@@ -15,8 +15,9 @@ import type { Student, Class, ReportData } from '@/types';
 interface StudentCardProps { student: Student; classData: Class; isAdmin?: boolean; }
 
 export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData, isAdmin = false }) => {
-  const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false });
+  const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false });
   const hasLoadedRef = useRef(false);
+  const lastSavedTextRef = useRef('');
 
   const imageUpload = useImageUploadV2({
     userId: `students/${student.id}`,
@@ -42,10 +43,13 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       setState(prev => ({ ...prev, reports: reportsData }));
       if (reportsData.length > 0) {
         const latestReport = reportsData[0];
-        setState(prev => ({ ...prev, reportText: latestReport.reportText || '' }));
+        const reportText = latestReport.reportText || '';
+        setState(prev => ({ ...prev, reportText, hasUnsavedChanges: false }));
+        lastSavedTextRef.current = reportText;
         imageUpload.initializeWithUrl(latestReport.artworkUrl || null);
       } else {
-        setState(prev => ({ ...prev, reportText: '' }));
+        setState(prev => ({ ...prev, reportText: '', hasUnsavedChanges: false }));
+        lastSavedTextRef.current = '';
         imageUpload.initializeWithUrl(null);
       }
     } catch (error) {
@@ -100,7 +104,9 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         hasLoadedRef.current = false;
         await loadReports();
       }
-      setState(prev => ({ ...prev, showAutoSave: true }));
+      // Update the last saved text and clear unsaved changes flag
+      lastSavedTextRef.current = state.reportText.trim();
+      setState(prev => ({ ...prev, showAutoSave: true, hasUnsavedChanges: false }));
       setTimeout(() => setState(prev => ({ ...prev, showAutoSave: false })), isAutoSave ? 1000 : 2000);
     } catch (error) {
       console.error('Error saving report:', error);
@@ -108,13 +114,41 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     }
   };
 
+  // Auto-save effect with unsaved changes tracking
   useEffect(() => {
-    if (!state.reportText.trim()) return;
+    if (!state.reportText.trim()) {
+      setState(prev => ({ ...prev, hasUnsavedChanges: false }));
+      return;
+    }
+    
+    // Check if there are unsaved changes
+    const hasChanges = state.reportText.trim() !== lastSavedTextRef.current;
+    setState(prev => ({ ...prev, hasUnsavedChanges: hasChanges }));
+    
+    if (!hasChanges) return;
+    
     const timeoutId = setTimeout(() => {
       if (!imageUpload.uploading) saveReport(imageUpload.currentImageUrl, true);
     }, 2000);
     return () => clearTimeout(timeoutId);
   }, [state.reportText, imageUpload.uploading]);
+
+  // beforeunload event handler to warn about unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (state.hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [state.hasUnsavedChanges]);
 
   return (
     <Card className="w-full">
@@ -193,10 +227,31 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     className="min-h-[100px]"
                   />
                 </div>
-                <div className="flex justify-center pt-2">
-                  <TypographySmall className={`transition-opacity duration-200 ${state.showAutoSave ? 'text-green-600 opacity-100' : 'text-muted-foreground opacity-0'}`}>
-                    {state.showAutoSave ? '✓ Saved' : 'Auto-saves as you type'}
+                <div className="flex justify-between items-center pt-2">
+                  <TypographySmall className={`transition-opacity duration-200 ${
+                    state.showAutoSave 
+                      ? 'text-green-600 opacity-100' 
+                      : state.hasUnsavedChanges 
+                        ? 'text-orange-600 opacity-100' 
+                        : 'text-muted-foreground opacity-0'
+                  }`}>
+                    {state.showAutoSave 
+                      ? '✓ Saved' 
+                      : state.hasUnsavedChanges 
+                        ? '● Unsaved changes' 
+                        : 'Auto-saves as you type'
+                    }
                   </TypographySmall>
+                  {state.hasUnsavedChanges && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => saveReport(imageUpload.currentImageUrl, false)}
+                      className="text-xs"
+                    >
+                      Save Now
+                    </Button>
+                  )}
                 </div>
                 <div className="pt-4">
                   <ReportPreview
