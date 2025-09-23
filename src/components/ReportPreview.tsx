@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, Loader2, Download } from 'lucide-react';
 import { ReportTemplate } from './ReportTemplate';
 import { getTeacherByEmail } from '@/services/firebaseService';
-import type { Student, Class, ReportData } from '@/types';
+import type { Student, Class, ReportData, Teacher } from '@/types';
 
 interface ReportPreviewProps {
   student: Student;
@@ -29,35 +29,39 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   artworkUrl,
   isImageUploading = false
 }) => {
-  const [teacher, setTeacher] = useState<any>(null);
+  const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchedTeacherEmail, setFetchedTeacherEmail] = useState<string | null>(null);
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Loading...';
   // Handle both Firestore timestamp objects and JavaScript Date objects
-  const getDateFromTimestamp = (timestamp: any): Date => {
-    if (timestamp?.seconds) {
+  const getDateFromTimestamp = (timestamp: unknown): Date => {
+    if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
       // Firestore timestamp object
-      return new Date(timestamp.seconds * 1000);
-    } else if (timestamp?.toDate) {
+      return new Date((timestamp as { seconds: number }).seconds * 1000);
+    } else if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
       // Firestore Timestamp object with toDate method
-      return timestamp.toDate();
+      return (timestamp as { toDate: () => Date }).toDate();
     } else {
       // JavaScript Date object
-      return new Date(timestamp);
+      return new Date(timestamp as Date);
     }
   };
   
-  const date = getDateFromTimestamp(reportData!.updatedAt).toLocaleDateString('en-GB');
+  const date = reportData?.updatedAt 
+    ? getDateFromTimestamp(reportData.updatedAt).toLocaleDateString('en-GB')
+    : new Date().toLocaleDateString('en-GB');
 
   // Fetch teacher information
   useEffect(() => {
     const fetchTeacher = async () => {
-      if (classData.teacherEmail) {
+      if (classData.teacherEmail && classData.teacherEmail !== fetchedTeacherEmail) {
         setLoading(true);
         try {
           const teacherData = await getTeacherByEmail(classData.teacherEmail);
           setTeacher(teacherData);
+          setFetchedTeacherEmail(classData.teacherEmail);
         } catch (error) {
           console.error('Error fetching teacher:', error);
         } finally {
@@ -67,7 +71,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     };
     
     fetchTeacher();
-  }, [classData.teacherEmail]);
+  }, [classData.teacherEmail, fetchedTeacherEmail]);
 
   return (
     <div className="flex gap-2">

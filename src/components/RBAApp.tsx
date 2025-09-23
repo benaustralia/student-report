@@ -10,7 +10,7 @@ import { ClassCard } from './ClassCard';
 import { TeacherCard } from './TeacherCard';
 import { AdminPanel } from './AdminPanel';
 import { ThemeToggle } from './theme-toggle';
-import { useAuthContext } from '@/contexts/AuthContext';
+import { useAuthContext } from '@/hooks/useAuthContext';
 
 interface RBAAppProps { user: User; }
 

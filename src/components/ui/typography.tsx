@@ -20,7 +20,7 @@ const typographyVariants = {
 
 interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
   variant?: keyof typeof typographyVariants
-  as?: string
+  as?: keyof React.JSX.IntrinsicElements
 }
 
 export function Typography({ 
@@ -29,7 +29,7 @@ export function Typography({
   className, 
   ...props 
 }: TypographyProps) {
-  const Component = as || (variant === "p" ? "p" : variant) as any
+  const Component = as || (variant === "p" ? "p" : variant) as keyof React.JSX.IntrinsicElements
   
   return React.createElement(
     Component,

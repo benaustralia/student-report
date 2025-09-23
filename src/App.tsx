@@ -1,18 +1,33 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { AuthProvider, useAuthContext } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuthContext } from './hooks/useAuthContext';
 import { RBAApp } from './components/RBAApp';
 import { signInWithGoogle } from './services/firebaseService';
 import { useState, useEffect } from 'react';
 
 // TypeScript declaration for Google Identity Services
+interface GoogleConfig {
+  client_id: string;
+  callback: (response: { credential: string }) => void;
+}
+
+interface GoogleButtonConfig {
+  type: string;
+  size: string;
+  theme: string;
+  text: string;
+  shape: string;
+  logo_alignment: string;
+}
+
 declare global {
   interface Window {
     google: {
       accounts: {
         id: {
-          initialize: (config: any) => void;
-          renderButton: (element: HTMLElement | null, config: any) => void;
+          initialize: (config: GoogleConfig) => void;
+          renderButton: (element: HTMLElement | null, config: GoogleButtonConfig) => void;
         };
       };
     };
@@ -42,7 +57,7 @@ function AppContent() {
     };
   }, []);
 
-  const handleCredentialResponse = async (response: any) => {
+  const handleCredentialResponse = async (response: { credential: string }) => {
     try {
       // Use the ID token from Google Identity Services
       const credential = response.credential;

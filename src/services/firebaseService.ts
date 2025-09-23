@@ -1,25 +1,25 @@
 import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider } from 'firebase/auth';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, deleteField, writeBatch, setDoc, enableNetwork, disableNetwork } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../config/firebase';
-import type { Class, Student, ReportData } from '../types';
+import type { Class, Student, ReportData, Teacher, AdminUser, LegacyReportData } from '../types';
 
 export interface UserData { uid: string; email: string; displayName: string; isWhitelisted: boolean; }
 
-const createDoc = async (collectionName: string, data: any, customId?: string) => {
+const createDoc = async (collectionName: string, data: Record<string, unknown>, customId?: string) => {
   if (customId) {
     await setDoc(doc(db, collectionName, customId), { ...data, createdAt: new Date(), updatedAt: new Date() });
     return customId;
   }
   return (await addDoc(collection(db, collectionName), { ...data, createdAt: new Date(), updatedAt: new Date() })).id;
 };
-const getDocsByQuery = async <T>(collectionName: string, conditions: [string, any, any][] = []): Promise<T[]> => {
+const getDocsByQuery = async <T>(collectionName: string, conditions: [string, '==' | '!=' | '<' | '<=' | '>' | '>=' | 'array-contains' | 'in' | 'not-in' | 'array-contains-any', unknown][] = []): Promise<T[]> => {
   const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
   const snapshot = await getDocs(q);
   
   // Always use Firestore document ID as the single source of truth
   return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
 };
-const updateDocById = async (collectionName: string, id: string, updates: any) => await updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
+const updateDocById = async (collectionName: string, id: string, updates: Record<string, unknown>) => await updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
 const deleteDocById = async (collectionName: string, id: string) => {
   return await deleteDoc(doc(db, collectionName, id));
 };
@@ -35,7 +35,7 @@ export const signInWithGoogle = async (credential?: string) => {
   }
 };
 export const signOutUser = async () => await signOut(auth);
-export const onAuthStateChange = (callback: (user: any) => void) => onAuthStateChanged(auth, callback);
+export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthStateChanged(auth, callback);
 export const isUserAdmin = async (email: string): Promise<boolean> => (await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]])).length > 0;
 
 export const createLegacyReport = async (reportData: Omit<ReportData, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => await createDoc('reports', reportData);
@@ -55,7 +55,7 @@ export const getStudentCountsForClasses = async (classIds: string[]): Promise<Re
   classIds.forEach(classId => counts[classId] = 0);
   
   students.forEach(student => {
-    if (student.classId && counts.hasOwnProperty(student.classId)) {
+    if (student.classId && Object.prototype.hasOwnProperty.call(counts, student.classId)) {
       counts[student.classId]++;
     }
   });
@@ -72,7 +72,7 @@ export const createOrUpdateReport = async (reportData: Omit<ReportData, 'id' | '
   const existingReports = await getDocsByQuery<ReportData>('reports', [['studentId', '==', reportData.studentId]]);
   if (existingReports.length === 0) return await createDoc('reports', reportData);
   const existingId = existingReports[0].id;
-  const updateData: any = { ...reportData, updatedAt: new Date() };
+  const updateData: Record<string, unknown> = { ...reportData, updatedAt: new Date() };
   if (!('artworkUrl' in reportData)) updateData.artworkUrl = deleteField();
   await updateDocById('reports', existingId, updateData);
   return existingId;
@@ -82,10 +82,10 @@ export const updateReport = async (reportId: string, updates: Partial<ReportData
 export const deleteReport = async (reportId: string): Promise<void> => await deleteDocById('reports', reportId);
 
 export const getUserDisplayName = async (email: string): Promise<string | null> => {
-  const users = await getDocsByQuery<any>('adminUsers', [['email', '==', email]]);
+  const users = await getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]);
   return users.length > 0 ? `${users[0].firstName} ${users[0].lastName}`.trim() : null;
 };
-export const getAllUsers = async (): Promise<any[]> => await getDocsByQuery<any>('adminUsers').catch(() => []);
+export const getAllUsers = async (): Promise<AdminUser[]> => await getDocsByQuery<AdminUser>('adminUsers').catch(() => []);
 export const getAllClasses = async (): Promise<Class[]> => await getDocsByQuery<Class>('classes').catch(() => []);
 export const getAllStudents = async (): Promise<Student[]> => {
   return await getDocsByQuery<Student>('students').catch(() => []);
@@ -106,17 +106,17 @@ export const forceRefreshStudents = async (): Promise<Student[]> => {
     return await getAllStudents();
   }
 };
-export const getAllTeachers = async (): Promise<any[]> => await getDocsByQuery<any>('teachers').catch(() => []);
+export const getAllTeachers = async (): Promise<Teacher[]> => await getDocsByQuery<Teacher>('teachers').catch(() => []);
 export const isUserWhitelisted = async (email: string): Promise<boolean> => (await getDocsByQuery('whitelistedUsers', [['email', '==', email]])).length > 0;
 
-export const importUsers = async (usersData: any[]): Promise<void> => {
+export const importUsers = async (usersData: AdminUser[]): Promise<void> => {
   usersData.forEach(user => { if (!user.email || !user.firstName || !user.lastName) throw new Error(`Invalid user data: ${JSON.stringify(user)}`); });
   const adminUsers = usersData.filter(user => user.isAdmin === true);
   const teachers = usersData.filter(user => user.isAdmin === false || user.isAdmin === undefined);
-  if (adminUsers.length > 0) await Promise.all(adminUsers.map(user => createDoc('adminUsers', user, `${user.firstName}-${user.lastName}`)));
-  if (teachers.length > 0) await Promise.all(teachers.map(teacher => createDoc('teachers', teacher, `${teacher.firstName}-${teacher.lastName}`)));
+  if (adminUsers.length > 0) await Promise.all(adminUsers.map(user => createDoc('adminUsers', { ...user }, `${user.firstName}-${user.lastName}`)));
+  if (teachers.length > 0) await Promise.all(teachers.map(teacher => createDoc('teachers', { ...teacher }, `${teacher.firstName}-${teacher.lastName}`)));
 };
-export const importClasses = async (classesData: any[]): Promise<void> => {
+export const importClasses = async (classesData: Class[]): Promise<void> => {
   const users = await getAllUsers();
   const userMap = new Map(users.map(user => [user.email, user]));
   await Promise.all(classesData.map(classData => {
@@ -127,7 +127,7 @@ export const importClasses = async (classesData: any[]): Promise<void> => {
     return createDoc('classes', { ...classData, teacherFirstName: teacher?.firstName, teacherLastName: teacher?.lastName }, classId);
   }));
 };
-export const importStudents = async (studentsData: any[]): Promise<void> => {
+export const importStudents = async (studentsData: Student[]): Promise<void> => {
   const classes = await getAllClasses();
   await Promise.all(studentsData.map(async student => {
     let classId = student.classId;
@@ -141,14 +141,14 @@ export const importStudents = async (studentsData: any[]): Promise<void> => {
   }));
 };
 
-export const importTeachers = async (teachersData: any[]): Promise<void> => {
+export const importTeachers = async (teachersData: Teacher[]): Promise<void> => {
   teachersData.forEach(teacher => { 
     if (!teacher.firstName || !teacher.lastName || !teacher.email) 
       throw new Error(`Invalid teacher data: ${JSON.stringify(teacher)}`); 
   });
   await Promise.all(teachersData.map(async teacher => {
     const teacherId = `${teacher.firstName}-${teacher.lastName}-${teacher.email.split('@')[0]}`;
-    await createDoc('teachers', teacher, teacherId);
+    await createDoc('teachers', { ...teacher }, teacherId);
   }));
 };
 
@@ -244,7 +244,7 @@ export const migrateToCustomIds = async (): Promise<void> => {
     const collection = user.isAdmin ? 'adminUsers' : 'teachers';
     
     // Create new user with custom ID
-    await createDoc(collection, user, newUserId);
+    await createDoc(collection, { ...user }, newUserId);
     
     // Delete old user
     await deleteDocById(collection, user.id);
@@ -254,7 +254,7 @@ export const migrateToCustomIds = async (): Promise<void> => {
 };
 
 // Update and Delete functions for Data Builder
-export const updateUser = async (userId: string, updates: any): Promise<void> => {
+export const updateUser = async (userId: string, updates: Partial<AdminUser>): Promise<void> => {
   await updateDocById('adminUsers', userId, updates);
 };
 
@@ -262,7 +262,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
   await deleteDocById('adminUsers', userId);
 };
 
-export const updateClass = async (classId: string, updates: any): Promise<void> => {
+export const updateClass = async (classId: string, updates: Partial<Class>): Promise<void> => {
   await updateDocById('classes', classId, updates);
 };
 
@@ -270,7 +270,7 @@ export const deleteClass = async (classId: string): Promise<void> => {
   await deleteDocById('classes', classId);
 };
 
-export const updateStudent = async (studentId: string, updates: any): Promise<void> => {
+export const updateStudent = async (studentId: string, updates: Partial<Student>): Promise<void> => {
   await updateDocById('students', studentId, updates);
 };
 
@@ -278,7 +278,7 @@ export const deleteStudent = async (studentId: string): Promise<void> => {
   await deleteDocById('students', studentId);
 };
 
-export const updateTeacher = async (teacherId: string, updates: any): Promise<void> => {
+export const updateTeacher = async (teacherId: string, updates: Partial<Teacher>): Promise<void> => {
   await updateDocById('teachers', teacherId, updates);
 };
 
@@ -286,28 +286,28 @@ export const deleteTeacher = async (teacherId: string): Promise<void> => {
   await deleteDocById('teachers', teacherId);
 };
 
-export const importReports = async (reportsData: any[]): Promise<void> => {
+export const importReports = async (reportsData: LegacyReportData[]): Promise<void> => {
   const [students, classes] = await Promise.all([getAllStudents(), getAllClasses()]);
   await Promise.all(reportsData.map(async report => {
     const student = students.find(s => `${s.firstName} ${s.lastName}` === report.studentName);
-    const classData = classes.find(c => c.teacherEmail === report.teacherEmail);
-    const reportData = { ...report, studentId: student?.id || 'unknown', classId: classData?.id || 'unknown', teacherEmail: report.teacherEmail, reportText: report.reportText || report.comments };
+    const classData = classes.find(c => c.teacherEmail === report.teacher);
+    const reportData = { ...report, studentId: student?.id || 'unknown', classId: classData?.id || 'unknown', teacherEmail: report.teacher, reportText: report.comments };
     await createDoc('reports', reportData);
   }));
 };
 
-export const getAdminUserByEmail = async (email: string): Promise<any | null> => {
-  const users = await getDocsByQuery<any>('adminUsers', [['email', '==', email]]);
+export const getAdminUserByEmail = async (email: string): Promise<AdminUser | null> => {
+  const users = await getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]);
   return users.length > 0 ? users[0] : null;
 };
-export const updateAdminUser = async (email: string, updateData: any): Promise<boolean> => {
-  const users = await getDocsByQuery<any>('adminUsers', [['email', '==', email]]);
+export const updateAdminUser = async (email: string, updateData: Partial<AdminUser>): Promise<boolean> => {
+  const users = await getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]);
   if (users.length === 0) return false;
   await Promise.all(users.map(user => updateDocById('adminUsers', user.id, updateData)));
   return true;
 };
 export const removeAdminUserByEmail = async (email: string): Promise<boolean> => {
-  const users = await getDocsByQuery<any>('adminUsers', [['email', '==', email]]);
+  const users = await getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]);
   if (users.length === 0) return false;
   await Promise.all(users.map(user => deleteDocById('adminUsers', user.id)));
   return true;
@@ -320,7 +320,7 @@ export const getTeacherUserCount = async (): Promise<number> => {
   const adminEmails = new Set(adminUsers.map(user => user.email));
   return [...teacherEmails].filter(email => !adminEmails.has(email)).length;
 };
-export const getTeacherByEmail = async (email: string): Promise<any | null> => await getAdminUserByEmail(email);
+export const getTeacherByEmail = async (email: string): Promise<Teacher | null> => await getAdminUserByEmail(email);
 
 // Get report counts for all teachers (admin only)
 export const getTeacherReportCounts = async (): Promise<Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>> => {
@@ -391,7 +391,7 @@ export const cleanupDuplicateReports = async (studentId: string): Promise<void> 
 };
 export const removeDuplicateAdminUsers = async (): Promise<{ removed: number; kept: number }> => {
   const users = await getAllUsers();
-  const usersByEmail = new Map<string, any[]>();
+  const usersByEmail = new Map<string, AdminUser[]>();
   users.forEach(user => { const email = user.email; if (!usersByEmail.has(email)) usersByEmail.set(email, []); usersByEmail.get(email)!.push(user); });
   let removed = 0, kept = 0;
   for (const [, userList] of usersByEmail) {

@@ -6,7 +6,7 @@ export interface Report {
   student: string;
   grade: string;
   comments: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ClassData {
@@ -63,8 +63,19 @@ export interface ReportData {
   updatedAt: Date;
 }
 
+// Teacher type
+export interface Teacher {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Admin user type
 export interface AdminUser {
+  id: string;
   email: string;
   firstName: string;
   lastName: string;

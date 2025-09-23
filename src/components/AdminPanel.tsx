@@ -10,12 +10,12 @@ import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
 import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts } from '@/services/firebaseService';
 import type { User } from 'firebase/auth';
-import type { Class, Student } from '@/types';
+import type { Class, Student, AdminUser, Teacher } from '@/types';
 
 interface AdminPanelProps { user: User; }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
-  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as any[], classes: [] as Class[], students: [] as Student[], teachers: [] as any[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }> });
+  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }> });
 
   const loadData = async () => {
     try {
@@ -28,7 +28,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
         getTeacherReportCounts().catch(() => ({}))
       ]);
       const userMap = new Map();
-      teachers.forEach(t => t.email && userMap.set(t.email, { ...t, isAdmin: t.isAdmin || false }));
+      teachers.forEach(t => t.email && userMap.set(t.email, { ...t, isAdmin: false }));
       adminUsers.forEach(a => a.email && userMap.set(a.email, { ...a, isAdmin: a.isAdmin || false }));
       const allUsers = Array.from(userMap.values());
       const teacherMap = new Map();
@@ -40,11 +40,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
         teacherReportStats,
         loading: false 
       }));
-    } catch (err) { setState(prev => ({ ...prev, loading: false })); }
+    } catch { setState(prev => ({ ...prev, loading: false })); }
   };
 
-  useEffect(() => { (async () => { try { const adminStatus = await isUserAdmin(user.email || ''); setState(prev => ({ ...prev, isAdmin: adminStatus, loading: false })); if (adminStatus) await loadData(); } catch (err) { setState(prev => ({ ...prev, error: 'Failed to check admin status', loading: false })); } })(); }, [user]);
-  useEffect(() => { !state.showDataBuilder && state.isAdmin && loadData(); }, [state.showDataBuilder, state.isAdmin]);
+  useEffect(() => { (async () => { try { const adminStatus = await isUserAdmin(user.email || ''); setState(prev => ({ ...prev, isAdmin: adminStatus, loading: false })); if (adminStatus) await loadData(); } catch { setState(prev => ({ ...prev, error: 'Failed to check admin status', loading: false })); } })(); }, [user]);
+  useEffect(() => { 
+    if (!state.showDataBuilder && state.isAdmin) {
+      loadData();
+    }
+  }, [state.showDataBuilder, state.isAdmin]);
 
   if (state.loading) return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin mr-2" /><span>Loading admin panel...</span></div>;
   if (!state.isAdmin) return (

@@ -19,19 +19,34 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
 
+  const saveReport = useCallback(async (imageUrl?: string | null, isAutoSave: boolean = false) => {
+    if (!state.reportText.trim() && !imageUrl) return;
+    try {
+      const reportData = {
+        studentId: student.id,
+        classId: classData.id,
+        teacherEmail: classData.teacherEmail,
+        reportText: state.reportText.trim(),
+        ...(imageUrl && { artworkUrl: imageUrl })
+      };
+      await createOrUpdateReport(reportData);
+      await new Promise(resolve => setTimeout(resolve, isAutoSave ? 500 : 1000));
+      
+      // Update the last saved text and clear unsaved changes flag
+      lastSavedTextRef.current = state.reportText.trim();
+      setState(prev => ({ ...prev, showAutoSave: true, hasUnsavedChanges: false }));
+      setTimeout(() => setState(prev => ({ ...prev, showAutoSave: false })), isAutoSave ? 1000 : 2000);
+    } catch (error) {
+      console.error('Error saving report:', error);
+      alert('Failed to save report. Please try again.');
+    }
+  }, [state.reportText, student.id, classData.id, classData.teacherEmail]);
+
   const imageUpload = useImageUploadV2({
     userId: `students/${student.id}`,
     onError: (error) => console.error('Image upload error:', error),
     onRemove: () => saveReport(null),
   });
-
-  useEffect(() => {
-    if (imageUpload.file) {
-      imageUpload.upload().then((imageUrl) => {
-        if (imageUrl) saveReport(imageUrl);
-      });
-    }
-  }, [imageUpload.file]);
 
   const loadReports = useCallback(async () => {
     if (hasLoadedRef.current) return;
@@ -58,6 +73,14 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       setState(prev => ({ ...prev, loading: false }));
     }
   }, [student.id]);
+
+  useEffect(() => {
+    if (imageUpload.file) {
+      imageUpload.upload().then((imageUrl) => {
+        if (imageUrl) saveReport(imageUrl);
+      });
+    }
+  }, [imageUpload.file, imageUpload, saveReport]);
 
   useEffect(() => {
     hasLoadedRef.current = false;
@@ -88,32 +111,6 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     }
   };
 
-  const saveReport = async (imageUrl?: string | null, isAutoSave: boolean = false) => {
-    if (!state.reportText.trim() && !imageUrl) return;
-    try {
-      const reportData = {
-        studentId: student.id,
-        classId: classData.id,
-        teacherEmail: classData.teacherEmail,
-        reportText: state.reportText.trim(),
-        ...(imageUrl && { artworkUrl: imageUrl })
-      };
-      await createOrUpdateReport(reportData);
-      await new Promise(resolve => setTimeout(resolve, isAutoSave ? 500 : 1000));
-      if (!isAutoSave) {
-        hasLoadedRef.current = false;
-        await loadReports();
-      }
-      // Update the last saved text and clear unsaved changes flag
-      lastSavedTextRef.current = state.reportText.trim();
-      setState(prev => ({ ...prev, showAutoSave: true, hasUnsavedChanges: false }));
-      setTimeout(() => setState(prev => ({ ...prev, showAutoSave: false })), isAutoSave ? 1000 : 2000);
-    } catch (error) {
-      console.error('Error saving report:', error);
-      alert('Failed to save report. Please try again.');
-    }
-  };
-
   // Auto-save effect with unsaved changes tracking
   useEffect(() => {
     if (!state.reportText.trim()) {
@@ -131,7 +128,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       if (!imageUpload.uploading) saveReport(imageUpload.currentImageUrl, true);
     }, 2000);
     return () => clearTimeout(timeoutId);
-  }, [state.reportText, imageUpload.uploading]);
+  }, [state.reportText, imageUpload.uploading, imageUpload.currentImageUrl, saveReport]);
 
   // beforeunload event handler to warn about unsaved changes
   useEffect(() => {

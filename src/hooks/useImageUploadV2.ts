@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { uploadImageToStorage, deleteImageFromStorage, generateImagePath } from '@/services/storageService';
 import { compressImage } from '@/utils/imageUtils';
 
@@ -151,19 +151,16 @@ export const useImageUploadV2 = ({
       setCurrentImageUrl(imageUrl);
       setPreview(imageUrl);
       
-      // If we have a file selected, clear it since we're loading from database
-      if (file) {
-        console.log('useImageUploadV2: Clearing file selection, using Firebase URL');
-        setFile(null);
-      }
+      // Clear any file selection since we're loading from database
+      setFile(null);
     } else {
       console.log('useImageUploadV2: Clearing image');
       setCurrentImageUrl(null);
       setPreview(null);
     }
-  }, [file]);
+  }, []); // Remove file dependency to prevent infinite loop
 
-  return {
+  return useMemo(() => ({
     file,
     preview,
     uploading,
@@ -176,5 +173,16 @@ export const useImageUploadV2 = ({
     clearError,
     reset,
     initializeWithUrl,
-  };
+  }), [
+    file,
+    preview,
+    uploading,
+    error,
+    currentImageUrl,
+    upload,
+    remove,
+    clearError,
+    reset,
+    initializeWithUrl,
+  ]);
 };

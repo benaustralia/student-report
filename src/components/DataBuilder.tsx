@@ -8,9 +8,10 @@ import { CollapsibleItem } from '@/components/ui/collapsible-item';
 import { Plus, CheckCircle, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight } from 'lucide-react';
 import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher } from '@/services/firebaseService';
 import { StatisticsBar } from './StatisticsBar';
+import type { AdminUser, Class, Student, Teacher } from '@/types';
 
 type DataType = 'users' | 'classes' | 'students' | 'teachers';
-type ItemType = { id?: string; [key: string]: any };
+type ItemType = AdminUser | Class | Student | Teacher;
 
 const CONFIG = {
   users: { icon: Users, title: 'Admins', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: false } },
@@ -37,16 +38,26 @@ export const DataBuilder = () => {
 
   useEffect(() => {
     Promise.all(OPS.getAll.map(fn => fn()))
-      .then(([users, classes, students, teachers]) => setData({ users: users || [], classes: classes || [], students: students || [], teachers: teachers || [] }))
+      .then(([users, classes, students, teachers]) => setData({ 
+        users: (users || []) as ItemType[], 
+        classes: (classes || []) as ItemType[], 
+        students: (students || []) as ItemType[], 
+        teachers: (teachers || []) as ItemType[] 
+      }))
       .catch(() => setData({ users: [], classes: [], students: [], teachers: [] }))
       .finally(() => setLoading(false));
   }, []);
 
-  const updateItem = (type: DataType, index: number | string, field: string, value: any, isNew = false) => {
+  const updateItem = (type: DataType, index: number | string, field: string, value: unknown, isNew = false) => {
     const setter = isNew ? setNewItems : setData;
     setter((prev: Record<DataType, ItemType[]>) => ({
       ...prev,
-      [type]: prev[type].map((item, i) => (isNew ? i === index : item.id === index) ? { ...item, [field]: value } : item),
+      [type]: prev[type].map((item, i) => {
+        if (isNew ? i === index : item.id === index) {
+          return { ...item, [field]: value } as ItemType;
+        }
+        return item;
+      }),
     }));
   };
 
@@ -55,30 +66,40 @@ export const DataBuilder = () => {
       if (action === 'add') setNewItems(prev => ({ ...prev, [type]: [...prev[type], { ...CONFIG[type].empty }] }));
       else if (action === 'remove') setNewItems(prev => ({ ...prev, [type]: prev[type].filter((_, i) => i !== index) }));
       else if (action === 'submit') {
-        await OPS.import[type](newItems[type]);
+        await OPS.import[type](newItems[type] as any);
         setNewItems(prev => ({ ...prev, [type]: [] }));
         setMessage(`Imported ${newItems[type].length} ${type}!`);
         const results = await Promise.all(OPS.getAll.map(fn => fn()));
-        setData({ users: results[0] || [], classes: results[1] || [], students: results[2] || [], teachers: results[3] || [] });
+        setData({ 
+          users: (results[0] || []) as ItemType[], 
+          classes: (results[1] || []) as ItemType[], 
+          students: (results[2] || []) as ItemType[], 
+          teachers: (results[3] || []) as ItemType[] 
+        });
       } else if (action === 'update' && item?.id) {
         await OPS.update[type](item.id, item);
         setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
         setMessage(`Updated ${type.slice(0, -1)}!`);
         // Refresh data after update to ensure UI reflects changes
         const results = await Promise.all(OPS.getAll.map(fn => fn()));
-        setData({ users: results[0] || [], classes: results[1] || [], students: results[2] || [], teachers: results[3] || [] });
+        setData({ 
+          users: (results[0] || []) as ItemType[], 
+          classes: (results[1] || []) as ItemType[], 
+          students: (results[2] || []) as ItemType[], 
+          teachers: (results[3] || []) as ItemType[] 
+        });
       } else if (action === 'delete' && item?.id) {
         await OPS.delete[type](item.id);
         setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
         setMessage(`Deleted ${type.slice(0, -1)}!`);
       }
-    } catch (error: any) { setMessage(`Failed: ${error.message}`); }
+    } catch (error: unknown) { setMessage(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };
 
   const renderField = (type: DataType, item: ItemType, field: string, index: number, isNew: boolean) => 
     field === 'classId' && type === 'students' ? (
       <Select 
-        value={item[field] || ''} 
+        value={((item as Student)[field as keyof Student] as string) || ''} 
         onValueChange={async (v) => {
           // Update local state first
           updateItem(type, isNew ? index : (item.id || ''), field, v, isNew);
@@ -92,10 +113,15 @@ export const DataBuilder = () => {
               setMessage(`Student assigned to class!`);
               // Refresh data to ensure UI reflects the change
               const results = await Promise.all(OPS.getAll.map(fn => fn()));
-              setData({ users: results[0] || [], classes: results[1] || [], students: results[2] || [], teachers: results[3] || [] });
-            } catch (error: any) {
+              setData({ 
+                users: (results[0] || []) as ItemType[], 
+                classes: (results[1] || []) as ItemType[], 
+                students: (results[2] || []) as ItemType[], 
+                teachers: (results[3] || []) as ItemType[] 
+              });
+            } catch (error: unknown) {
               console.error('Failed to save class assignment:', error);
-              setMessage(`Failed to assign student: ${error.message}`);
+              setMessage(`Failed to assign student: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           }
         }}
@@ -106,14 +132,14 @@ export const DataBuilder = () => {
         <SelectContent>
           {data.classes.map(cls => (
             <SelectItem key={cls.id} value={cls.id || ''}>
-              {cls.classDay} {cls.classTime} - {cls.classLevel}
+              {(cls as Class).classDay} {(cls as Class).classTime} - {(cls as Class).classLevel}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
     ) : (
       <Input
-        value={item[field] || ''}
+        value={(item as any)[field] || ''}
         onChange={e =>
           updateItem(
             type,
@@ -134,12 +160,12 @@ export const DataBuilder = () => {
     }, {});
 
   const getTeacherName = (email: string) => {
-    const teacher = data.teachers.find(t => t.email === email);
+    const teacher = data.teachers.find(t => (t as Teacher).email === email) as Teacher;
     return teacher ? `${teacher.firstName} ${teacher.lastName}` : email;
   };
 
-  const renderGroupedItems = (type: DataType, items: ItemType[], config: any) => 
-    Object.entries(groupByTeacher(items, item => type === 'students' ? data.classes.find(c => c.id === item.classId)?.teacherEmail || '' : item.teacherEmail || '', type))
+  const renderGroupedItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => 
+    Object.entries(groupByTeacher(items, item => type === 'students' ? (data.classes.find(c => c.id === (item as Student).classId) as Class)?.teacherEmail || '' : type === 'classes' ? (item as Class).teacherEmail || '' : '', type))
       .map(([teacher, groupItems]: [string, ItemType[]]) => (
         <div key={teacher} className="mb-4">
           <div className="flex items-center cursor-pointer p-2 bg-gray-100 dark:bg-gray-800 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
@@ -154,13 +180,13 @@ export const DataBuilder = () => {
                   key={item.id}
                   title={
                     type === 'students'
-                      ? `${item.firstName} ${item.lastName}`
-                      : `${item.classDay} ${item.classTime}`
+                      ? `${(item as Student).firstName} ${(item as Student).lastName}`
+                      : type === 'classes' ? `${(item as Class).classDay} ${(item as Class).classTime}` : ''
                   }
                   subtitle={
                     type === 'students'
-                      ? data.classes.find(c => c.id === item.classId)?.classDay
-                      : item.classLocation
+                      ? (data.classes.find(c => c.id === (item as Student).classId) as Class)?.classDay
+                      : type === 'classes' ? (item as Class).classLocation : ''
                   }
                   isEditing={editing.has(item.id!)}
                   onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
@@ -196,16 +222,16 @@ export const DataBuilder = () => {
         </div>
       ));
 
-  const renderFlatItems = (type: DataType, items: ItemType[], config: any) => 
+  const renderFlatItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => 
     items.map(item => (
-      <CollapsibleItem key={item.id} title={`${item.firstName} ${item.lastName}`} subtitle={item.email} isEditing={editing.has(item.id!)} onEdit={() => setEditing(prev => new Set([...prev, item.id!]))} onSave={() => handleAction('update', type, item, 0)} onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))} onDelete={() => handleAction('delete', type, item, 0)}>
+      <CollapsibleItem key={item.id} title={`${(item as AdminUser & { id: string } | Teacher).firstName} ${(item as AdminUser & { id: string } | Teacher).lastName}`} subtitle={(item as AdminUser & { id: string } | Teacher).email} isEditing={editing.has(item.id!)} onEdit={() => setEditing(prev => new Set([...prev, item.id!]))} onSave={() => handleAction('update', type, item, 0)} onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))} onDelete={() => handleAction('delete', type, item, 0)}>
         {editing.has(item.id!) && <div className="grid gap-4 md:grid-cols-2">{config.fields.map((field: string) => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(type, item, field, 0, false)}</div>)}</div>}
       </CollapsibleItem>
     ));
 
   return (
     <div className="space-y-6">
-      <StatisticsBar adminCount={data.users.filter(u => u.isAdmin).length} teacherCount={data.teachers.length} classCount={data.classes.length} studentCount={data.students.length} loading={loading} />
+      <StatisticsBar adminCount={data.users.filter(u => (u as AdminUser & { id: string }).isAdmin).length} teacherCount={data.teachers.length} classCount={data.classes.length} studentCount={data.students.length} loading={loading} />
       {message && <Alert><CheckCircle className="h-4 w-4" /><AlertDescription>{message}</AlertDescription></Alert>}
       
       {Object.entries(CONFIG).map(([type, config]) => {

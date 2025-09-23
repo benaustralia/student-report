@@ -1,4 +1,4 @@
-import type { ReportData } from '@/types';
+import type { ReportData, Student, Teacher } from '@/types';
 
 // Dynamic import for JSZip to reduce initial bundle size
 const getJSZip = async () => {
@@ -7,7 +7,7 @@ const getJSZip = async () => {
 };
 
 // Helper function to safely convert Firestore timestamps to Date objects
-const toDate = (dateValue: any): Date => {
+const toDate = (dateValue: unknown): Date => {
   if (dateValue instanceof Date) {
     return dateValue;
   }
@@ -18,7 +18,7 @@ const toDate = (dateValue: any): Date => {
   }
   
   // Try to create a date from the value
-  const date = new Date(dateValue);
+  const date = new Date(dateValue as string | number | Date);
   
   // Check if the date is valid
   if (isNaN(date.getTime())) {
@@ -39,7 +39,7 @@ export interface ClassReport {
   date: string;
 }
 
-export const downloadClassAsZIP = async (reports: ReportData[], className: string, students: any[], teacher: any) => {
+export const downloadClassAsZIP = async (reports: ReportData[], className: string, students: Student[], teacher: Teacher) => {
   try {
     const JSZip = await getJSZip();
     const zip = new JSZip();
@@ -72,7 +72,7 @@ export const downloadClassAsZIP = async (reports: ReportData[], className: strin
         const pdfBlob = await generatePDFBlob(legacyReportData);
         
         // Add to ZIP
-        const fileName = `${student.firstName || 'Unknown'}_${student.lastName || 'Student'}_${toDate(report.createdAt).toISOString().split('T')[0]}.pdf`;
+        const fileName = `${student?.firstName || 'Unknown'}_${student?.lastName || 'Student'}_${toDate(report.createdAt).toISOString().split('T')[0]}.pdf`;
         folder.file(fileName, pdfBlob);
       } catch (error) {
         console.error(`Error processing report for student ${report.studentId}:`, error);
@@ -139,7 +139,7 @@ export const generateClassZIP = async (reports: ClassReport[], className: string
 };
 
 // Helper function to generate PDF as blob instead of downloading
-const generatePDFBlob = async (reportData: any): Promise<Blob> => {
+const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> => {
   // This is a simplified version - you'll need to implement the actual PDF generation
   // that returns a blob instead of triggering a download
   // For now, we'll create a placeholder blob
