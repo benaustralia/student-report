@@ -35,9 +35,21 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Loading...';
-  const date = reportData?.updatedAt 
-    ? new Date(reportData.updatedAt).toLocaleDateString()
-    : new Date().toLocaleDateString();
+  // Handle both Firestore timestamp objects and JavaScript Date objects
+  const getDateFromTimestamp = (timestamp: any): Date => {
+    if (timestamp?.seconds) {
+      // Firestore timestamp object
+      return new Date(timestamp.seconds * 1000);
+    } else if (timestamp?.toDate) {
+      // Firestore Timestamp object with toDate method
+      return timestamp.toDate();
+    } else {
+      // JavaScript Date object
+      return new Date(timestamp);
+    }
+  };
+  
+  const date = getDateFromTimestamp(reportData!.updatedAt).toLocaleDateString('en-GB');
 
   // Fetch teacher information
   useEffect(() => {
