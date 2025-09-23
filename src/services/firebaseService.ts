@@ -1,5 +1,5 @@
 import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider } from 'firebase/auth';
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, deleteField, writeBatch, setDoc, getDoc, enableNetwork, disableNetwork } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, deleteField, writeBatch, setDoc, enableNetwork, disableNetwork } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../config/firebase';
 import type { Class, Student, ReportData } from '../types';
 
