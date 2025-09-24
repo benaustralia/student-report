@@ -77,7 +77,7 @@ export const DataBuilder = () => {
           teachers: (results[3] || []) as ItemType[] 
         });
         // Notify other components that data has changed
-        window.dispatchEvent(new CustomEvent('dataChanged'));
+        window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
       } else if (action === 'update' && item?.id) {
         await OPS.update[type](item.id, item);
         setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
@@ -91,13 +91,13 @@ export const DataBuilder = () => {
           teachers: (results[3] || []) as ItemType[] 
         });
         // Notify other components that data has changed
-        window.dispatchEvent(new CustomEvent('dataChanged'));
+        window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
       } else if (action === 'delete' && item?.id) {
         await OPS.delete[type](item.id);
         setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
         setMessage(`Deleted ${type.slice(0, -1)}!`);
         // Notify other components that data has changed
-        window.dispatchEvent(new CustomEvent('dataChanged'));
+        window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
       }
     } catch (error: unknown) { setMessage(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };

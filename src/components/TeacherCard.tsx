@@ -24,24 +24,37 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
   const [isOpen, setIsOpen] = useState(false);
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
 
+  const loadStudentCounts = React.useCallback(async () => {
+    try {
+      const classIds = classes.map(classData => classData.id);
+      const studentCounts = await getStudentCountsForClasses(classIds);
+      const total = Object.values(studentCounts).reduce((sum, count) => sum + count, 0);
+      setTotalStudents(total);
+    } catch (error) {
+      console.error('Error loading student counts:', error);
+      setTotalStudents(0);
+    }
+  }, [classes]);
+
   // Load student counts for all classes to calculate total - optimized with single query
   useEffect(() => {
-    const loadStudentCounts = async () => {
-      try {
-        const classIds = classes.map(classData => classData.id);
-        const studentCounts = await getStudentCountsForClasses(classIds);
-        const total = Object.values(studentCounts).reduce((sum, count) => sum + count, 0);
-        setTotalStudents(total);
-      } catch (error) {
-        console.error('Error loading student counts:', error);
-        setTotalStudents(0);
-      }
-    };
-
     if (classes.length > 0) {
       loadStudentCounts();
     }
-  }, [classes]);
+  }, [loadStudentCounts]);
+
+  // Listen for data changes from DataBuilder to refresh student counts
+  useEffect(() => {
+    const handleDataChange = (event: CustomEvent) => {
+      // Only refresh when students are added/updated/deleted
+      if (event.detail?.type === 'students') {
+        loadStudentCounts();
+      }
+    };
+
+    window.addEventListener('dataChanged', handleDataChange as unknown as EventListener);
+    return () => window.removeEventListener('dataChanged', handleDataChange as unknown as EventListener);
+  }, [loadStudentCounts]);
 
   return (
     <Card className="w-full">

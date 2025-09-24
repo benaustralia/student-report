@@ -37,20 +37,33 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, isAd
     }
   };
 
+  const loadStudentCount = React.useCallback(async () => {
+    try {
+      const counts = await getStudentCountsForClasses([classData.id]);
+      setStudentCount(counts[classData.id] || 0);
+    } catch (error) {
+      console.error('Error loading student count:', error);
+      setStudentCount(0);
+    }
+  }, [classData.id]);
+
   // Load student count on mount to show accurate count - optimized
   React.useEffect(() => {
-    const loadStudentCount = async () => {
-      try {
-        const counts = await getStudentCountsForClasses([classData.id]);
-        setStudentCount(counts[classData.id] || 0);
-      } catch (error) {
-        console.error('Error loading student count:', error);
-        setStudentCount(0);
+    loadStudentCount();
+  }, [loadStudentCount]);
+
+  // Listen for data changes from DataBuilder to refresh student count
+  React.useEffect(() => {
+    const handleDataChange = (event: CustomEvent) => {
+      // Only refresh when students are added/updated/deleted
+      if (event.detail?.type === 'students') {
+        loadStudentCount();
       }
     };
-    
-    loadStudentCount();
-  }, [classData.id]);
+
+    window.addEventListener('dataChanged', handleDataChange as unknown as EventListener);
+    return () => window.removeEventListener('dataChanged', handleDataChange as unknown as EventListener);
+  }, [loadStudentCount]);
 
   const handleDownloadClass = async () => {
     setIsDownloading(true);
