@@ -11,7 +11,7 @@ service cloud.firestore {
     // Alternative admin check by email (if UID doesn't match)
     function isAdminByEmail() {
       return request.auth != null && 
-        request.auth.token.email in ['bahinton@gmail.com', 'yoc31397@gmail.com'];
+        request.auth.token.email in ['bahinton@gmail.com', 'yoc31397@gmail.com', 'wenli116651@gmail.com'];
     }
     
     // Whitelisted users collection - allow bahinton@gmail.com full access during setup
