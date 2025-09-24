@@ -76,6 +76,8 @@ export const DataBuilder = () => {
           students: (results[2] || []) as ItemType[], 
           teachers: (results[3] || []) as ItemType[] 
         });
+        // Notify other components that data has changed
+        window.dispatchEvent(new CustomEvent('dataChanged'));
       } else if (action === 'update' && item?.id) {
         await OPS.update[type](item.id, item);
         setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
@@ -88,10 +90,14 @@ export const DataBuilder = () => {
           students: (results[2] || []) as ItemType[], 
           teachers: (results[3] || []) as ItemType[] 
         });
+        // Notify other components that data has changed
+        window.dispatchEvent(new CustomEvent('dataChanged'));
       } else if (action === 'delete' && item?.id) {
         await OPS.delete[type](item.id);
         setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
         setMessage(`Deleted ${type.slice(0, -1)}!`);
+        // Notify other components that data has changed
+        window.dispatchEvent(new CustomEvent('dataChanged'));
       }
     } catch (error: unknown) { setMessage(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };
