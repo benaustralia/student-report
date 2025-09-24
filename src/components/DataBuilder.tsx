@@ -170,63 +170,113 @@ export const DataBuilder = () => {
     return teacher ? `${teacher.firstName} ${teacher.lastName}` : email;
   };
 
-  const renderGroupedItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => 
-    Object.entries(groupByTeacher(items, item => type === 'students' ? (data.classes.find(c => c.id === (item as Student).classId) as Class)?.teacherEmail || '' : type === 'classes' ? (item as Class).teacherEmail || '' : '', type))
-      .map(([teacher, groupItems]: [string, ItemType[]]) => (
-        <div key={teacher} className="mb-4">
-          <div className="flex items-center cursor-pointer p-2 bg-gray-100 dark:bg-gray-800 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
-            {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
-            <span className="font-medium">{getTeacherName(teacher)}</span>
-            <span className="ml-2 text-sm text-gray-500">({groupItems.length})</span>
-          </div>
-          {openGroups[`${type}-${teacher}`] && (
-            <div className="ml-6 space-y-2">
-              {groupItems.map(item => (
-                <CollapsibleItem
-                  key={item.id}
-                  title={
-                    type === 'students'
-                      ? `${(item as Student).firstName} ${(item as Student).lastName}`
-                      : type === 'classes' ? `${(item as Class).classDay} ${(item as Class).classTime}` : ''
-                  }
-                  subtitle={
-                    type === 'students'
-                      ? (data.classes.find(c => c.id === (item as Student).classId) as Class)?.classDay
-                      : type === 'classes' ? (item as Class).classLocation : ''
-                  }
-                  isEditing={editing.has(item.id!)}
-                  onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
-                  onSave={() =>
-                    handleAction(
-                      'update',
-                      type,
-                      item,
-                      0
-                    )
-                  }
-                  onCancel={() =>
-                    setEditing(prev =>
-                      new Set([...prev].filter(id => id !== item.id))
-                    )
-                  }
-                  onDelete={() => handleAction('delete', type, item, 0)}
-                >
-                  {editing.has(item.id!) && (
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {config.fields.map((field: string) => (
-                        <div key={field}>
-                          <label className="text-sm font-medium">{field}</label>
-                          {renderField(type, item, field, 0, false)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CollapsibleItem>
-              ))}
+  const renderGroupedItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => {
+    if (type === 'students') {
+      // For students, group by teacher first, then by class within each teacher
+      const teacherGroups = groupByTeacher(items, item => (data.classes.find(c => c.id === (item as Student).classId) as Class)?.teacherEmail || '', type);
+      
+      return Object.entries(teacherGroups).map(([teacher, groupItems]: [string, ItemType[]]) => {
+        // Group students by class within this teacher
+        const classGroups = groupItems.reduce((groups: Record<string, ItemType[]>, item: ItemType) => {
+          const classId = (item as Student).classId || 'No Class';
+          const className = classId === 'No Class' ? 'No Class Assigned' : 
+            (data.classes.find(c => c.id === classId) as Class)?.classDay + ' ' + 
+            (data.classes.find(c => c.id === classId) as Class)?.classTime || 'Unknown Class';
+          (groups[className] = groups[className] || []).push(item);
+          return groups;
+        }, {});
+
+        return (
+          <div key={teacher} className="mb-4">
+            <div className="flex items-center cursor-pointer p-2 bg-gray-100 dark:bg-gray-800 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
+              {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
+              <span className="font-medium">{getTeacherName(teacher)}</span>
+              <span className="ml-2 text-sm text-gray-500">({groupItems.length})</span>
             </div>
-          )}
-        </div>
-      ));
+            {openGroups[`${type}-${teacher}`] && (
+              <div className="ml-6 space-y-3">
+                {Object.entries(classGroups).map(([className, classItems]: [string, ItemType[]]) => (
+                  <div key={className}>
+                    <div className="flex items-center cursor-pointer p-2 bg-gray-50 dark:bg-gray-700 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}-${className}`]: !prev[`${type}-${teacher}-${className}`] }))}>
+                      {openGroups[`${type}-${teacher}-${className}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
+                      <span className="font-medium text-sm">{className}</span>
+                      <span className="ml-2 text-xs text-gray-500">({classItems.length})</span>
+                    </div>
+                    {openGroups[`${type}-${teacher}-${className}`] && (
+                      <div className="ml-6 space-y-2">
+                        {classItems.map(item => (
+                          <CollapsibleItem
+                            key={item.id}
+                            title={`${(item as Student).firstName} ${(item as Student).lastName}`}
+                            subtitle={(data.classes.find(c => c.id === (item as Student).classId) as Class)?.classLevel || 'No Class'}
+                            isEditing={editing.has(item.id!)}
+                            onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
+                            onSave={() => handleAction('update', type, item, 0)}
+                            onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))}
+                            onDelete={() => handleAction('delete', type, item, 0)}
+                          >
+                            {editing.has(item.id!) && (
+                              <div className="grid gap-4 md:grid-cols-2">
+                                {config.fields.map((field: string) => (
+                                  <div key={field}>
+                                    <label className="text-sm font-medium">{field}</label>
+                                    {renderField(type, item, field, 0, false)}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </CollapsibleItem>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      });
+    } else {
+      // For classes, use the original grouping by teacher
+      return Object.entries(groupByTeacher(items, item => (item as Class).teacherEmail || '', type))
+        .map(([teacher, groupItems]: [string, ItemType[]]) => (
+          <div key={teacher} className="mb-4">
+            <div className="flex items-center cursor-pointer p-2 bg-gray-100 dark:bg-gray-800 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
+              {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
+              <span className="font-medium">{getTeacherName(teacher)}</span>
+              <span className="ml-2 text-sm text-gray-500">({groupItems.length})</span>
+            </div>
+            {openGroups[`${type}-${teacher}`] && (
+              <div className="ml-6 space-y-2">
+                {groupItems.map(item => (
+                  <CollapsibleItem
+                    key={item.id}
+                    title={`${(item as Class).classDay} ${(item as Class).classTime}`}
+                    subtitle={(item as Class).classLocation}
+                    isEditing={editing.has(item.id!)}
+                    onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
+                    onSave={() => handleAction('update', type, item, 0)}
+                    onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))}
+                    onDelete={() => handleAction('delete', type, item, 0)}
+                  >
+                    {editing.has(item.id!) && (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {config.fields.map((field: string) => (
+                          <div key={field}>
+                            <label className="text-sm font-medium">{field}</label>
+                            {renderField(type, item, field, 0, false)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CollapsibleItem>
+                ))}
+              </div>
+            )}
+          </div>
+        ));
+    }
+  };
 
   const renderFlatItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => 
     items.map(item => (
