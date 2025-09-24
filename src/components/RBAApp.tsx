@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TypographyH1, TypographyH2, TypographyMuted, TypographySmall } from '@/components/ui/typography';
 import { Loader2, Users, Shield, LogOut } from 'lucide-react';
-import { getAllClasses, isUserAdmin, getUserDisplayName, debugCheckAdminStatus } from '@/services/firebaseService';
+import { getAllClasses, isUserAdmin, getUserDisplayName } from '@/services/firebaseService';
 import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
 import { ClassCard } from './ClassCard';
@@ -36,17 +36,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         getAllClasses()
       ]);
       
-      // Debug logging
-      console.log('=== DEBUG INFO ===');
-      console.log('User email:', user.email);
-      console.log('Admin status:', adminStatus);
-      console.log('All classes count:', allClasses.length);
-      console.log('All classes:', allClasses);
-      console.log('==================');
-      
-      // Debug check for both admin emails
-      await debugCheckAdminStatus('wenli11651@gmail.com');
-      await debugCheckAdminStatus('yoc31397@gmail.com');
       
       setIsAdmin(adminStatus);
       
@@ -151,7 +140,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       )}
     </div>
     <footer className="text-center py-4 border-t">
-      <TypographySmall className="text-muted-foreground">Version 8</TypographySmall>
+      <TypographySmall className="text-muted-foreground">Version 9</TypographySmall>
     </footer>
   </div>;
 };

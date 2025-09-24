@@ -36,18 +36,7 @@ export const signInWithGoogle = async (credential?: string) => {
 };
 export const signOutUser = async () => await signOut(auth);
 export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthStateChanged(auth, callback);
-export const isUserAdmin = async (email: string): Promise<boolean> => {
-  try {
-    console.log('isUserAdmin: Checking admin status for:', email);
-    const result = await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]]);
-    console.log('isUserAdmin: Query result for', email, ':', result);
-    console.log('isUserAdmin: Is admin?', result.length > 0);
-    return result.length > 0;
-  } catch (error) {
-    console.error('isUserAdmin: Error checking admin status for', email, ':', error);
-    return false;
-  }
-};
+export const isUserAdmin = async (email: string): Promise<boolean> => (await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]])).length > 0;
 
 export const createLegacyReport = async (reportData: Omit<ReportData, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => await createDoc('reports', reportData);
 export const getReportsByUser = async (userId: string): Promise<ReportData[]> => (await getDocsByQuery<ReportData>('reports', [['userId', '==', userId]])).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -98,38 +87,7 @@ export const getUserDisplayName = async (email: string): Promise<string | null> 
 };
 export const getAllUsers = async (): Promise<AdminUser[]> => await getDocsByQuery<AdminUser>('adminUsers').catch(() => []);
 
-// Temporary debugging function to check admin status for any email
-export const debugCheckAdminStatus = async (email: string): Promise<void> => {
-  try {
-    console.log('=== DEBUG: Checking admin status for', email, '===');
-    const allUsers = await getAllUsers();
-    console.log('All users in adminUsers collection:', allUsers);
-    
-    const userWithEmail = allUsers.find(user => user.email === email);
-    console.log('User found with email', email, ':', userWithEmail);
-    
-    if (userWithEmail) {
-      console.log('Is admin?', userWithEmail.isAdmin);
-    } else {
-      console.log('No user found with email:', email);
-    }
-    console.log('=== END DEBUG ===');
-  } catch (error) {
-    console.error('Debug check failed:', error);
-  }
-};
-export const getAllClasses = async (): Promise<Class[]> => {
-  try {
-    console.log('getAllClasses: Starting query...');
-    const result = await getDocsByQuery<Class>('classes');
-    console.log('getAllClasses: Query result:', result);
-    console.log('getAllClasses: Result count:', result.length);
-    return result;
-  } catch (error) {
-    console.error('getAllClasses: Error occurred:', error);
-    return [];
-  }
-};
+export const getAllClasses = async (): Promise<Class[]> => await getDocsByQuery<Class>('classes').catch(() => []);
 export const getAllStudents = async (): Promise<Student[]> => {
   return await getDocsByQuery<Student>('students').catch(() => []);
 };
