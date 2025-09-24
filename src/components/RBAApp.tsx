@@ -134,13 +134,13 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
           }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
             <TeacherCard key={teacherData.teacherEmail} teacherName={teacherData.teacherName} teacherEmail={teacherData.teacherEmail} classes={teacherData.classes} isAdmin={isAdmin} />
           )) : classes.map((classData) => (
-            <ClassCard key={classData.id} classData={classData} isAdmin={isAdmin} />
+            <ClassCard key={classData.id} classData={classData} />
           ))}
         </div>
       )}
     </div>
     <footer className="text-center py-4 border-t">
-      <TypographySmall className="text-muted-foreground">Version 12</TypographySmall>
+      <TypographySmall className="text-muted-foreground">Version 16</TypographySmall>
     </footer>
   </div>;
 };

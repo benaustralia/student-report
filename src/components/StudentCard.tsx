@@ -5,16 +5,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { TypographySmall } from '@/components/ui/typography';
-import { ChevronDown, ChevronRight, Loader2, Trash2 } from 'lucide-react';
-import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports, deleteStudent } from '@/services/firebaseService';
+import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { ReportPreview } from '@/components/ReportPreview';
 import type { Student, Class, ReportData } from '@/types';
 
-interface StudentCardProps { student: Student; classData: Class; isAdmin?: boolean; }
+interface StudentCardProps { student: Student; classData: Class; }
 
-export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData, isAdmin = false }) => {
+export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData }) => {
   const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false });
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
@@ -97,27 +97,6 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
   };
 
-  const handleDelete = async () => {
-    console.log('handleDelete called for student:', student.firstName, student.lastName);
-    console.log('Call stack:', new Error().stack);
-    
-    if (!isAdmin) return;
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${student.firstName} ${student.lastName}? This action cannot be undone and will also delete all their reports.`
-    );
-    
-    if (confirmed) {
-      try {
-        await deleteStudent(student.id);
-        // The parent component should handle refreshing the student list
-        window.location.reload(); // Simple refresh for now
-      } catch (error) {
-        console.error('Error deleting student:', error);
-        alert('Failed to delete student. Please try again.');
-      }
-    }
-  };
 
   // Auto-save effect with unsaved changes tracking
   useEffect(() => {
@@ -186,19 +165,6 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
               {state.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               <CardTitle>{student.firstName} {student.lastName}</CardTitle>
             </div>
-            {isAdmin && state.isOpen && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete();
-                }}
-                className="ml-2"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CollapsibleContent>

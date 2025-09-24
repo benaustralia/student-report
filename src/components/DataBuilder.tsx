@@ -247,16 +247,19 @@ export const DataBuilder = () => {
         return (
           <CollapsibleCard key={type} title={config.title} icon={Icon} badge={`${newItems[dataType]?.length || 0} new | ${items.length} existing`} isOpen={openSections[dataType]} onToggle={open => setOpenSections(prev => ({ ...prev, [dataType]: open }))}>
             {['students', 'classes'].includes(dataType) ? renderGroupedItems(dataType, items, config) : renderFlatItems(dataType, items, config)}
-            <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => handleAction('add', dataType, null, 0)} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" />Add New</Button>
-              {newItems[dataType]?.length > 0 && <Button onClick={() => handleAction('submit', dataType, null, 0)} className="bg-green-600 hover:bg-green-700 text-white">Submit {newItems[dataType].length} New {config.title}</Button>}
-            </div>
             {newItems[dataType]?.map((item, index) => (
               <div key={index} className="p-4 border rounded-lg space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">{config.fields.map(field => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(dataType, item, field, index, true)}</div>)}</div>
-                <Button onClick={() => handleAction('remove', dataType, null, index)} variant="destructive" size="sm">Remove</Button>
               </div>
             ))}
+            {newItems[dataType]?.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                <Button onClick={() => handleAction('submit', dataType, null, 0)} className="bg-green-600 hover:bg-green-700 text-white">Submit {newItems[dataType].length} New {CONFIG[dataType].title}</Button>
+              </div>
+            )}
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={() => handleAction('add', dataType, null, 0)} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" />Add New</Button>
+            </div>
           </CollapsibleCard>
         );
       })}

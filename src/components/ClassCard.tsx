@@ -12,24 +12,25 @@ import { generateClassZIP, type ClassReport } from '@/services/zipService';
 
 interface ClassCardProps {
   classData: Class;
-  isAdmin?: boolean;
 }
 
-export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, isAdmin = false }) => {
+export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [studentCount, setStudentCount] = useState<number | null>(null);
+  const [hasLoadedStudents, setHasLoadedStudents] = useState(false);
 
-  const loadStudents = async () => {
-    if (students.length > 0) return; // Already loaded
+  const loadStudents = async (forceReload = false) => {
+    if (students.length > 0 && !forceReload) return; // Already loaded, unless forced
     
     setLoading(true);
     try {
       const studentsData = await getStudentsForClass(classData.id);
       setStudents(studentsData);
       setStudentCount(studentsData.length);
+      setHasLoadedStudents(true);
     } catch (error) {
       console.error('Error loading students:', error);
     } finally {
@@ -52,18 +53,22 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, isAd
     loadStudentCount();
   }, [loadStudentCount]);
 
-  // Listen for data changes from DataBuilder to refresh student count
+  // Listen for data changes from DataBuilder to refresh student count and list
   React.useEffect(() => {
     const handleDataChange = (event: CustomEvent) => {
       // Only refresh when students are added/updated/deleted
       if (event.detail?.type === 'students') {
         loadStudentCount();
+        // Also reload the student list if it has been loaded before
+        if (hasLoadedStudents) {
+          loadStudents(true);
+        }
       }
     };
 
     window.addEventListener('dataChanged', handleDataChange as unknown as EventListener);
     return () => window.removeEventListener('dataChanged', handleDataChange as unknown as EventListener);
-  }, [loadStudentCount]);
+  }, [loadStudentCount, hasLoadedStudents]);
 
   const handleDownloadClass = async () => {
     setIsDownloading(true);
@@ -164,7 +169,6 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, isAd
                       key={student.id}
                       student={student}
                       classData={classData}
-                      isAdmin={isAdmin}
                     />
                   ))}
                 </div>
