@@ -110,7 +110,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, isAd
           >
             <div className="flex items-center justify-between">
               <CardTitle>
-                {classData.classDay}, {classData.classTime} - {classData.classLocation}
+                {classData.classDay} - {classData.classLocation}
               </CardTitle>
               {isOpen ? (
                 <ChevronDown className="h-4 w-4 flex-shrink-0" />
