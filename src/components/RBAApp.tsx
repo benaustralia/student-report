@@ -39,7 +39,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       setIsAdmin(adminStatus);
       
       if (adminStatus) {
-        // For admin users, use all classes and batch teacher name lookups
+        // For all admin users (admin-only and admin+teacher), use all classes and batch teacher name lookups
         setClasses(allClasses);
         
         const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
@@ -55,7 +55,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         }), {} as Record<string, string>);
         setTeacherDisplayNames(displayNameMap);
       } else {
-        // For teacher users, filter classes by their email
+        // For teacher-only users, filter classes by their email
         const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
         setClasses(teacherClasses);
       }
@@ -138,5 +138,8 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         </div>
       )}
     </div>
+    <footer className="text-center py-4 border-t">
+      <TypographySmall className="text-muted-foreground">Version 1</TypographySmall>
+    </footer>
   </div>;
 };
