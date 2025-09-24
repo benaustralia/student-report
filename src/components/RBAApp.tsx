@@ -36,14 +36,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         getAllClasses()
       ]);
       
-      // Debug logging
-      console.log('=== DEBUG INFO ===');
-      console.log('User email:', user.email);
-      console.log('Admin status:', adminStatus);
-      console.log('All classes count:', allClasses.length);
-      console.log('All classes:', allClasses);
-      console.log('==================');
-      
       setIsAdmin(adminStatus);
       
       if (adminStatus) {
