@@ -66,7 +66,7 @@ export const DataBuilder = () => {
       if (action === 'add') setNewItems(prev => ({ ...prev, [type]: [...prev[type], { ...CONFIG[type].empty }] }));
       else if (action === 'remove') setNewItems(prev => ({ ...prev, [type]: prev[type].filter((_, i) => i !== index) }));
       else if (action === 'submit') {
-        await OPS.import[type](newItems[type] as any);
+        await (OPS.import[type] as (items: ItemType[]) => Promise<void>)(newItems[type]);
         setNewItems(prev => ({ ...prev, [type]: [] }));
         setMessage(`Imported ${newItems[type].length} ${type}!`);
         const results = await Promise.all(OPS.getAll.map(fn => fn()));
@@ -139,7 +139,7 @@ export const DataBuilder = () => {
       </Select>
     ) : (
       <Input
-        value={(item as any)[field] || ''}
+        value={(item as unknown as Record<string, unknown>)[field] as string || ''}
         onChange={e =>
           updateItem(
             type,

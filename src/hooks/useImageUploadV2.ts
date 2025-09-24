@@ -143,18 +143,16 @@ export const useImageUploadV2 = ({
 
   // Initialize with existing image URL - this is the key fix
   const initializeWithUrl = useCallback((imageUrl: string | null) => {
-    console.log('useImageUploadV2: initializeWithUrl called with:', imageUrl);
+    // Remove debug logs to reduce console noise
     
     // Always prioritize the Firebase URL over any file selection
     if (imageUrl) {
-      console.log('useImageUploadV2: Setting Firebase image URL:', imageUrl);
       setCurrentImageUrl(imageUrl);
       setPreview(imageUrl);
       
       // Clear any file selection since we're loading from database
       setFile(null);
     } else {
-      console.log('useImageUploadV2: Clearing image');
       setCurrentImageUrl(null);
       setPreview(null);
     }

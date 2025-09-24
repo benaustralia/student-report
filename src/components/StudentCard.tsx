@@ -18,6 +18,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false });
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
+  const initializeWithUrlRef = useRef<(url: string | null) => void>(() => {});
 
   const saveReport = useCallback(async (imageUrl?: string | null, isAutoSave: boolean = false) => {
     if (!state.reportText.trim() && !imageUrl) return;
@@ -48,6 +49,9 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     onRemove: () => saveReport(null),
   });
 
+  // Store the latest initializeWithUrl function in a ref
+  initializeWithUrlRef.current = imageUpload.initializeWithUrl;
+
   const loadReports = useCallback(async () => {
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
@@ -61,11 +65,11 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         const reportText = latestReport.reportText || '';
         setState(prev => ({ ...prev, reportText, hasUnsavedChanges: false }));
         lastSavedTextRef.current = reportText;
-        imageUpload.initializeWithUrl(latestReport.artworkUrl || null);
+        initializeWithUrlRef.current(latestReport.artworkUrl || null);
       } else {
         setState(prev => ({ ...prev, reportText: '', hasUnsavedChanges: false }));
         lastSavedTextRef.current = '';
-        imageUpload.initializeWithUrl(null);
+        initializeWithUrlRef.current(null);
       }
     } catch (error) {
       console.error('Error loading reports:', error);
@@ -83,8 +87,9 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   }, [imageUpload.file, imageUpload, saveReport]);
 
   useEffect(() => {
-    hasLoadedRef.current = false;
-    loadReports();
+    if (!hasLoadedRef.current) {
+      loadReports();
+    }
   }, [loadReports]);
 
   const handleToggle = () => {

@@ -92,7 +92,7 @@ function AppContent() {
                 shape: 'rectangular',
                 logo_alignment: 'left'
               });
-              console.log('Google Sign-In button rendered successfully');
+              // Remove console log to reduce noise
             } catch (renderError) {
               console.error('Error rendering button:', renderError);
             }
@@ -100,7 +100,10 @@ function AppContent() {
             retryCount++;
             setTimeout(renderButton, 500);
           } else {
-            console.warn('Failed to render Google Sign-In button after maximum retries');
+            // Only log in development mode
+            if (import.meta.env.DEV) {
+              console.warn('Failed to render Google Sign-In button after maximum retries');
+            }
           }
         };
         
