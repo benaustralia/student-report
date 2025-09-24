@@ -1,4 +1,5 @@
 import type { ReportData, Student, Teacher } from '@/types';
+import reportTemplateSvg from '@/assets/report-template.svg?url';
 
 // Dynamic import for JSZip to reduce initial bundle size
 const getJSZip = async () => {

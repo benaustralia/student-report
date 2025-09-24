@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, Loader2, Download } from 'lucide-react';
+import reportTemplateSvg from '@/assets/report-template.svg?url';
 import { ReportTemplate } from './ReportTemplate';
 import { getTeacherByEmail } from '@/services/firebaseService';
 import type { Student, Class, ReportData, Teacher } from '@/types';
@@ -133,7 +134,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             document.body.appendChild(tempDiv);
             
             // We'll create the SVG content directly here
-            const response = await fetch('/src/assets/report-template.svg');
+            const response = await fetch(reportTemplateSvg);
             const svgText = await response.text();
             const parser = new DOMParser();
             const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
