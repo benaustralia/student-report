@@ -73,13 +73,40 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
 
   // Listen for data changes from DataBuilder
   useEffect(() => {
-    const handleDataChange = () => {
-      loadData();
+    const handleDataChange = async () => {
+      try {
+        // Only refresh class data, don't reload admin status or user info
+        const allClasses = await getAllClasses();
+        
+        if (isAdmin) {
+          // For admin users, update classes and teacher display names
+          setClasses(allClasses);
+          
+          const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
+          const displayNames = await Promise.all(
+            uniqueTeacherEmails.map(async (email) => ({ 
+              email, 
+              displayName: (await getUserDisplayName(email)) || 'Unknown Teacher' 
+            }))
+          );
+          const displayNameMap = displayNames.reduce((acc, { email, displayName }) => ({ 
+            ...acc, 
+            [email]: displayName 
+          }), {} as Record<string, string>);
+          setTeacherDisplayNames(displayNameMap);
+        } else {
+          // For teacher users, filter classes by their email
+          const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
+          setClasses(teacherClasses);
+        }
+      } catch (err) {
+        console.error('Error refreshing class data:', err);
+      }
     };
 
     window.addEventListener('dataChanged', handleDataChange);
     return () => window.removeEventListener('dataChanged', handleDataChange);
-  }, []);
+  }, [isAdmin, user.email]);
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
