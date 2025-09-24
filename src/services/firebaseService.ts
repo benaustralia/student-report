@@ -86,7 +86,18 @@ export const getUserDisplayName = async (email: string): Promise<string | null> 
   return users.length > 0 ? `${users[0].firstName} ${users[0].lastName}`.trim() : null;
 };
 export const getAllUsers = async (): Promise<AdminUser[]> => await getDocsByQuery<AdminUser>('adminUsers').catch(() => []);
-export const getAllClasses = async (): Promise<Class[]> => await getDocsByQuery<Class>('classes').catch(() => []);
+export const getAllClasses = async (): Promise<Class[]> => {
+  try {
+    console.log('getAllClasses: Starting query...');
+    const result = await getDocsByQuery<Class>('classes');
+    console.log('getAllClasses: Query result:', result);
+    console.log('getAllClasses: Result count:', result.length);
+    return result;
+  } catch (error) {
+    console.error('getAllClasses: Error occurred:', error);
+    return [];
+  }
+};
 export const getAllStudents = async (): Promise<Student[]> => {
   return await getDocsByQuery<Student>('students').catch(() => []);
 };
