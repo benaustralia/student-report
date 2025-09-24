@@ -113,7 +113,6 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
                 <ClassCard
                   key={classData.id}
                   classData={classData}
-                  isAdmin={isAdmin}
                 />
               ))}
             </div>
