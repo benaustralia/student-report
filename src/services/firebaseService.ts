@@ -36,7 +36,18 @@ export const signInWithGoogle = async (credential?: string) => {
 };
 export const signOutUser = async () => await signOut(auth);
 export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthStateChanged(auth, callback);
-export const isUserAdmin = async (email: string): Promise<boolean> => (await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]])).length > 0;
+export const isUserAdmin = async (email: string): Promise<boolean> => {
+  try {
+    console.log('isUserAdmin: Checking admin status for:', email);
+    const result = await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]]);
+    console.log('isUserAdmin: Query result for', email, ':', result);
+    console.log('isUserAdmin: Is admin?', result.length > 0);
+    return result.length > 0;
+  } catch (error) {
+    console.error('isUserAdmin: Error checking admin status for', email, ':', error);
+    return false;
+  }
+};
 
 export const createLegacyReport = async (reportData: Omit<ReportData, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => await createDoc('reports', reportData);
 export const getReportsByUser = async (userId: string): Promise<ReportData[]> => (await getDocsByQuery<ReportData>('reports', [['userId', '==', userId]])).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
