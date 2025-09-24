@@ -140,7 +140,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       )}
     </div>
     <footer className="text-center py-4 border-t">
-      <TypographySmall className="text-muted-foreground">Version 10</TypographySmall>
+      <TypographySmall className="text-muted-foreground">Version 12</TypographySmall>
     </footer>
   </div>;
 };

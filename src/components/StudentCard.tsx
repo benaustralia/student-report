@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { TypographySmall } from '@/components/ui/typography';
 import { ChevronDown, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports, deleteStudent } from '@/services/firebaseService';
@@ -98,6 +98,9 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   };
 
   const handleDelete = async () => {
+    console.log('handleDelete called for student:', student.firstName, student.lastName);
+    console.log('Call stack:', new Error().stack);
+    
     if (!isAdmin) return;
     
     const confirmed = window.confirm(
@@ -154,43 +157,50 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
 
   return (
     <Card className="w-full">
-      <Collapsible open={state.isOpen} onOpenChange={(open) => setState(prev => ({ ...prev, isOpen: open }))}>
-        <CollapsibleTrigger asChild>
-          <CardHeader 
-            className="cursor-pointer hover:bg-muted/50 transition-colors" 
-            onClick={handleToggle}
-            role="button"
-            tabIndex={0}
-            aria-expanded={state.isOpen}
-            aria-label={`${state.isOpen ? 'Collapse' : 'Expand'} student details for ${student.firstName} ${student.lastName}`}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+      <Collapsible open={state.isOpen}>
+        <CardHeader className="p-0">
+          <div 
+            className="flex items-center justify-between p-6"
+            onClick={(e) => {
+              // Only allow clicks on the specific clickable area
+              if (!e.target || !(e.target as Element).closest('[role="button"]')) {
                 e.preventDefault();
-                handleToggle();
+                e.stopPropagation();
               }
             }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {state.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <CardTitle>{student.firstName} {student.lastName}</CardTitle>
-              </div>
-              {isAdmin && (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete();
-                  }}
-                  className="ml-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
+            <div 
+              className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors p-2 -m-2 rounded"
+              role="button"
+              tabIndex={0}
+              aria-expanded={state.isOpen}
+              aria-label={`${state.isOpen ? 'Collapse' : 'Expand'} student details for ${student.firstName} ${student.lastName}`}
+              onClick={handleToggle}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleToggle();
+                }
+              }}
+            >
+              {state.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <CardTitle>{student.firstName} {student.lastName}</CardTitle>
             </div>
-          </CardHeader>
-        </CollapsibleTrigger>
+            {isAdmin && state.isOpen && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                className="ml-2"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardHeader>
         <CollapsibleContent>
           <CardContent className="pt-0">
             {state.loading ? (
