@@ -226,13 +226,24 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="report">Report</Label>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="report">Report</Label>
+                    <TypographySmall className="text-muted-foreground">
+                      {state.reportText.length}/220 characters
+                    </TypographySmall>
+                  </div>
                   <Textarea
                     id="report"
                     value={state.reportText}
-                    onChange={(e) => setState(prev => ({ ...prev, reportText: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 220) {
+                        setState(prev => ({ ...prev, reportText: value }));
+                      }
+                    }}
                     placeholder="Write your report here..."
                     className="min-h-[100px]"
+                    maxLength={220}
                   />
                 </div>
                 <div className="flex justify-between items-center pt-2">

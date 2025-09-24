@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Eye, Loader2, Download } from 'lucide-react';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
+import nsalogoPng from '@/assets/NSALogo.png?url';
 import { ReportTemplate } from './ReportTemplate';
 import { getTeacherByEmail } from '@/services/firebaseService';
 import type { Student, Class, ReportData, Teacher } from '@/types';
@@ -100,7 +101,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>Report Preview - {studentName}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -152,6 +153,35 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               textElement.textContent = text;
               return textElement;
             };
+
+            // Add text wrapping function
+            const wrapText = (text: string, maxLength: number): string[] => {
+              if (text.length <= maxLength) return [text];
+              const words = text.split(' ');
+              const lines: string[] = [];
+              let currentLine = '';
+              for (const word of words) {
+                if (currentLine.length + word.length + 1 > maxLength) {
+                  if (currentLine.length > 0) { lines.push(currentLine.trim()); currentLine = word; } else lines.push(word);
+                } else currentLine += (currentLine.length > 0 ? ' ' : '') + word;
+              }
+              if (currentLine.length > 0) lines.push(currentLine.trim());
+              return lines;
+            };
+
+            const addWrappedTextElement = (x: number, y: number, text: string, lineHeight: number = 20) => {
+              const wrappedLines = wrapText(text, 40);
+              const textElements: SVGTextElement[] = [];
+              wrappedLines.forEach((line, index) => {
+                const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textElement.setAttribute('transform', `translate(${x} ${y + (index * lineHeight)})`);
+                textElement.setAttribute('font-family', 'Arial, sans-serif');
+                textElement.setAttribute('fill', 'black');
+                textElement.textContent = line;
+                textElements.push(textElement);
+              });
+              return textElements;
+            };
             
             // Add student data
             svgClone.appendChild(addTextElement(206.17, 222.41, studentName));
@@ -161,7 +191,8 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             svgClone.appendChild(addTextElement(327.71, 745.52, date));
             
             if (reportText?.trim()) {
-              svgClone.appendChild(addTextElement(179.27, 590.33, reportText));
+              const wrappedTextElements = addWrappedTextElement(179.27, 590.33, reportText);
+              wrappedTextElements.forEach(element => svgClone.appendChild(element));
             }
             
             // Add artwork image if available
@@ -198,6 +229,16 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 console.error('Failed to load artwork image:', error); 
               }
             }
+            
+            // Add logo to bottom right
+            const logoElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+            logoElement.setAttribute('href', nsalogoPng);
+            logoElement.setAttribute('x', '460');
+            logoElement.setAttribute('y', '680');
+            logoElement.setAttribute('width', '80');
+            logoElement.setAttribute('height', '80');
+            logoElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            svgClone.appendChild(logoElement);
             
             // Set SVG attributes
             svgClone.setAttribute('width', '595.28');

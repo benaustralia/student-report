@@ -62,7 +62,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
         };
 
         const addWrappedTextElement = (x: number, y: number, text: string, className: string = 'st5', lineHeight: number = 20) => {
-          const wrappedLines = wrapText(text, 55);
+          const wrappedLines = wrapText(text, 40);
           const textElements: SVGTextElement[] = [];
           wrappedLines.forEach((line, index) => {
             const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -151,15 +151,16 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
       <span className="ml-2">Loading report template...</span>
     </div>
   ) : (
-    <div className="w-full bg-white">
+    <div className="w-full bg-white p-4">
       <div className="border rounded-lg overflow-hidden shadow-lg">
         <div 
           ref={svgRef} 
           className="w-full overflow-auto"
           style={{ 
-            maxHeight: 'calc(95vh - 80px)',
+            maxHeight: 'calc(95vh - 120px)',
             display: 'flex',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            padding: '20px'
           }}
           dangerouslySetInnerHTML={{ __html: state.processedSvg }} 
         />
