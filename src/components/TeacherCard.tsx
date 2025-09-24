@@ -12,14 +12,12 @@ interface TeacherCardProps {
   teacherName: string;
   teacherEmail: string;
   classes: Class[];
-  isAdmin?: boolean;
 }
 
 export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({ 
   teacherName, 
   teacherEmail, 
-  classes, 
-  isAdmin = false 
+  classes
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [totalStudents, setTotalStudents] = useState<number | null>(null);

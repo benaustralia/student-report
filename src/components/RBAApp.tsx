@@ -132,7 +132,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
             acc[teacherKey].classes.push(classData);
             return acc;
           }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
-            <TeacherCard key={teacherData.teacherEmail} teacherName={teacherData.teacherName} teacherEmail={teacherData.teacherEmail} classes={teacherData.classes} isAdmin={isAdmin} />
+            <TeacherCard key={teacherData.teacherEmail} teacherName={teacherData.teacherName} teacherEmail={teacherData.teacherEmail} classes={teacherData.classes} />
           )) : classes.map((classData) => (
             <ClassCard key={classData.id} classData={classData} />
           ))}
