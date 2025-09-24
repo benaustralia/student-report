@@ -17,6 +17,7 @@
 
       .st5 {
         fill: #0e100e;
+        font-size: 10px;
       }
 
       .st6 {

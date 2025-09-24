@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { TypographySmall } from '@/components/ui/typography';
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -15,7 +15,7 @@ import type { Student, Class, ReportData } from '@/types';
 interface StudentCardProps { student: Student; classData: Class; }
 
 export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData }) => {
-  const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false });
+  const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false, generatingAI: false });
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
   const initializeWithUrlRef = useRef<(url: string | null) => void>(() => {});
@@ -95,6 +95,80 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   const handleToggle = () => {
     if (!state.isOpen) loadReports();
     setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
+  };
+
+  const generateAIReport = async () => {
+    if (!state.reportText.trim()) {
+      alert('Please enter some notes or ideas first to generate a report.');
+      return;
+    }
+
+    setState(prev => ({ ...prev, generatingAI: true }));
+    
+    try {
+      // Using OpenAI API (you can replace with any AI service)
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY || 'your-api-key-here'}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a bilingual assistant that creates detailed student reports in TWO languages. Create a comprehensive report using the FULL 280 character limit: approximately 140 characters in English followed by approximately 140 characters in Mandarin Chinese. Use ALL available characters - be detailed and specific. Focus on student progress, creativity, engagement, and specific achievements. Make the report rich and informative within the character limit.'
+            },
+            {
+              role: 'user',
+              content: `Student: ${student.firstName} ${student.lastName}, Class: ${classData.classLevel}. Write a detailed bilingual report based on: ${state.reportText}. Use the FULL 280 characters - be comprehensive and specific. Format: [~140 chars English] [~140 chars Chinese]. Example: "Emma demonstrates exceptional artistic growth, creativity, and collaborative skills. Her attention to detail and willingness to help classmates shows great character development. 艾玛展现出卓越的艺术成长、创造力和协作能力。她对细节的关注和帮助同学的意愿显示出优秀的品格发展。"`
+            }
+          ],
+          max_tokens: 200,
+          temperature: 0.6
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate AI report');
+      }
+
+      const data = await response.json();
+      let generatedText = data.choices[0]?.message?.content?.trim();
+      
+      if (generatedText) {
+        // If the generated text is too long, truncate it intelligently
+        if (generatedText.length > 280) {
+          // For bilingual reports, try to maintain the 140+140 character structure
+          const truncated = generatedText.substring(0, 280);
+          
+          // Look for a natural break point around 140 characters (end of English section)
+          const englishEnd = truncated.lastIndexOf('.', 150);
+          const chineseStart = truncated.indexOf('。', 140);
+          
+          if (englishEnd > 120 && englishEnd < 160) {
+            // Truncate at the end of English section
+            generatedText = truncated.substring(0, englishEnd + 1);
+          } else if (chineseStart > 140 && chineseStart < 180) {
+            // If we can find the start of Chinese text, truncate there
+            generatedText = truncated.substring(0, chineseStart);
+          } else {
+            // Fallback: truncate at 280 characters
+            generatedText = truncated;
+          }
+        }
+        
+        setState(prev => ({ ...prev, reportText: generatedText, hasUnsavedChanges: true }));
+      } else {
+        alert('Failed to generate report text. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating AI report:', error);
+      alert('Failed to generate AI report. Please check your API key or try again.');
+    } finally {
+      setState(prev => ({ ...prev, generatingAI: false }));
+    }
   };
 
 
@@ -205,7 +279,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                   <div className="flex justify-between items-center">
                     <Label htmlFor="report">Report</Label>
                     <TypographySmall className="text-muted-foreground">
-                      {state.reportText.length}/220 characters
+                      {state.reportText.length}/280 characters
                     </TypographySmall>
                   </div>
                   <Textarea
@@ -213,14 +287,35 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     value={state.reportText}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value.length <= 220) {
+                      if (value.length <= 280) {
                         setState(prev => ({ ...prev, reportText: value }));
                       }
                     }}
-                    placeholder="Write your report here..."
+                    placeholder="Write your report here or enter notes/bullet points for AI generation..."
                     className="min-h-[100px]"
-                    maxLength={220}
+                    maxLength={280}
                   />
+                  <div className="flex justify-end mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={generateAIReport}
+                      disabled={state.generatingAI || !state.reportText.trim()}
+                      className="text-xs"
+                    >
+                      {state.generatingAI ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Generate Report
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center pt-2">
                   <TypographySmall className={`transition-opacity duration-200 ${

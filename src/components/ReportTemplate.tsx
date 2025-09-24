@@ -28,16 +28,78 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
 
   const wrapText = (text: string, maxLength: number = 55): string[] => {
     if (text.length <= maxLength) return [text];
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-    for (const word of words) {
-      if (currentLine.length + word.length + 1 > maxLength) {
-        if (currentLine.length > 0) { lines.push(currentLine.trim()); currentLine = word; } else lines.push(word);
-      } else currentLine += (currentLine.length > 0 ? ' ' : '') + word;
+    
+    // Check if text contains Chinese characters
+    const hasChinese = /[\u4e00-\u9fff]/.test(text);
+    
+    if (hasChinese) {
+      // For Chinese text, try to wrap at natural boundaries
+      const lines: string[] = [];
+      let currentLine = '';
+      
+      // Split text into segments by punctuation and spaces
+      const segments = text.split(/([。！？，、；：\s]+)/);
+      
+      for (const segment of segments) {
+        if (!segment) continue;
+        
+        // If adding this segment would exceed the limit
+        if (currentLine.length + segment.length > maxLength) {
+          if (currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = segment;
+          } else {
+            // If even a single segment is too long, break it character by character
+            if (segment.length > maxLength) {
+              let tempLine = '';
+              for (const char of segment) {
+                if (tempLine.length + 1 > maxLength) {
+                  lines.push(tempLine);
+                  tempLine = char;
+                } else {
+                  tempLine += char;
+                }
+              }
+              currentLine = tempLine;
+            } else {
+              currentLine = segment;
+            }
+          }
+        } else {
+          currentLine += segment;
+        }
+      }
+      
+      if (currentLine.length > 0) {
+        lines.push(currentLine);
+      }
+      
+      return lines;
+    } else {
+      // For English text, split by words
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        if (currentLine.length + word.length + 1 > maxLength) {
+          if (currentLine.length > 0) { 
+            lines.push(currentLine.trim()); 
+            currentLine = word; 
+          } else {
+            lines.push(word);
+          }
+        } else {
+          currentLine += (currentLine.length > 0 ? ' ' : '') + word;
+        }
+      }
+      
+      if (currentLine.length > 0) {
+        lines.push(currentLine.trim());
+      }
+      
+      return lines;
     }
-    if (currentLine.length > 0) lines.push(currentLine.trim());
-    return lines;
   };
 
   useEffect(() => {
@@ -56,19 +118,20 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
           const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
           textElement.setAttribute('class', className);
           textElement.setAttribute('transform', `translate(${x} ${y})`);
-          textElement.setAttribute('font-family', 'Arial, sans-serif');
+          textElement.setAttribute('font-family', 'Arial, "Microsoft YaHei", "SimSun", sans-serif');
           textElement.textContent = text;
           return textElement;
         };
 
         const addWrappedTextElement = (x: number, y: number, text: string, className: string = 'st5', lineHeight: number = 20) => {
-          const wrappedLines = wrapText(text, 40);
+          const wrappedLines = wrapText(text, 50); // Reduced from 80 to prevent overflow
           const textElements: SVGTextElement[] = [];
           wrappedLines.forEach((line, index) => {
             const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
             textElement.setAttribute('class', className);
             textElement.setAttribute('transform', `translate(${x} ${y + (index * lineHeight)})`);
-            textElement.setAttribute('font-family', 'Arial, sans-serif');
+            textElement.setAttribute('font-family', 'Arial, "Microsoft YaHei", "SimSun", sans-serif');
+            textElement.setAttribute('font-size', '10px');
             textElement.textContent = line;
             textElements.push(textElement);
           });
@@ -123,8 +186,24 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
 
         const styleElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
         styleElement.textContent = `
-          text { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; color: black !important; } 
-          .st2 { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; }
+          text { 
+            fill: black !important; 
+            fill-opacity: 1 !important; 
+            opacity: 1 !important; 
+            color: black !important;
+            font-family: Arial, "Microsoft YaHei", "SimSun", "Noto Sans CJK SC", sans-serif !important;
+            font-weight: normal !important;
+          } 
+          .st1, .st2 { 
+            fill: transparent !important; 
+            fill-opacity: 0 !important; 
+            opacity: 0 !important; 
+          }
+          .st5 { 
+            fill: black !important; 
+            fill-opacity: 1 !important; 
+            opacity: 1 !important; 
+          }
           @media (max-width: 768px) {
             svg { max-width: 100%; height: auto; }
           }
