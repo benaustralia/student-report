@@ -97,6 +97,27 @@ export const getUserDisplayName = async (email: string): Promise<string | null> 
   return users.length > 0 ? `${users[0].firstName} ${users[0].lastName}`.trim() : null;
 };
 export const getAllUsers = async (): Promise<AdminUser[]> => await getDocsByQuery<AdminUser>('adminUsers').catch(() => []);
+
+// Temporary debugging function to check admin status for any email
+export const debugCheckAdminStatus = async (email: string): Promise<void> => {
+  try {
+    console.log('=== DEBUG: Checking admin status for', email, '===');
+    const allUsers = await getAllUsers();
+    console.log('All users in adminUsers collection:', allUsers);
+    
+    const userWithEmail = allUsers.find(user => user.email === email);
+    console.log('User found with email', email, ':', userWithEmail);
+    
+    if (userWithEmail) {
+      console.log('Is admin?', userWithEmail.isAdmin);
+    } else {
+      console.log('No user found with email:', email);
+    }
+    console.log('=== END DEBUG ===');
+  } catch (error) {
+    console.error('Debug check failed:', error);
+  }
+};
 export const getAllClasses = async (): Promise<Class[]> => {
   try {
     console.log('getAllClasses: Starting query...');
