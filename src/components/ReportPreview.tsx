@@ -127,7 +127,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         disabled={isImageUploading}
         onClick={async () => {
           try {
-            const { jsPDF } = await import('jspdf');
+            const { default: jsPDF } = await import('jspdf');
             const { svg2pdf } = await import('svg2pdf.js');
             
             // Load Chinese fonts and wait for them to be ready
@@ -181,7 +181,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               textElement.setAttribute('transform', `translate(${x} ${y})`);
               textElement.setAttribute('font-family', 'Arial, "Microsoft YaHei", "SimSun", "Noto Sans CJK SC", sans-serif');
               textElement.setAttribute('fill', 'black');
-              textElement.setAttribute('font-size', '12px');
+              textElement.setAttribute('font-size', '13px'); // Slightly bigger for form fields
               textElement.textContent = text;
               return textElement;
             };
@@ -596,7 +596,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                       const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
                       textElement.setAttribute('transform', `translate(${x} ${currentY + (index * lineHeight)})`);
                       textElement.setAttribute('font-family', 'Arial, sans-serif');
-                      textElement.setAttribute('font-size', '10px');
+                      textElement.setAttribute('font-size', '11px'); // Slightly bigger English text
                       textElement.setAttribute('fill', 'black');
                       textElement.textContent = trimmedLine;
                       textElements.push(textElement);
