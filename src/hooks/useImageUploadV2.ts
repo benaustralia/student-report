@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { uploadImageToStorage, deleteImageFromStorage, generateImagePath } from '@/services/storageService';
 import { compressImage } from '@/utils/imageUtils';
 
@@ -35,6 +35,7 @@ export const useImageUploadV2 = ({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const currentImageUrlRef = useRef<string | null>(null);
 
   // Cleanup blob URLs when component unmounts
   useEffect(() => {
@@ -44,6 +45,11 @@ export const useImageUploadV2 = ({
       }
     };
   }, [preview]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentImageUrlRef.current = currentImageUrl;
+  }, [currentImageUrl]);
 
   const upload = useCallback(async (): Promise<string | null> => {
     if (!file) {
@@ -55,13 +61,10 @@ export const useImageUploadV2 = ({
 
     try {
       // Delete old image from Firebase Storage if there's one
-      if (currentImageUrl) {
-        try {
-          await deleteImageFromStorage(currentImageUrl);
-        } catch (deleteError) {
-          console.warn('Failed to delete old image:', deleteError);
-          // Continue with upload even if deletion fails
-        }
+      const currentUrl = currentImageUrlRef.current;
+      if (currentUrl) {
+        await deleteImageFromStorage(currentUrl);
+        // Note: deleteImageFromStorage handles errors internally and doesn't throw
       }
 
       // Compress the image first
@@ -92,7 +95,7 @@ export const useImageUploadV2 = ({
     } finally {
       setUploading(false);
     }
-  }, [file, userId, preview, currentImageUrl, onSuccess, onError]);
+  }, [file, userId, onSuccess, onError]);
 
   const remove = useCallback(async () => {
     setUploading(true);
@@ -100,8 +103,10 @@ export const useImageUploadV2 = ({
 
     try {
       // Delete from Firebase Storage if there's a current image
-      if (currentImageUrl) {
-        await deleteImageFromStorage(currentImageUrl);
+      const currentUrl = currentImageUrlRef.current;
+      if (currentUrl) {
+        await deleteImageFromStorage(currentUrl);
+        // Note: deleteImageFromStorage handles errors internally and doesn't throw
       }
       
       // Cleanup blob URL
@@ -122,7 +127,7 @@ export const useImageUploadV2 = ({
     } finally {
       setUploading(false);
     }
-  }, [currentImageUrl, preview, onRemove, onError]);
+  }, [preview, onRemove, onError]);
 
   const clearError = useCallback(() => {
     setError(null);

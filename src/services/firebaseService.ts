@@ -13,13 +13,51 @@ const createDoc = async (collectionName: string, data: Record<string, unknown>, 
   return (await addDoc(collection(db, collectionName), { ...data, createdAt: new Date(), updatedAt: new Date() })).id;
 };
 const getDocsByQuery = async <T>(collectionName: string, conditions: [string, '==' | '!=' | '<' | '<=' | '>' | '>=' | 'array-contains' | 'in' | 'not-in' | 'array-contains-any', unknown][] = []): Promise<T[]> => {
-  const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
-  const snapshot = await getDocs(q);
-  
-  // Always use Firestore document ID as the single source of truth
-  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+  try {
+    const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
+    const snapshot = await getDocs(q);
+    
+    // Always use Firestore document ID as the single source of truth
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+  } catch (error: any) {
+    // Handle network errors gracefully
+    if (error?.code === 'unavailable' || error?.message?.includes('network')) {
+      console.warn(`Network error accessing ${collectionName}, retrying...`);
+      // Wait a bit and retry once
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+      } catch (retryError) {
+        console.error(`Failed to fetch ${collectionName} after retry:`, retryError);
+        return [];
+      }
+    }
+    console.error(`Error fetching ${collectionName}:`, error);
+    return [];
+  }
 };
-const updateDocById = async (collectionName: string, id: string, updates: Record<string, unknown>) => await updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
+const updateDocById = async (collectionName: string, id: string, updates: Record<string, unknown>) => {
+  try {
+    await updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
+  } catch (error: any) {
+    // Handle network errors gracefully
+    if (error?.code === 'unavailable' || error?.message?.includes('network')) {
+      console.warn(`Network error updating ${collectionName}/${id}, retrying...`);
+      // Wait a bit and retry once
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        await updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
+        return;
+      } catch (retryError) {
+        console.error(`Failed to update ${collectionName}/${id} after retry:`, retryError);
+        throw retryError;
+      }
+    }
+    throw error;
+  }
+};
 const deleteDocById = async (collectionName: string, id: string) => {
   return await deleteDoc(doc(db, collectionName, id));
 };
@@ -67,6 +105,56 @@ export const getReportsForStudent = async (studentId: string): Promise<ReportDat
   return reports.length > 0 ? [reports.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]] : [];
 };
 export const getReportsForClass = async (classId: string): Promise<ReportData[]> => (await getDocsByQuery<ReportData>('reports', [['classId', '==', classId]])).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+export const getIncompleteReports = async (): Promise<ReportData[]> => {
+  const allReports = await getAllReports();
+  return allReports.filter(report => {
+    // Only include reports that have been started (have some text)
+    const hasStarted = report.reportText && report.reportText.trim().length > 0;
+    if (!hasStarted) return false;
+    
+    const hasImage = report.artworkUrl && report.artworkUrl.trim() !== '';
+    const hasMinText = report.reportText && report.reportText.length >= 150;
+    return !hasImage || !hasMinText;
+  });
+};
+
+export const cleanReportsWithoutStudentNames = async (): Promise<void> => {
+  try {
+    const [allReports, allStudents] = await Promise.all([getAllReports(), getAllStudents()]);
+    
+    console.log(`Before cleanup: ${allStudents.length} students, ${allReports.length} reports`);
+    
+    // Find reports that are missing studentName
+    const reportsToDelete = allReports.filter(report => !report.studentName);
+    
+    if (reportsToDelete.length === 0) {
+      console.log('No reports need to be cleaned');
+      return;
+    }
+    
+    console.log(`Found ${reportsToDelete.length} reports without student names to delete`);
+    
+    // Delete each report without a student name
+    await Promise.all(reportsToDelete.map(async (report) => {
+      await deleteDocById('reports', report.id);
+      console.log(`Deleted report ${report.id} (no student name)`);
+    }));
+    
+    // Verify student count hasn't changed
+    const studentsAfter = await getAllStudents();
+    console.log(`After cleanup: ${studentsAfter.length} students (should be same as before: ${allStudents.length})`);
+    
+    if (studentsAfter.length !== allStudents.length) {
+      console.warn(`WARNING: Student count changed from ${allStudents.length} to ${studentsAfter.length}! This should not happen.`);
+    }
+    
+    console.log(`Cleaned ${reportsToDelete.length} reports without student names`);
+  } catch (error) {
+    console.error('Error during report cleanup:', error);
+    throw error;
+  }
+};
 
 export const createOrUpdateReport = async (reportData: Omit<ReportData, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   const existingReports = await getDocsByQuery<ReportData>('reports', [['studentId', '==', reportData.studentId]]);
@@ -292,7 +380,14 @@ export const importReports = async (reportsData: LegacyReportData[]): Promise<vo
   await Promise.all(reportsData.map(async report => {
     const student = students.find(s => `${s.firstName} ${s.lastName}` === report.studentName);
     const classData = classes.find(c => c.teacherEmail === report.teacher);
-    const reportData = { ...report, studentId: student?.id || 'unknown', classId: classData?.id || 'unknown', teacherEmail: report.teacher, reportText: report.comments };
+    const reportData = { 
+      ...report, 
+      studentId: student?.id || 'unknown', 
+      classId: classData?.id || 'unknown', 
+      teacherEmail: report.teacher, 
+      reportText: report.comments,
+      studentName: report.studentName // Preserve the student name from legacy data
+    };
     await createDoc('reports', reportData);
   }));
 };

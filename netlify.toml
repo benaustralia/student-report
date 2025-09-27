@@ -5,6 +5,14 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Production branch settings
+[context.production]
+  command = "npm ci --force && npm run build"
+
+# Development branch settings  
+[context.development]
+  command = "npm ci --force && npm run build"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -43,7 +43,14 @@ export const deleteImageFromStorage = async (url: string): Promise<void> => {
     // Create reference and delete
     const storageRef = ref(storage, path);
     await deleteObject(storageRef);
-  } catch (error) {
+  } catch (error: any) {
+    // Handle specific Firebase Storage errors
+    if (error?.code === 'storage/object-not-found') {
+      // File doesn't exist - this is fine, just return silently
+      return;
+    }
+    
+    // For other errors, log them but don't throw
     console.error('Error deleting from Firebase Storage:', error);
     // Don't throw - deletion failures shouldn't break the app
   }

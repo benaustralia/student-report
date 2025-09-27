@@ -12,9 +12,14 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { ReportPreview } from '@/components/ReportPreview';
 import type { Student, Class, ReportData } from '@/types';
 
-interface StudentCardProps { student: Student; classData: Class; }
+interface StudentCardProps { 
+  student: Student; 
+  classData: Class; 
+  isSelected?: boolean;
+  onStudentSelected?: (studentId: string) => void;
+}
 
-export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData }) => {
+export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData, isSelected, onStudentSelected }) => {
   const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false, generatingAI: false });
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
@@ -28,6 +33,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         classId: classData.id,
         teacherEmail: classData.teacherEmail,
         reportText: state.reportText.trim(),
+        studentName: `${student.firstName} ${student.lastName}`,
         ...(imageUrl && { artworkUrl: imageUrl })
       };
       await createOrUpdateReport(reportData);
@@ -51,6 +57,13 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
 
   // Store the latest initializeWithUrl function in a ref
   initializeWithUrlRef.current = imageUpload.initializeWithUrl;
+
+  // Auto-expand when this student is selected
+  useEffect(() => {
+    if (isSelected) {
+      setState(prev => ({ ...prev, isOpen: true }));
+    }
+  }, [isSelected]);
 
   const loadReports = useCallback(async () => {
     if (hasLoadedRef.current) return;
@@ -84,7 +97,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         if (imageUrl) saveReport(imageUrl);
       });
     }
-  }, [imageUpload.file, imageUpload, saveReport]);
+  }, [imageUpload.file, saveReport]);
 
   useEffect(() => {
     if (!hasLoadedRef.current) {
@@ -118,11 +131,17 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
           messages: [
             {
               role: 'system',
-              content: 'You are a bilingual assistant that creates detailed student reports in TWO languages. Create a comprehensive report using the FULL 280 character limit: approximately 140 characters in English followed by approximately 140 characters in Mandarin Chinese. Use ALL available characters - be detailed and specific. Focus on student progress, creativity, engagement, and specific achievements. Make the report rich and informative within the character limit.'
+              content: 'You are a bilingual assistant that creates detailed student reports in TWO languages. You MUST create a report that uses EXACTLY 230 characters total: exactly 115 characters in English followed by exactly 115 characters in Mandarin Chinese. This is a strict requirement - count your characters carefully. Use ALL available characters - be detailed and specific. Focus on student progress, creativity, engagement, and specific achievements. Make the report rich and informative within the character limit. Use the notes/points provided by the teacher as the foundation for your report, expanding on them to create a comprehensive bilingual report. CRITICAL: Your response must be exactly 230 characters long.'
             },
             {
               role: 'user',
-              content: `Student: ${student.firstName} ${student.lastName}, Class: ${classData.classLevel}. Write a detailed bilingual report based on: ${state.reportText}. Use the FULL 280 characters - be comprehensive and specific. Format: [~140 chars English] [~140 chars Chinese]. Example: "Emma demonstrates exceptional artistic growth, creativity, and collaborative skills. Her attention to detail and willingness to help classmates shows great character development. 艾玛展现出卓越的艺术成长、创造力和协作能力。她对细节的关注和帮助同学的意愿显示出优秀的品格发展。"`
+              content: `Student: ${student.firstName} ${student.lastName}, Class: ${classData.classLevel}. Write a detailed bilingual report based on the teacher's notes: ${state.reportText}. The teacher's notes may be in English, Mandarin, or both languages - use these as your foundation and expand them into a comprehensive bilingual report. 
+
+REQUIREMENT: Your response must be EXACTLY 230 characters long - no more, no less. Format: [exactly 115 chars English] [exactly 115 chars Chinese] = 230 total.
+
+Example (230 chars exactly): "Emma demonstrates exceptional artistic growth, creativity, and collaborative skills. Her attention to detail shows great character development. 艾玛展现出卓越的艺术成长、创造力和协作能力。她对细节的关注显示出优秀的品格发展。"
+
+Count your characters and ensure your response is exactly 230 characters.`
             }
           ],
           max_tokens: 200,
@@ -138,25 +157,14 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       let generatedText = data.choices[0]?.message?.content?.trim();
       
       if (generatedText) {
-        // If the generated text is too long, truncate it intelligently
-        if (generatedText.length > 280) {
-          // For bilingual reports, try to maintain the 140+140 character structure
-          const truncated = generatedText.substring(0, 280);
-          
-          // Look for a natural break point around 140 characters (end of English section)
-          const englishEnd = truncated.lastIndexOf('.', 150);
-          const chineseStart = truncated.indexOf('。', 140);
-          
-          if (englishEnd > 120 && englishEnd < 160) {
-            // Truncate at the end of English section
-            generatedText = truncated.substring(0, englishEnd + 1);
-          } else if (chineseStart > 140 && chineseStart < 180) {
-            // If we can find the start of Chinese text, truncate there
-            generatedText = truncated.substring(0, chineseStart);
-          } else {
-            // Fallback: truncate at 280 characters
-            generatedText = truncated;
-          }
+        // Ensure exactly 230 characters
+        if (generatedText.length > 230) {
+          // Truncate to exactly 230 characters
+          generatedText = generatedText.substring(0, 230);
+        } else if (generatedText.length < 230) {
+          // Pad with spaces to reach exactly 230 characters
+          const paddingNeeded = 230 - generatedText.length;
+          generatedText = generatedText + ' '.repeat(paddingNeeded);
         }
         
         setState(prev => ({ ...prev, reportText: generatedText, hasUnsavedChanges: true }));
@@ -209,7 +217,10 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   }, [state.hasUnsavedChanges]);
 
   return (
-    <Card className="w-full">
+    <Card 
+      className="w-full"
+      data-student-id={student.id}
+    >
       <Collapsible open={state.isOpen}>
         <CardHeader className="p-0">
           <div 
@@ -228,10 +239,18 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
               tabIndex={0}
               aria-expanded={state.isOpen}
               aria-label={`${state.isOpen ? 'Collapse' : 'Expand'} student details for ${student.firstName} ${student.lastName}`}
-              onClick={handleToggle}
+              onClick={() => {
+                if (onStudentSelected) {
+                  onStudentSelected(student.id);
+                }
+                handleToggle();
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
+                  if (onStudentSelected) {
+                    onStudentSelected(student.id);
+                  }
                   handleToggle();
                 }
               }}
@@ -279,7 +298,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                   <div className="flex justify-between items-center">
                     <Label htmlFor="report">Report</Label>
                     <TypographySmall className="text-muted-foreground">
-                      {state.reportText.length}/280 characters
+                      {state.reportText.length} characters
                     </TypographySmall>
                   </div>
                   <Textarea
@@ -287,35 +306,11 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     value={state.reportText}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value.length <= 280) {
-                        setState(prev => ({ ...prev, reportText: value }));
-                      }
+                      setState(prev => ({ ...prev, reportText: value }));
                     }}
                     placeholder="Write your report here or enter notes/bullet points for AI generation..."
-                    className="min-h-[100px]"
-                    maxLength={280}
+                    className="min-h-[150px]"
                   />
-                  <div className="flex justify-end mt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={generateAIReport}
-                      disabled={state.generatingAI || !state.reportText.trim()}
-                      className="text-xs"
-                    >
-                      {state.generatingAI ? (
-                        <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Generate Report
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </div>
                 <div className="flex justify-between items-center pt-2">
                   <TypographySmall className={`transition-opacity duration-200 ${
@@ -343,7 +338,28 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     </Button>
                   )}
                 </div>
-                <div className="pt-4">
+                <div className="pt-4 space-y-2">
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={generateAIReport}
+                      disabled={state.generatingAI || !state.reportText.trim()}
+                      className="text-xs w-full sm:w-auto"
+                    >
+                      {state.generatingAI ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Generate Report
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <ReportPreview
                     student={student}
                     classData={classData}

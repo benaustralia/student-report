@@ -24,6 +24,57 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [teacherDisplayNames, setTeacherDisplayNames] = useState<Record<string, string>>({});
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+
+  const handleNavigateToStudent = async (studentId: string) => {
+    setSelectedStudentId(studentId);
+    
+    try {
+      // First, find which class contains this student
+      const { getStudentsForClass } = await import('@/services/firebaseService');
+      
+      for (const classData of classes) {
+        const students = await getStudentsForClass(classData.id);
+        if (students.some(student => student.id === studentId)) {
+          // First expand the teacher card
+          window.dispatchEvent(new CustomEvent('expandTeacherForStudent', { 
+            detail: { teacherEmail: classData.teacherEmail, classId: classData.id, studentId } 
+          }));
+          
+          // Wait for teacher card to expand, then dispatch class expansion event
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('expandClassForStudent', { 
+              detail: { classId: classData.id, studentId } 
+            }));
+          }, 200);
+          
+          // Quick scroll to student with minimal delay
+          const scrollToStudent = (attempts = 0) => {
+            const studentElement = document.querySelector(`[data-student-id="${studentId}"]`);
+            
+            if (studentElement) {
+              studentElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              });
+              return;
+            }
+            
+            if (attempts < 10) {
+              setTimeout(() => scrollToStudent(attempts + 1), 100);
+            }
+          };
+          
+          // Start scrolling after a delay to allow for teacher and class expansion
+          setTimeout(() => scrollToStudent(), 500);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error finding student:', error);
+    }
+  };
 
   const loadData = React.useCallback(async () => {
     try {
@@ -119,7 +170,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         </div>
       </div>
     </div>
-    {isAdmin && <AdminPanel user={user} />}
+    {isAdmin && <AdminPanel user={user} onNavigateToStudent={handleNavigateToStudent} />}
     <div className="space-y-4">
       <div className="flex items-center justify-between"><TypographyH2>{isAdmin ? 'All Classes' : 'Your Classes'} ({classes.length})</TypographyH2></div>
       {classes.length === 0 ? (
@@ -132,15 +183,15 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
             acc[teacherKey].classes.push(classData);
             return acc;
           }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
-            <TeacherCard key={teacherData.teacherEmail} teacherName={teacherData.teacherName} teacherEmail={teacherData.teacherEmail} classes={teacherData.classes} />
+            <TeacherCard key={teacherData.teacherEmail} teacherName={teacherData.teacherName} teacherEmail={teacherData.teacherEmail} classes={teacherData.classes} selectedStudentId={selectedStudentId} onStudentSelected={handleNavigateToStudent} />
           )) : classes.map((classData) => (
-            <ClassCard key={classData.id} classData={classData} />
+            <ClassCard key={classData.id} classData={classData} selectedStudentId={selectedStudentId} onStudentSelected={handleNavigateToStudent} />
           ))}
         </div>
       )}
     </div>
     <footer className="text-center py-4 border-t">
-      <TypographySmall className="text-muted-foreground">Version 29 - Developed by hand and with Cursor.ai by Wenli and Ben</TypographySmall>
+      <TypographySmall className="text-muted-foreground">V. 30 - by hand and Cursor.ai with love Wenli and Ben</TypographySmall>
     </footer>
   </div>;
 };

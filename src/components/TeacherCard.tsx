@@ -12,12 +12,16 @@ interface TeacherCardProps {
   teacherName: string;
   teacherEmail: string;
   classes: Class[];
+  selectedStudentId?: string | null;
+  onStudentSelected?: (studentId: string) => void;
 }
 
 export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({ 
   teacherName, 
   teacherEmail, 
-  classes
+  classes,
+  selectedStudentId,
+  onStudentSelected
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
@@ -53,6 +57,34 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
     window.addEventListener('dataChanged', handleDataChange as unknown as EventListener);
     return () => window.removeEventListener('dataChanged', handleDataChange as unknown as EventListener);
   }, [loadStudentCounts]);
+
+  // Listen for teacher expansion events
+  useEffect(() => {
+    const handleExpandTeacher = (event: CustomEvent) => {
+      const { teacherEmail: targetTeacherEmail } = event.detail;
+      
+      if (targetTeacherEmail === teacherEmail) {
+        setIsOpen(true);
+      }
+    };
+
+    window.addEventListener('expandTeacherForStudent', handleExpandTeacher as unknown as EventListener);
+    return () => window.removeEventListener('expandTeacherForStudent', handleExpandTeacher as unknown as EventListener);
+  }, [teacherEmail]);
+
+  // Listen for class expansion events to expand teacher if needed
+  useEffect(() => {
+    const handleExpandClass = (event: CustomEvent) => {
+      const { classId } = event.detail;
+      // Check if this teacher has the class that needs to be expanded
+      if (classes.some(classData => classData.id === classId)) {
+        setIsOpen(true);
+      }
+    };
+
+    window.addEventListener('expandClassForStudent', handleExpandClass as EventListener);
+    return () => window.removeEventListener('expandClassForStudent', handleExpandClass as EventListener);
+  }, [classes]);
 
   return (
     <Card className="w-full">
@@ -111,6 +143,8 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
                 <ClassCard
                   key={classData.id}
                   classData={classData}
+                  selectedStudentId={selectedStudentId}
+                  onStudentSelected={onStudentSelected}
                 />
               ))}
             </div>

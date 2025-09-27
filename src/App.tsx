@@ -28,6 +28,7 @@ declare global {
         id: {
           initialize: (config: GoogleConfig) => void;
           renderButton: (element: HTMLElement | null, config: GoogleButtonConfig) => void;
+          cancel: () => void;
         };
       };
     };
@@ -39,21 +40,30 @@ declare global {
 function AppContent() {
   const { user, loading, error } = useAuthContext();
   const [googleLoaded, setGoogleLoaded] = useState(false);
-
+  const [buttonRendered, setButtonRendered] = useState(false);
 
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setGoogleLoaded(true);
-    script.onerror = (error) => {
-      console.error('Failed to load Google Identity Services script:', error);
+    // Check if Google Identity Services is already loaded
+    const checkGoogleLoaded = () => {
+      if (window.google?.accounts?.id) {
+        setGoogleLoaded(true);
+      } else {
+        // Retry after a short delay if not loaded yet
+        setTimeout(checkGoogleLoaded, 100);
+      }
     };
-    document.head.appendChild(script);
+
+    checkGoogleLoaded();
 
     return () => {
-      document.head.removeChild(script);
+      // Clean up Google Identity Services
+      if (window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.cancel();
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      }
     };
   }, []);
 
@@ -69,21 +79,27 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (googleLoaded && window.google) {
+    // Only initialize and render Google Sign-In if user is not authenticated
+    if (googleLoaded && window.google && !user && !buttonRendered) {
       try {
         window.google.accounts.id.initialize({
           client_id: '1089251772494-s8a9lafg8ju91vvaq426bkvj5mon7vm9.apps.googleusercontent.com',
           callback: handleCredentialResponse,
         });
         
-        // Try to render the button with limited retries
-        let retryCount = 0;
-        const maxRetries = 10;
-        
+        // Use a more reliable approach with requestAnimationFrame
         const renderButton = () => {
+          // Double-check that user is still not authenticated before rendering
+          if (user || buttonRendered) {
+            return; // User is now authenticated or button already rendered
+          }
+          
           const buttonElement = document.getElementById('g_id_signin');
-          if (buttonElement && window.google.accounts.id) {
+          if (buttonElement && window.google?.accounts?.id) {
             try {
+              // Clear any existing content
+              buttonElement.innerHTML = '';
+              
               window.google.accounts.id.renderButton(buttonElement, {
                 type: 'standard',
                 size: 'large',
@@ -92,27 +108,47 @@ function AppContent() {
                 shape: 'rectangular',
                 logo_alignment: 'left'
               });
-              // Remove console log to reduce noise
+              
+              setButtonRendered(true);
             } catch (renderError) {
-              console.error('Error rendering button:', renderError);
+              // Only log errors in development mode
+              if (import.meta.env.DEV) {
+                console.error('Error rendering Google Sign-In button:', renderError);
+              }
             }
-          } else if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(renderButton, 500);
           } else {
-            // Only log in development mode
-            if (import.meta.env.DEV) {
-              console.warn('Failed to render Google Sign-In button after maximum retries');
-            }
+            // Use requestAnimationFrame for better timing
+            requestAnimationFrame(renderButton);
           }
         };
         
-        setTimeout(renderButton, 200);
+        // Use requestAnimationFrame for better timing
+        requestAnimationFrame(renderButton);
       } catch (error) {
         console.error('Failed to initialize Google Identity Services:', error);
       }
     }
-  }, [googleLoaded]);
+  }, [googleLoaded, user, buttonRendered]);
+
+  // Reset button rendered state when user logs out
+  useEffect(() => {
+    if (!user) {
+      setButtonRendered(false);
+    }
+  }, [user]);
+
+  // Clean up Google Sign-In when user logs in
+  useEffect(() => {
+    if (user && window.google?.accounts?.id) {
+      try {
+        // Cancel any ongoing Google Identity Services operations
+        window.google.accounts.id.cancel();
+        setButtonRendered(false);
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
+  }, [user]);
 
   if (loading) {
     return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -12,9 +12,11 @@ import { generateClassZIP, type ClassReport } from '@/services/zipService';
 
 interface ClassCardProps {
   classData: Class;
+  selectedStudentId?: string | null;
+  onStudentSelected?: (studentId: string) => void;
 }
 
-export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData }) => {
+export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, selectedStudentId, onStudentSelected }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -69,6 +71,48 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData }) =>
     window.addEventListener('dataChanged', handleDataChange as unknown as EventListener);
     return () => window.removeEventListener('dataChanged', handleDataChange as unknown as EventListener);
   }, [loadStudentCount, hasLoadedStudents]);
+
+  // Auto-expand if this class contains the selected student
+  useEffect(() => {
+    if (selectedStudentId && students.some(student => student.id === selectedStudentId)) {
+      setIsOpen(true);
+    }
+  }, [selectedStudentId, students]);
+
+  // Listen for class expansion events
+  useEffect(() => {
+    const handleExpandClass = async (event: CustomEvent) => {
+      const { classId, studentId } = event.detail;
+      
+      // If specific classId is provided, only expand that class
+      if (classId && classId === classData.id) {
+        setIsOpen(true);
+        if (students.length === 0) {
+          loadStudents(true);
+        }
+        return;
+      }
+      
+      // If only studentId is provided, check if this class contains the student
+      if (studentId && !classId) {
+        try {
+          const { getStudentsForClass } = await import('@/services/firebaseService');
+          const classStudents = await getStudentsForClass(classData.id);
+          if (classStudents.some(student => student.id === studentId)) {
+            setIsOpen(true);
+            if (students.length === 0) {
+              loadStudents(true);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking students for class:', error);
+        }
+      }
+    };
+
+    window.addEventListener('expandClassForStudent', handleExpandClass as unknown as EventListener);
+    return () => window.removeEventListener('expandClassForStudent', handleExpandClass as unknown as EventListener);
+  }, [classData.id, students.length, loadStudents]);
 
   const handleDownloadClass = async () => {
     setIsDownloading(true);
@@ -169,6 +213,8 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData }) =>
                       key={student.id}
                       student={student}
                       classData={classData}
+                      isSelected={selectedStudentId === student.id}
+                      onStudentSelected={onStudentSelected}
                     />
                   ))}
                 </div>

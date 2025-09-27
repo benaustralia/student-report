@@ -4,28 +4,32 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRight, FileText, Eye } from 'lucide-react';
 import { TypographyH3, TypographySmall } from '@/components/ui/typography';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
-import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts } from '@/services/firebaseService';
+import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports } from '@/services/firebaseService';
 import type { User } from 'firebase/auth';
-import type { Class, Student, AdminUser, Teacher } from '@/types';
+import type { Class, Student, AdminUser, Teacher, ReportData } from '@/types';
 
-interface AdminPanelProps { user: User; }
+interface AdminPanelProps { 
+  user: User; 
+  onNavigateToStudent?: (studentId: string) => void;
+}
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
-  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }> });
+export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStudent }) => {
+  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[] });
 
   const loadData = async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      const [adminUsers, teachers, classes, students, teacherReportStats] = await Promise.all([
+      const [adminUsers, teachers, classes, students, teacherReportStats, incompleteReports] = await Promise.all([
         getAllUsers().catch(() => []), 
         getAllTeachers().catch(() => []), 
         getAllClasses().catch(() => []), 
         getAllStudents().catch(() => []),
-        getTeacherReportCounts().catch(() => ({}))
+        getTeacherReportCounts().catch(() => ({})),
+        getIncompleteReports().catch(() => [])
       ]);
       const userMap = new Map();
       teachers.forEach(t => t.email && userMap.set(t.email, { ...t, isAdmin: false }));
@@ -38,10 +42,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
         ...prev, 
         data: { users: allUsers, classes, students, teachers: uniqueTeachers, teacherCount: uniqueTeachers.length, adminCount: allUsers.filter(u => u.isAdmin).length }, 
         teacherReportStats,
+        incompleteReports,
         loading: false 
       }));
     } catch { setState(prev => ({ ...prev, loading: false })); }
   };
+
 
   useEffect(() => { (async () => { try { const adminStatus = await isUserAdmin(user.email || ''); setState(prev => ({ ...prev, isAdmin: adminStatus, loading: false })); if (adminStatus) await loadData(); } catch { setState(prev => ({ ...prev, error: 'Failed to check admin status', loading: false })); } })(); }, [user]);
   useEffect(() => { 
@@ -66,7 +72,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
   );
 
   return <div className="space-y-6"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Database className="h-5 w-5" />Admin Panel</CardTitle></CardHeader><CardContent className="space-y-4">
-    <div className="flex flex-col sm:flex-row gap-4"><Button onClick={() => setState(prev => ({ ...prev, showDataBuilder: !prev.showDataBuilder }))} variant={state.showDataBuilder ? "default" : "outline"}><Settings className="h-4 w-4 mr-2" />{state.showDataBuilder ? 'Hide' : 'Show'} Data Builder</Button></div>
+    <div className="flex flex-col sm:flex-row gap-4">
+      <Button onClick={() => setState(prev => ({ ...prev, showDataBuilder: !prev.showDataBuilder }))} variant={state.showDataBuilder ? "default" : "outline"}>
+        <Settings className="h-4 w-4 mr-2" />
+        {state.showDataBuilder ? 'Hide' : 'Show'} Data Builder
+      </Button>
+    </div>
     {state.showDataBuilder && <DataBuilder />}
     {!state.showDataBuilder && <StatisticsBar adminCount={state.data.adminCount} teacherCount={state.data.teacherCount} classCount={state.data.classes.length} studentCount={state.data.students.length} loading={state.loading} />}
     
@@ -170,6 +181,96 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user }) => {
         </CardContent></CollapsibleContent>
       </Collapsible></Card>
     )}
+
+    {!state.showDataBuilder && state.incompleteReports.length > 0 && (
+      <Card>
+        <Collapsible open={state.openSections.incompleteReports} onOpenChange={() => setState(prev => ({ ...prev, openSections: { ...prev.openSections, incompleteReports: !prev.openSections.incompleteReports } }))}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">Incomplete Reports</span>
+                  </div>
+                  <Badge variant="destructive" className="text-xs flex-shrink-0">
+                    {state.incompleteReports.length} reports
+                  </Badge>
+                </CardTitle>
+                {state.openSections.incompleteReports ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-2">
+              {state.incompleteReports.map((report, i) => {
+                const student = state.data.students.find(s => s.id === report.studentId);
+                const classData = state.data.classes.find(c => c.id === report.classId);
+                const teacher = state.data.teachers.find(t => t.email === report.teacherEmail);
+                
+                // Use studentName from report if student not found in state
+                const studentName = student 
+                  ? `${student.firstName} ${student.lastName}` 
+                  : (report.studentName || 'Unknown Student');
+                const hasImage = report.artworkUrl && report.artworkUrl.trim() !== '';
+                const hasMinText = report.reportText && report.reportText.length >= 150;
+                const issues = [];
+                if (!hasImage) issues.push('No image');
+                if (!hasMinText) issues.push(`Only ${report.reportText?.length || 0} characters`);
+                
+                return (
+                  <Card key={`incomplete-${i}`} className="p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                        <div className="flex flex-wrap gap-1">
+                          {issues.map((issue, idx) => (
+                            <Badge key={idx} variant="destructive" className="text-xs">
+                              {issue}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="space-y-1">
+                            <div className="font-medium break-words">
+                              {studentName}
+                            </div>
+                            <TypographySmall className="text-muted-foreground break-words">
+                              {classData ? `${classData.level} - ${classData.location}` : 'Unknown Class'} • {teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher'}
+                            </TypographySmall>
+                            {report.reportText && (
+                              <TypographySmall className="text-muted-foreground break-words line-clamp-2">
+                                "{report.reportText.substring(0, 100)}{report.reportText.length > 100 ? '...' : ''}"
+                              </TypographySmall>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 mt-2 sm:mt-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (onNavigateToStudent) {
+                              onNavigateToStudent(report.studentId);
+                            } else {
+                              alert(`Navigate to student: ${studentName}`);
+                            }
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Report
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    )}
+
     {state.data.users.length === 0 && state.data.classes.length === 0 && state.data.students.length === 0 && (
       <Card>
         <CardContent className="text-center p-8">

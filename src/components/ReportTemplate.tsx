@@ -26,80 +26,79 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
     img.src = url;
   });
 
-  const wrapText = (text: string, maxLength: number = 55): string[] => {
-    if (text.length <= maxLength) return [text];
+  // Use the same text wrapping logic as PDF generation for accurate preview
+  const wrapTextWithNotoSans = (text: string, maxPixelWidth: number): string[] => {
+    const measureCanvas = document.createElement('canvas');
+    const measureCtx = measureCanvas.getContext('2d');
+    if (!measureCtx) return [text];
     
-    // Check if text contains Chinese characters
-    const hasChinese = /[\u4e00-\u9fff]/.test(text);
+    measureCtx.font = '11px "Noto Sans SC", Arial, sans-serif';
     
-    if (hasChinese) {
-      // For Chinese text, try to wrap at natural boundaries
-      const lines: string[] = [];
-      let currentLine = '';
+    if (measureCtx.measureText(text).width <= maxPixelWidth) {
+      return [text];
+    }
+    
+    return wrapTextByWidth(text, maxPixelWidth, measureCtx);
+  };
+
+  const wrapTextByWidth = (text: string, maxPixelWidth: number, measureCtx: CanvasRenderingContext2D): string[] => {
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    const tokens = text.split(/(\s+|[。！？，、；：]|[.!?])/);
+    
+    for (const token of tokens) {
+      if (!token) continue;
       
-      // Split text into segments by punctuation and spaces
-      const segments = text.split(/([。！？，、；：\s]+)/);
+      const testLine = currentLine + token;
+      const testWidth = measureCtx.measureText(testLine).width;
       
-      for (const segment of segments) {
-        if (!segment) continue;
-        
-        // If adding this segment would exceed the limit
-        if (currentLine.length + segment.length > maxLength) {
-          if (currentLine.length > 0) {
-            lines.push(currentLine);
-            currentLine = segment;
+      if (testWidth > maxPixelWidth) {
+        if (currentLine.length > 0) {
+          // Check if current line ends with punctuation (English or Chinese)
+          const trimmedLine = currentLine.trim();
+          const punctuationMarks = ['.', '。', '!', '！', '?', '？', ',', '，', ';', '；', ':', '：'];
+          const endsWithPunctuation = punctuationMarks.some(mark => trimmedLine.endsWith(mark));
+          
+          if (endsWithPunctuation) {
+            // Keep punctuation with the last word - don't break the line here
+            lines.push(currentLine.trim());
+            currentLine = token;
           } else {
-            // If even a single segment is too long, break it character by character
-            if (segment.length > maxLength) {
-              let tempLine = '';
-              for (const char of segment) {
-                if (tempLine.length + 1 > maxLength) {
+            lines.push(currentLine.trim());
+            currentLine = token;
+          }
+        } else {
+          if (measureCtx.measureText(token).width > maxPixelWidth) {
+            let tempLine = '';
+            for (const char of token) {
+              const testCharLine = tempLine + char;
+              if (measureCtx.measureText(testCharLine).width > maxPixelWidth) {
+                if (tempLine.length > 0) {
                   lines.push(tempLine);
                   tempLine = char;
                 } else {
-                  tempLine += char;
+                  lines.push(char);
                 }
+              } else {
+                tempLine += char;
               }
-              currentLine = tempLine;
-            } else {
-              currentLine = segment;
             }
-          }
-        } else {
-          currentLine += segment;
-        }
-      }
-      
-      if (currentLine.length > 0) {
-        lines.push(currentLine);
-      }
-      
-      return lines;
-    } else {
-      // For English text, split by words
-      const words = text.split(' ');
-      const lines: string[] = [];
-      let currentLine = '';
-      
-      for (const word of words) {
-        if (currentLine.length + word.length + 1 > maxLength) {
-          if (currentLine.length > 0) { 
-            lines.push(currentLine.trim()); 
-            currentLine = word; 
+            currentLine = tempLine;
           } else {
-            lines.push(word);
+            currentLine = token;
           }
-        } else {
-          currentLine += (currentLine.length > 0 ? ' ' : '') + word;
         }
+      } else {
+        currentLine += token;
       }
-      
-      if (currentLine.length > 0) {
-        lines.push(currentLine.trim());
-      }
-      
-      return lines;
     }
+    
+    if (currentLine.length > 0) {
+      lines.push(currentLine.trim());
+    }
+    
+    return lines;
   };
 
   useEffect(() => {
@@ -124,16 +123,20 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
         };
 
         const addWrappedTextElement = (x: number, y: number, text: string, className: string = 'st5', lineHeight: number = 20) => {
-          const wrappedLines = wrapText(text, 50); // Reduced from 80 to prevent overflow
+          const maxPixelWidth = 350; // Same as PDF generation
+          const wrappedLines = wrapTextWithNotoSans(text, maxPixelWidth);
           const textElements: SVGTextElement[] = [];
           wrappedLines.forEach((line, index) => {
-            const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
-            textElement.setAttribute('class', className);
-            textElement.setAttribute('transform', `translate(${x} ${y + (index * lineHeight)})`);
-            textElement.setAttribute('font-family', 'Arial, "Microsoft YaHei", "SimSun", sans-serif');
-            textElement.setAttribute('font-size', '10px');
-            textElement.textContent = line;
-            textElements.push(textElement);
+            const trimmedLine = line.replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, '');
+            if (trimmedLine) {
+              const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
+              textElement.setAttribute('class', className);
+              textElement.setAttribute('transform', `translate(${x} ${y + (index * lineHeight)})`);
+              textElement.setAttribute('font-family', 'Noto Sans SC, Arial, sans-serif');
+              textElement.setAttribute('font-size', '11px');
+              textElement.textContent = trimmedLine;
+              textElements.push(textElement);
+            }
           });
           return textElements;
         };
@@ -191,8 +194,9 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
             fill-opacity: 1 !important; 
             opacity: 1 !important; 
             color: black !important;
-            font-family: Arial, "Microsoft YaHei", "SimSun", "Noto Sans CJK SC", sans-serif !important;
+            font-family: 'Noto Sans SC', Arial, sans-serif !important;
             font-weight: normal !important;
+            font-size: 11px !important;
           } 
           .st1, .st2 { 
             fill: transparent !important; 
