@@ -377,12 +377,12 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             
             // Call Netlify function to generate PDF
             const getFunctionUrl = () => {
-              if (import.meta.env.DEV) {
-                // Check if we're on localhost (local development)
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                  return 'http://localhost:8888/.netlify/functions/svg2pdf';
-                }
-                // Otherwise we're on Netlify dev server - use the current domain
+              // Check if we're on localhost (local development)
+              if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:8888/.netlify/functions/svg2pdf';
+              }
+              // Check if we're on development branch (development--nsastudentreports.netlify.app)
+              if (window.location.hostname === 'development--nsastudentreports.netlify.app') {
                 return `${window.location.origin}/.netlify/functions/svg2pdf`;
               }
               // Production - use the correct production URL
