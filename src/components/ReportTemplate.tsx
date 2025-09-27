@@ -185,7 +185,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
 
         const logoElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
         logoElement.setAttribute('href', nsalogoPng);
-        logoElement.setAttribute('x', '460');
+        logoElement.setAttribute('x', '55');
         logoElement.setAttribute('y', '680');
         logoElement.setAttribute('width', '80');
         logoElement.setAttribute('height', '80');

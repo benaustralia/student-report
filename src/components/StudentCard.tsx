@@ -21,7 +21,16 @@ interface StudentCardProps {
 }
 
 export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData, isSelected, onStudentSelected }) => {
-  const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false, generatingAI: false, hasSeenAIWarning: false });
+  const [state, setState] = useState({ 
+    isOpen: false, 
+    loading: false, 
+    reports: [] as ReportData[], 
+    reportText: '', 
+    showAutoSave: false, 
+    hasUnsavedChanges: false, 
+    generatingAI: false, 
+    hasSeenAIWarning: false
+  });
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
   const initializeWithUrlRef = useRef<(url: string | null) => void>(() => {});
@@ -138,22 +147,16 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         body: JSON.stringify({
           model: 'gpt-3.5-turbo',
           messages: [
-            {
-              role: 'system',
-              content: 'You are a bilingual assistant that creates detailed student reports in TWO languages. You MUST create a report that uses EXACTLY 230 characters total: exactly 115 characters in English followed by exactly 115 characters in Mandarin Chinese. This is a strict requirement - count your characters carefully. Use ALL available characters - be detailed and specific. Focus on student progress, creativity, engagement, and specific achievements. Make the report rich and informative within the character limit. Use the notes/points provided by the teacher as the foundation for your report, expanding on them to create a comprehensive bilingual report. CRITICAL: Your response must be exactly 230 characters long.'
-            },
+        {
+          role: 'system',
+          content: 'You are a bilingual educator creating student progress reports. Generate a bilingual report with BOTH English and Chinese sections. Format: [English text] [Chinese text]. English section should be conversational and warm. Chinese section should be formal and academic. Focus on student progress, creativity, engagement, and achievements. Use teacher notes as foundation. If notes are Chinese dot points, transform into proper sentences. Keep student names in English in both languages. Each language section must be complete and meaningful. Generate natural, flowing text without section headers. CRITICAL: Your response must be EXACTLY 400 characters or less. Count characters as you write. If your first attempt exceeds 400 characters, revise and shorten it. If still too long, revise again. Keep revising until it fits within 400 characters. This is for a printed certificate with limited space.'
+        },
             {
               role: 'user',
-              content: `Student: ${student.firstName} ${student.lastName}, Class: ${classData.classLevel}. Write a detailed bilingual report based on the teacher's notes: ${state.reportText}. The teacher's notes may be in English, Mandarin, or both languages - use these as your foundation and expand them into a comprehensive bilingual report. 
-
-REQUIREMENT: Your response must be EXACTLY 230 characters long - no more, no less. Format: [exactly 115 chars English] [exactly 115 chars Chinese] = 230 total.
-
-Example (230 chars exactly): "Emma demonstrates exceptional artistic growth, creativity, and collaborative skills. Her attention to detail shows great character development. 艾玛展现出卓越的艺术成长、创造力和协作能力。她对细节的关注显示出优秀的品格发展。"
-
-Count your characters and ensure your response is exactly 230 characters.`
+              content: `Student: ${student.firstName} ${student.lastName}\nClass: ${classData.classLevel}\nBullets: ${state.reportText}`
             }
           ],
-          max_tokens: 200,
+          max_tokens: 800,
           temperature: 0.6
         })
       });
@@ -165,16 +168,21 @@ Count your characters and ensure your response is exactly 230 characters.`
       const data = await response.json();
       let generatedText = data.choices[0]?.message?.content?.trim();
       
+      // DEBUG: Log raw AI output
+      console.log('🔍 DEBUG: Raw AI output:', generatedText);
+      console.log('🔍 DEBUG: Raw output length:', generatedText?.length);
+      
       if (generatedText) {
-        // Ensure exactly 230 characters
-        if (generatedText.length > 230) {
-          // Truncate to exactly 230 characters
-          generatedText = generatedText.substring(0, 230);
-        } else if (generatedText.length < 230) {
-          // Pad with spaces to reach exactly 230 characters
-          const paddingNeeded = 230 - generatedText.length;
-          generatedText = generatedText + ' '.repeat(paddingNeeded);
-        }
+        // Clean up any unwanted formatting
+        generatedText = generatedText
+          .replace(/\[.*?\]/g, '')
+          .trim();
+        
+        // DEBUG: Log after cleaning
+        console.log('🔍 DEBUG: After cleaning:', generatedText);
+        console.log('🔍 DEBUG: Cleaned length:', generatedText.length);
+        
+        // AI handles character limit - no truncation needed
         
         setState(prev => ({ ...prev, reportText: generatedText, hasUnsavedChanges: true }));
       } else {
@@ -306,29 +314,33 @@ Count your characters and ensure your response is exactly 230 characters.`
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label htmlFor="report">Report</Label>
-                    <TypographySmall className={`${
-                      state.reportText.length >= 180 
-                        ? 'text-green-600' 
-                        : state.reportText.length >= 115 
-                          ? 'text-yellow-600' 
-                          : 'text-muted-foreground'
-                    }`}>
-                      {state.reportText.length}/230 characters
-                    </TypographySmall>
+        <TypographySmall         className={`${
+          state.reportText.length >= 340 
+            ? 'text-green-600' 
+            : state.reportText.length >= 215 
+              ? 'text-yellow-600' 
+              : 'text-muted-foreground'
+        }`}>
+          {state.reportText.length}/430 characters
+        </TypographySmall>
                   </div>
                   <Textarea
                     id="report"
                     value={state.reportText}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Limit to 230 characters
-                      if (value.length <= 230) {
-                        setState(prev => ({ ...prev, reportText: value }));
-                      }
-                    }}
+        onChange={(e) => {
+          const value = e.target.value;
+          // Limit to 430 characters
+          if (value.length <= 430) {
+            setState(prev => ({ 
+              ...prev, 
+              reportText: value, 
+              hasUnsavedChanges: true
+            }));
+          }
+        }}
                     placeholder="Write your report here or enter notes/bullet points for AI generation..."
                     className="min-h-[150px]"
-                    maxLength={230}
+                    maxLength={430}
                   />
                 </div>
                 <div className="flex justify-between items-center pt-2">

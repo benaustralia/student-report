@@ -332,8 +332,8 @@ exports.handler = async (event) => {
       }
       
       if (logoBuffer) {
-        // Add logo to bottom right
-        doc.image(logoBuffer, 460, 680, { width: 80, height: 80 });
+        // Add logo to bottom left
+        doc.image(logoBuffer, 55, 680, { width: 80, height: 80 });
         console.log('Logo added successfully from:', logoPath);
       } else {
         console.error('Logo not found in any of the expected locations');
