@@ -10,19 +10,28 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
 
   const convertUrlToDataUrl = async (url: string): Promise<string> => new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    img.crossOrigin = 'anonymous'; // Now that CORS is configured, this should work
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        if (!ctx) { reject(new Error('Could not get canvas context')); return; }
+        if (!ctx) { 
+          reject(new Error('Could not get canvas context'));
+          return; 
+        }
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
         ctx.drawImage(img, 0, 0);
         resolve(canvas.toDataURL('image/jpeg', 0.9));
-      } catch (error) { reject(error); }
+      } catch (error) { 
+        console.error('Canvas conversion failed:', error);
+        reject(error);
+      }
     };
-    img.onerror = () => reject(new Error(`Failed to load image from URL: ${url}. Please ensure CORS is configured for your Firebase Storage bucket.`));
+    img.onerror = () => {
+      console.error('Image load failed:', url);
+      reject(new Error(`Failed to load image: ${url}`));
+    };
     img.src = url;
   });
 

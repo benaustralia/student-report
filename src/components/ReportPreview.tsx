@@ -269,28 +269,37 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             }
             
             // Helper function to convert URL to data URL
-            const convertUrlToDataUrl = async (url: string): Promise<string> => new Promise((resolve, reject) => {
-              const img = new Image();
-              img.crossOrigin = 'anonymous';
-              img.onload = () => {
-                try {
-                  const canvas = document.createElement('canvas');
-                  const ctx = canvas.getContext('2d');
-                  if (!ctx) { reject(new Error('Could not get canvas context')); return; }
-                  canvas.width = img.naturalWidth;
-                  canvas.height = img.naturalHeight;
-                  ctx.drawImage(img, 0, 0);
-                  resolve(canvas.toDataURL('image/jpeg', 0.9));
-                } catch (error) { reject(error); }
-              };
-              img.onerror = () => reject(new Error(`Failed to load image from URL: ${url}`));
-              img.src = url;
-            });
+  const convertUrlToDataUrl = async (url: string): Promise<string> => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // Now that CORS is configured, this should work
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Could not get canvas context')); return; }
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      } catch (error) {
+        console.error('Canvas conversion failed:', error);
+        reject(error);
+      }
+    };
+    img.onerror = () => {
+      console.error('Image load failed:', url);
+      reject(new Error(`Failed to load image: ${url}`));
+    };
+    img.src = url;
+  });
 
             // Add artwork image if available
             if (artworkUrl) {
+              console.log('🔍 DEBUG: Processing artwork image:', artworkUrl);
               try {
                 const dataUrl = await convertUrlToDataUrl(artworkUrl);
+                console.log('🔍 DEBUG: Image converted to data URL:', dataUrl.substring(0, 100) + '...');
+                
                 const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
                 imageElement.setAttribute('href', dataUrl);
                 imageElement.setAttribute('x', '97.64');
@@ -299,9 +308,13 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 imageElement.setAttribute('height', '250');
                 imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
                 svgClone.appendChild(imageElement);
+                
+                console.log('🔍 DEBUG: Image element added to SVG');
               } catch (error) { 
-                console.error('Failed to load artwork image:', error); 
+                console.error('❌ DEBUG: Failed to load artwork image:', error); 
               }
+            } else {
+              console.log('🔍 DEBUG: No artwork URL provided');
             }
             
             // Logo will be added in PDF generation from file system
@@ -363,9 +376,20 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             const svgString = new XMLSerializer().serializeToString(svgClone);
             
             // Call Netlify function to generate PDF
-            const functionUrl = import.meta.env.DEV 
-              ? 'http://localhost:8888/.netlify/functions/svg2pdf'
-              : '/.netlify/functions/svg2pdf';
+            const getFunctionUrl = () => {
+              if (import.meta.env.DEV) {
+                // Check if we're on localhost (local development)
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                  return 'http://localhost:8888/.netlify/functions/svg2pdf';
+                }
+                // Otherwise we're on Netlify dev server
+                return 'https://devserver-development--nsastudentreports.netlify.app/.netlify/functions/svg2pdf';
+              }
+              // Production - use the correct production URL
+              return 'https://nsastudentreports.netlify.app/.netlify/functions/svg2pdf';
+            };
+            
+            const functionUrl = getFunctionUrl();
               
             const functionResponse = await fetch(functionUrl, {
               method: 'POST',
