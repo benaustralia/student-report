@@ -131,48 +131,68 @@ export const handler: Handler = async (event) => {
     // Load font file
     console.log('Loading font file...');
     if (!noto) {
-      // Use absolute path to the font file in the project root
-      const fontPath = "/Users/benhinton/Documents/Github/studentreports/fonts/NotoSansSC-Regular.ttf";
-      console.log('Font path:', fontPath);
-      console.log('Current working directory:', process.cwd());
-      console.log('__dirname:', __dirname);
+      // Try multiple possible paths for the font file
+      const possibleFontPaths = [
+        // Local development path
+        "/Users/benhinton/Documents/Github/studentreports/fonts/NotoSansSC-Regular.ttf",
+        // Netlify function environment paths
+        path.join(__dirname, '../../fonts/NotoSansSC-Regular.ttf'),
+        path.join(__dirname, '../../../fonts/NotoSansSC-Regular.ttf'),
+        path.join(process.cwd(), 'fonts/NotoSansSC-Regular.ttf'),
+        path.join(process.cwd(), 'netlify/functions/data/NotoSansSC-Regular.ttf')
+      ];
       
-      // Also copy font data to the function directory for PDFKit
-      const fontDataPath = path.join(__dirname, "data", "Helvetica.afm");
-      const sourceFontDataPath = "/Users/benhinton/Documents/Github/studentreports/netlify/functions/data/Helvetica.afm";
+      let fontPath: string | null = null;
       
-      try {
-        // Ensure the data directory exists
-        const dataDir = path.dirname(fontDataPath);
-        await fs.mkdir(dataDir, { recursive: true });
-        
-        // Copy font data if it doesn't exist
+      for (const testPath of possibleFontPaths) {
         try {
-          await fs.access(fontDataPath);
-          console.log('Font data already exists');
-        } catch {
-          await fs.copyFile(sourceFontDataPath, fontDataPath);
-          console.log('Font data copied successfully');
+          await fs.access(testPath);
+          fontPath = testPath;
+          console.log('Font found at:', testPath);
+          break;
+        } catch (pathError) {
+          console.log('Font not found at:', testPath);
         }
-      } catch (copyError) {
-        console.warn('Warning: Could not copy font data:', copyError);
       }
       
-      try {
-        noto = await fs.readFile(fontPath);
-        console.log('Font loaded successfully, size:', noto.length, 'bytes');
-      } catch (fontError) {
-        console.error('ERROR: Failed to load font file:', fontError);
-        return {
-          statusCode: 500,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-          },
-          body: JSON.stringify({ 
-            error: "Font loading failed", 
-            details: `Could not load font file: ${fontError instanceof Error ? fontError.message : 'Unknown error'}` 
-          })
-        } as HandlerResponse;
+      if (!fontPath) {
+        console.error('Font file not found in any expected location');
+        // Continue without custom font - PDFKit will use default font
+        noto = Buffer.alloc(0); // Set to empty buffer to skip font loading
+      } else {
+        console.log('Font path:', fontPath);
+        console.log('Current working directory:', process.cwd());
+        console.log('__dirname:', __dirname);
+        
+        // Also copy font data to the function directory for PDFKit
+        const fontDataPath = path.join(__dirname, "data", "Helvetica.afm");
+        const sourceFontDataPath = "/Users/benhinton/Documents/Github/studentreports/netlify/functions/data/Helvetica.afm";
+        
+        try {
+          // Ensure the data directory exists
+          const dataDir = path.dirname(fontDataPath);
+          await fs.mkdir(dataDir, { recursive: true });
+          
+          // Copy font data if it doesn't exist
+          try {
+            await fs.access(fontDataPath);
+            console.log('Font data already exists');
+          } catch {
+            await fs.copyFile(sourceFontDataPath, fontDataPath);
+            console.log('Font data copied successfully');
+          }
+        } catch (copyError) {
+          console.warn('Warning: Could not copy font data:', copyError);
+        }
+        
+        try {
+          noto = await fs.readFile(fontPath);
+          console.log('Font loaded successfully, size:', noto.length, 'bytes');
+        } catch (fontError) {
+          console.error('ERROR: Failed to load font file:', fontError);
+          // Continue without custom font - PDFKit will use default font
+          noto = Buffer.alloc(0);
+        }
       }
     } else {
       console.log('Using cached font, size:', noto.length, 'bytes');
