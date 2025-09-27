@@ -235,7 +235,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
                               {studentName}
                             </div>
                             <TypographySmall className="text-muted-foreground break-words">
-                              {classData ? `${classData.level} - ${classData.location}` : 'Unknown Class'} • {teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher'}
+                              {classData ? `${classData.classLevel} - ${classData.classLocation}` : 'Unknown Class'} • {teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher'}
                             </TypographySmall>
                             {report.reportText && (
                               <TypographySmall className="text-muted-foreground break-words line-clamp-2">
