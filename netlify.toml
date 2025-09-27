@@ -3,6 +3,9 @@
   command = "npm ci --force && npm run build"
   functions = "netlify/functions"
 
+[functions]
+  included_files = ["netlify/functions/data/**"]
+
 [build.environment]
   NODE_VERSION = "20"
 

@@ -133,7 +133,8 @@ exports.handler = async (event) => {
       const possibleFontPaths = [
         // Local development path
         "/Users/benhinton/Documents/Github/studentreports/fonts/NotoSansSC-Regular.ttf",
-        // Netlify function environment paths - prioritize the data directory
+        // Netlify function environment paths - font next to function
+        path.join(__dirname, 'NotoSansSC-Regular.ttf'),
         path.join(__dirname, 'data/NotoSansSC-Regular.ttf'),
         path.join(__dirname, '../../fonts/NotoSansSC-Regular.ttf'),
         path.join(__dirname, '../../../fonts/NotoSansSC-Regular.ttf'),
