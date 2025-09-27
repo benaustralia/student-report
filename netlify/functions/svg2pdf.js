@@ -141,7 +141,7 @@ exports.handler = async (event) => {
         path.join(process.cwd(), 'netlify/functions/data/NotoSansSC-Regular.ttf')
       ];
       
-      let fontPath: string | null = null;
+      let fontPath = null;
       
       for (const testPath of possibleFontPaths) {
         try {
@@ -314,8 +314,8 @@ exports.handler = async (event) => {
         path.join(process.cwd(), 'netlify/functions/data/NSALogo.png')
       ];
       
-      let logoBuffer: Buffer | null = null;
-      let logoPath: string | null = null;
+      let logoBuffer = null;
+      let logoPath = null;
       
       for (const testPath of possiblePaths) {
         try {
