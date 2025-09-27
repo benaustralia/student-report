@@ -133,8 +133,7 @@ exports.handler = async (event) => {
       const possibleFontPaths = [
         // Local development path
         "/Users/benhinton/Documents/Github/studentreports/fonts/NotoSansSC-Regular.ttf",
-        // Netlify function environment paths - font next to function
-        path.join(__dirname, 'NotoSansSC-Regular.ttf'),
+        // Netlify function environment paths - prioritize the data directory
         path.join(__dirname, 'data/NotoSansSC-Regular.ttf'),
         path.join(__dirname, '../../fonts/NotoSansSC-Regular.ttf'),
         path.join(__dirname, '../../../fonts/NotoSansSC-Regular.ttf'),
@@ -309,9 +308,12 @@ exports.handler = async (event) => {
     try {
       // Try multiple possible paths for the logo
       const possiblePaths = [
+        // Local development paths
         path.join(__dirname, '../src/assets/NSALogo.png'),
         path.join(__dirname, '../../src/assets/NSALogo.png'),
         path.join(process.cwd(), 'src/assets/NSALogo.png'),
+        // Netlify function data directory (prioritized)
+        path.join(__dirname, 'data/NSALogo.png'),
         path.join(process.cwd(), 'netlify/functions/data/NSALogo.png')
       ];
       
