@@ -152,8 +152,17 @@ export const handler: Handler = async (event) => {
           console.log('Font found at:', testPath);
           break;
         } catch (pathError) {
-          console.log('Font not found at:', testPath);
+          console.log('Font not found at:', testPath, 'Error:', pathError);
         }
+      }
+      
+      // Debug: List files in data directory
+      try {
+        const dataDir = path.join(__dirname, 'data');
+        const files = await fs.readdir(dataDir);
+        console.log('Files in data directory:', files);
+      } catch (dirError) {
+        console.log('Could not read data directory:', dirError);
       }
       
       if (!fontPath) {
