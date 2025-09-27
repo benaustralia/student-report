@@ -157,8 +157,16 @@ export const handler: Handler = async (event) => {
       
       if (!fontPath) {
         console.error('Font file not found in any expected location');
-        // Continue without custom font - PDFKit will use default font
-        noto = Buffer.alloc(0); // Set to empty buffer to skip font loading
+        return {
+          statusCode: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({ 
+            error: "Font loading failed", 
+            details: "NotoSansSC-Regular.ttf font file is required but not found" 
+          })
+        } as HandlerResponse;
       } else {
         console.log('Font path:', fontPath);
         console.log('Current working directory:', process.cwd());
@@ -190,8 +198,16 @@ export const handler: Handler = async (event) => {
           console.log('Font loaded successfully, size:', noto.length, 'bytes');
         } catch (fontError) {
           console.error('ERROR: Failed to load font file:', fontError);
-          // Continue without custom font - PDFKit will use default font
-          noto = Buffer.alloc(0);
+          return {
+            statusCode: 500,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+            },
+            body: JSON.stringify({ 
+              error: "Font loading failed", 
+              details: `Could not load NotoSansSC-Regular.ttf: ${fontError instanceof Error ? fontError.message : 'Unknown error'}` 
+            })
+          } as HandlerResponse;
         }
       }
     } else {
