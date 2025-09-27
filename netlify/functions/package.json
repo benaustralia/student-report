@@ -1,0 +1,9 @@
+{
+  "name": "netlify-functions",
+  "version": "1.0.0",
+  "dependencies": {
+    "@netlify/functions": "^4.2.6",
+    "pdfkit": "^0.17.2",
+    "svg-to-pdfkit": "^0.1.8"
+  }
+}
