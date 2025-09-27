@@ -382,8 +382,8 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                   return 'http://localhost:8888/.netlify/functions/svg2pdf';
                 }
-                // Otherwise we're on Netlify dev server
-                return 'https://devserver-development--nsastudentreports.netlify.app/.netlify/functions/svg2pdf';
+                // Otherwise we're on Netlify dev server - use the current domain
+                return `${window.location.origin}/.netlify/functions/svg2pdf`;
               }
               // Production - use the correct production URL
               return 'https://nsastudentreports.netlify.app/.netlify/functions/svg2pdf';
