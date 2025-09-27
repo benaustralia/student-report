@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { TypographySmall } from '@/components/ui/typography';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
@@ -20,7 +21,7 @@ interface StudentCardProps {
 }
 
 export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData, isSelected, onStudentSelected }) => {
-  const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false, generatingAI: false });
+  const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', showAutoSave: false, hasUnsavedChanges: false, generatingAI: false, hasSeenAIWarning: false });
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
   const initializeWithUrlRef = useRef<(url: string | null) => void>(() => {});
@@ -110,13 +111,21 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
   };
 
-  const generateAIReport = async () => {
+  const handleAIGenerate = () => {
     if (!state.reportText.trim()) {
       alert('Please enter some notes or ideas first to generate a report.');
       return;
     }
 
-    setState(prev => ({ ...prev, generatingAI: true }));
+    // If user has already seen the warning, proceed directly
+    if (state.hasSeenAIWarning) {
+      generateAIReport();
+    }
+    // Otherwise, the AlertDialog will handle showing the warning
+  };
+
+  const generateAIReport = async () => {
+    setState(prev => ({ ...prev, generatingAI: true, hasSeenAIWarning: true }));
     
     try {
       // Using OpenAI API (you can replace with any AI service)
@@ -297,8 +306,14 @@ Count your characters and ensure your response is exactly 230 characters.`
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label htmlFor="report">Report</Label>
-                    <TypographySmall className="text-muted-foreground">
-                      {state.reportText.length} characters
+                    <TypographySmall className={`${
+                      state.reportText.length >= 180 
+                        ? 'text-green-600' 
+                        : state.reportText.length >= 115 
+                          ? 'text-yellow-600' 
+                          : 'text-muted-foreground'
+                    }`}>
+                      {state.reportText.length}/230 characters
                     </TypographySmall>
                   </div>
                   <Textarea
@@ -306,10 +321,14 @@ Count your characters and ensure your response is exactly 230 characters.`
                     value={state.reportText}
                     onChange={(e) => {
                       const value = e.target.value;
-                      setState(prev => ({ ...prev, reportText: value }));
+                      // Limit to 230 characters
+                      if (value.length <= 230) {
+                        setState(prev => ({ ...prev, reportText: value }));
+                      }
                     }}
                     placeholder="Write your report here or enter notes/bullet points for AI generation..."
                     className="min-h-[150px]"
+                    maxLength={230}
                   />
                 </div>
                 <div className="flex justify-between items-center pt-2">
@@ -340,25 +359,60 @@ Count your characters and ensure your response is exactly 230 characters.`
                 </div>
                 <div className="pt-4 space-y-2">
                   <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={generateAIReport}
-                      disabled={state.generatingAI || !state.reportText.trim()}
-                      className="text-xs w-full sm:w-auto"
-                    >
-                      {state.generatingAI ? (
-                        <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Generate Report
-                        </>
-                      )}
-                    </Button>
+                    {state.hasSeenAIWarning ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={generateAIReport}
+                        disabled={state.generatingAI || !state.reportText.trim()}
+                        className="text-xs w-full sm:w-auto"
+                      >
+                        {state.generatingAI ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            AI support
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleAIGenerate}
+                            disabled={state.generatingAI || !state.reportText.trim()}
+                            className="text-xs w-full sm:w-auto"
+                          >
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            AI support
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-white border shadow-lg">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>AI Support Warning</AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm text-gray-600 leading-relaxed">
+                              AI support will completely overwrite your current text with a new AI-generated report. Your existing text will be lost.
+                              <br /><br />
+                              <span className="font-medium text-gray-800">点击"AI生成"将覆盖原文，现有文本将被替换。</span>
+                              <br /><br />
+                              Are you sure you want to continue?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={generateAIReport}>
+                              Continue
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                   <ReportPreview
                     student={student}
