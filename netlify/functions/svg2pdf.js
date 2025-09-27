@@ -40,7 +40,7 @@ exports.handler = async (event) => {
           'Access-Control-Allow-Origin': '*',
         },
         body: JSON.stringify({ error: "Missing request body", details: "The request must include a JSON body with an 'svg' field" })
-      } as HandlerResponse;
+      };
     }
     
     console.log('Request body length:', event.body.length);
@@ -62,7 +62,7 @@ exports.handler = async (event) => {
           error: "Invalid JSON", 
           details: `Failed to parse request body: ${parseError instanceof Error ? parseError.message : 'Unknown error'}` 
         })
-      } as HandlerResponse;
+      };
     }
     
     // Validate SVG field
@@ -78,7 +78,7 @@ exports.handler = async (event) => {
           error: "Missing svg field", 
           details: "The request body must include an 'svg' field containing the SVG content" 
         })
-      } as HandlerResponse;
+      };
     }
     
     if (typeof svg !== "string") {
@@ -92,7 +92,7 @@ exports.handler = async (event) => {
           error: "Invalid svg field", 
           details: `The 'svg' field must be a string, but received ${typeof svg}` 
         })
-      } as HandlerResponse;
+      };
     }
     
     console.log('SVG content length:', svg.length);
@@ -247,14 +247,14 @@ exports.handler = async (event) => {
           error: "Chinese font registration failed", 
           details: `Could not register Chinese font: ${fontError instanceof Error ? fontError.message : 'Unknown error'}` 
         })
-      } as HandlerResponse;
+      };
     }
 
     // Set up PDF stream
     console.log('Setting up PDF stream...');
     const stream = new PassThrough();
-    const chunks: Buffer[] = [];
-    const done = new Promise<Buffer>((res, rej) => {
+    const chunks = [];
+    const done = new Promise((res, rej) => {
       stream.on("data", c => {
         chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c));
       });
@@ -278,7 +278,7 @@ exports.handler = async (event) => {
         width: A4_W,
         height: A4_H,
         preserveAspectRatio: 'none',
-        fontCallback: (fontFamily: string, fontWeight: string, fontStyle: string) => {
+        fontCallback: (fontFamily, fontWeight, fontStyle) => {
           console.log('Font callback called for:', fontFamily, fontWeight, fontStyle);
           return 'NotoSansSC'; // Use embedded Noto Sans SC font
         },
@@ -301,7 +301,7 @@ exports.handler = async (event) => {
           error: "SVG conversion failed", 
           details: `Failed to convert SVG to PDF: ${svgError instanceof Error ? svgError.message : 'Unknown error'}` 
         })
-      } as HandlerResponse;
+      };
     }
     
     // Add logo as PDF image (no border) - LAST to ensure it's on top
@@ -361,8 +361,8 @@ exports.handler = async (event) => {
       },
       body: base64Pdf,
       isBase64Encoded: true,
-    } as HandlerResponse;
-  } catch (e: any) {
+    };
+  } catch (e) {
     console.error('=== CRITICAL ERROR in SVG2PDF Function ===');
     console.error('Error type:', typeof e);
     console.error('Error message:', e?.message || 'No message');
@@ -380,6 +380,6 @@ exports.handler = async (event) => {
         details: `svg2pdf error: ${e?.message || e}`,
         timestamp: new Date().toISOString()
       })
-    } as HandlerResponse;
+    };
   }
 };
