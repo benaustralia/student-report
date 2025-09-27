@@ -11,6 +11,9 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: [
+      'devserver-development--nsastudentreports.netlify.app'
+    ],
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
       'Cross-Origin-Embedder-Policy': 'unsafe-none'
