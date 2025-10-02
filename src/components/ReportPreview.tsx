@@ -101,11 +101,11 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             )}
           </Button>
         </DialogTrigger>
-      <DialogContent className="w-[95vw] max-w-6xl h-[95vh] max-h-[95vh] p-0 overflow-hidden">
+      <DialogContent className="w-[95vw] max-w-7xl h-[95vh] max-h-[95vh] p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>Report Preview - {studentName}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-hidden p-2">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mr-2" />

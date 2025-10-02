@@ -192,9 +192,10 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
         logoElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         svgClone.appendChild(logoElement);
 
-        svgClone.setAttribute('width', '595.28');
-        svgClone.setAttribute('height', '841.89');
+        svgClone.setAttribute('width', '100%');
+        svgClone.setAttribute('height', 'auto');
         svgClone.setAttribute('viewBox', '0 0 595.28 841.89');
+        svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
         const styleElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
         styleElement.textContent = `
@@ -216,6 +217,11 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
             fill: black !important; 
             fill-opacity: 1 !important; 
             opacity: 1 !important; 
+          }
+          svg { 
+            max-width: 100%; 
+            height: auto; 
+            width: 100%;
           }
           @media (max-width: 768px) {
             svg { max-width: 100%; height: auto; }
@@ -247,9 +253,10 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
       <div className="border rounded-lg overflow-hidden shadow-lg">
         <div 
           ref={svgRef} 
-          className="w-full overflow-auto"
+          className="w-full overflow-y-auto overflow-x-hidden"
           style={{ 
-            maxHeight: 'calc(95vh - 120px)',
+            maxHeight: 'calc(95vh - 160px)',
+            maxWidth: '100%',
             display: 'flex',
             justifyContent: 'center',
             padding: '20px'
