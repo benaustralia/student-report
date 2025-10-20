@@ -36,12 +36,20 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
   const [success, setSuccess] = useState<string | null>(null);
 
   const downloadTemplate = () => {
+    if (!classData) return;
+    
     const template = 'firstName,lastName\nJohn,Smith\nJane,Doe\nBob,Johnson';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `students-template-${classData?.classLevel || 'class'}.csv`;
+    
+    // Create class-specific filename: students-template-{classLevel}-{classDay}-{classTime}
+    const sanitizedLevel = classData.classLevel.replace(/[^a-zA-Z0-9]/g, '');
+    const sanitizedDay = classData.classDay.replace(/[^a-zA-Z0-9]/g, '');
+    const sanitizedTime = classData.classTime.replace(/[^a-zA-Z0-9]/g, '');
+    
+    a.download = `students-template-${sanitizedLevel}-${sanitizedDay}-${sanitizedTime}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -157,7 +165,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Import Students for {classData?.classLevel} - {classData?.classLocation}
+            Import Students for {classData?.classLevel} - {classData?.classDay} at {classData?.classTime}
           </DialogTitle>
         </DialogHeader>
         
@@ -172,7 +180,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
             </CardHeader>
             <CardContent className="pt-0">
               <p className="text-sm text-muted-foreground mb-3">
-                Download the CSV template to see the correct format, then paste your student data below.
+                Download the CSV template with the correct format for this specific class, then paste your student data below.
               </p>
               <Button variant="outline" size="sm" onClick={downloadTemplate}>
                 <Download className="h-4 w-4 mr-2" />
