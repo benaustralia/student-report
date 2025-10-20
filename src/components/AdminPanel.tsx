@@ -60,17 +60,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
   useEffect(() => {
     const handleDataChanged = (event: CustomEvent) => {
       const { type } = event.detail;
-      console.log(`AdminPanel: Data changed for type: ${type}, reloading all data...`);
+      console.log(`AdminPanel: Data changed for type: ${type}, checking if refresh needed...`);
       
       // Only reload data for changes that affect the admin panel view
       // Skip individual student deletions to prevent unnecessary refreshes
       if (type === 'users' || type === 'classes' || type === 'teachers' || type === 'reports') {
+        console.log(`AdminPanel: Refreshing for ${type}`);
         loadData();
       } else if (type === 'students') {
-        // For students, only reload if it's not a deletion (to avoid refreshing the whole app)
+        // For students, only reload if it's not a deletion or bulk import (to avoid refreshing the whole app)
         const { action } = event.detail;
-        if (action !== 'delete') {
+        if (action !== 'delete' && action !== 'bulk_import') {
+          console.log(`AdminPanel: Refreshing for student ${action}`);
           loadData();
+        } else {
+          console.log(`AdminPanel: Skipping refresh for student ${action}`);
         }
       }
     };

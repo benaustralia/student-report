@@ -355,7 +355,12 @@ export const DataBuilder = () => {
           setShowBulkImport(null);
           
           // Notify other components that data has changed
-          window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'students' } }));
+          window.dispatchEvent(new CustomEvent('dataChanged', { 
+            detail: { 
+              type: 'students', 
+              action: 'bulk_import'
+            } 
+          }));
         }}
       />
     </div>
