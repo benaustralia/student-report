@@ -228,7 +228,7 @@ export const importClasses = async (classesData: Class[]): Promise<void> => {
   const allUsers = [...adminUsers, ...teachers];
   const userMap = new Map(allUsers.map(user => [user.email, user]));
   
-  await Promise.all(classesData.map(async (classData, index) => {
+  await Promise.all(classesData.map(async (classData) => {
     const teacher = userMap.get(classData.teacherEmail);
     
     if (!teacher && !classData.teacherFirstName) {
