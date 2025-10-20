@@ -170,8 +170,21 @@ export const updateReport = async (reportId: string, updates: Partial<ReportData
 export const deleteReport = async (reportId: string): Promise<void> => await deleteDocById('reports', reportId);
 
 export const getUserDisplayName = async (email: string): Promise<string | null> => {
-  const users = await getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]);
-  return users.length > 0 ? `${users[0].firstName} ${users[0].lastName}`.trim() : null;
+  // Check both adminUsers and teachers collections
+  const [adminUsers, teachers] = await Promise.all([
+    getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]),
+    getDocsByQuery<Teacher>('teachers', [['email', '==', email]])
+  ]);
+  
+  // Return the first match from either collection
+  if (adminUsers.length > 0) {
+    return `${adminUsers[0].firstName} ${adminUsers[0].lastName}`.trim();
+  }
+  if (teachers.length > 0) {
+    return `${teachers[0].firstName} ${teachers[0].lastName}`.trim();
+  }
+  
+  return null;
 };
 export const getAllUsers = async (): Promise<AdminUser[]> => await getDocsByQuery<AdminUser>('adminUsers').catch(() => []);
 
@@ -435,7 +448,23 @@ export const getTeacherUserCount = async (): Promise<number> => {
   const adminEmails = new Set(adminUsers.map(user => user.email));
   return [...teacherEmails].filter(email => !adminEmails.has(email)).length;
 };
-export const getTeacherByEmail = async (email: string): Promise<Teacher | null> => await getAdminUserByEmail(email);
+export const getTeacherByEmail = async (email: string): Promise<Teacher | null> => {
+  // Check both adminUsers and teachers collections
+  const [adminUsers, teachers] = await Promise.all([
+    getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]),
+    getDocsByQuery<Teacher>('teachers', [['email', '==', email]])
+  ]);
+  
+  // Return the first match from either collection
+  if (adminUsers.length > 0) {
+    return adminUsers[0] as Teacher;
+  }
+  if (teachers.length > 0) {
+    return teachers[0];
+  }
+  
+  return null;
+};
 
 // Get report counts for all teachers (admin only)
 export const getTeacherReportCounts = async (): Promise<Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>> => {

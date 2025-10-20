@@ -62,32 +62,10 @@ export const DataBuilder = () => {
   };
 
   const handleAction = async (action: 'add' | 'remove' | 'submit' | 'update' | 'delete', type: DataType, item: ItemType | null, index: number) => {
-    console.log(`🔍 DEBUG: handleAction called with action=${action}, type=${type}, index=${index}`);
-    
     try {
-      if (action === 'add') {
-        console.log(`🔍 DEBUG: Adding new ${type} item`);
-        setNewItems(prev => ({ ...prev, [type]: [...prev[type], { ...CONFIG[type].empty }] }));
-      } else if (action === 'remove') {
-        console.log(`🔍 DEBUG: Removing ${type} item at index ${index}`);
-        setNewItems(prev => ({ ...prev, [type]: prev[type].filter((_, i) => i !== index) }));
-      } else if (action === 'submit') {
-        console.log(`🔍 DEBUG: Submitting ${newItems[type].length} new ${type} items:`, newItems[type]);
-        
-        // Additional debugging for class creation
-        if (type === 'classes') {
-          console.log(`🔍 DEBUG: Class creation details:`);
-          newItems[type].forEach((classItem, idx) => {
-            console.log(`  Class ${idx + 1}:`, {
-              classLevel: (classItem as Class).classLevel,
-              classDay: (classItem as Class).classDay,
-              classTime: (classItem as Class).classTime,
-              classLocation: (classItem as Class).classLocation,
-              teacherEmail: (classItem as Class).teacherEmail
-            });
-          });
-        }
-        
+      if (action === 'add') setNewItems(prev => ({ ...prev, [type]: [...prev[type], { ...CONFIG[type].empty }] }));
+      else if (action === 'remove') setNewItems(prev => ({ ...prev, [type]: prev[type].filter((_, i) => i !== index) }));
+      else if (action === 'submit') {
         await (OPS.import[type] as (items: ItemType[]) => Promise<void>)(newItems[type]);
         setNewItems(prev => ({ ...prev, [type]: [] }));
         setMessage(`Imported ${newItems[type].length} ${type}!`);
@@ -101,7 +79,6 @@ export const DataBuilder = () => {
         // Notify other components that data has changed
         window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
       } else if (action === 'update' && item?.id) {
-        console.log(`🔍 DEBUG: Updating ${type} item with id=${item.id}`);
         await OPS.update[type](item.id, item);
         setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
         setMessage(`Updated ${type.slice(0, -1)}!`);
@@ -116,18 +93,13 @@ export const DataBuilder = () => {
         // Notify other components that data has changed
         window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
       } else if (action === 'delete' && item?.id) {
-        console.log(`🔍 DEBUG: Deleting ${type} item with id=${item.id}`);
         await OPS.delete[type](item.id);
         setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
         setMessage(`Deleted ${type.slice(0, -1)}!`);
         // Notify other components that data has changed
         window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
       }
-    } catch (error: unknown) { 
-      console.error(`🔍 DEBUG: Error in handleAction for ${action} ${type}:`, error);
-      console.error(`🔍 DEBUG: Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
-      setMessage(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); 
-    }
+    } catch (error: unknown) { setMessage(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };
 
   const renderField = (type: DataType, item: ItemType, field: string, index: number, isNew: boolean) => 
