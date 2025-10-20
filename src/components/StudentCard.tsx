@@ -203,13 +203,20 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   // Auto-save effect with unsaved changes tracking
   useEffect(() => {
     if (!state.reportText.trim()) {
-      setState(prev => ({ ...prev, hasUnsavedChanges: false }));
+      // Only update state if hasUnsavedChanges is currently true
+      if (state.hasUnsavedChanges) {
+        setState(prev => ({ ...prev, hasUnsavedChanges: false }));
+      }
       return;
     }
     
     // Check if there are unsaved changes
     const hasChanges = state.reportText.trim() !== lastSavedTextRef.current;
-    setState(prev => ({ ...prev, hasUnsavedChanges: hasChanges }));
+    
+    // Only update state if the hasUnsavedChanges value actually changed
+    if (hasChanges !== state.hasUnsavedChanges) {
+      setState(prev => ({ ...prev, hasUnsavedChanges: hasChanges }));
+    }
     
     if (!hasChanges) return;
     
@@ -217,7 +224,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       if (!imageUpload.uploading) saveReport(imageUpload.currentImageUrl, true);
     }, 2000);
     return () => clearTimeout(timeoutId);
-  }, [state.reportText, imageUpload.uploading, imageUpload.currentImageUrl, saveReport]);
+  }, [state.reportText, state.hasUnsavedChanges, imageUpload.uploading, imageUpload.currentImageUrl, saveReport]);
 
   // beforeunload event handler to warn about unsaved changes
   useEffect(() => {
@@ -336,8 +343,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
           if (value.length <= 430) {
             setState(prev => ({ 
               ...prev, 
-              reportText: value, 
-              hasUnsavedChanges: true
+              reportText: value
             }));
           }
         }}
