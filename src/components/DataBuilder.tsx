@@ -79,7 +79,13 @@ export const DataBuilder = () => {
           teachers: (results[3] || []) as ItemType[] 
         });
         // Notify other components that data has changed
-        window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
+        window.dispatchEvent(new CustomEvent('dataChanged', { 
+          detail: { 
+            type, 
+            action: 'submit',
+            count: newItems[type].length 
+          } 
+        }));
       } else if (action === 'update' && item?.id) {
         await OPS.update[type](item.id, item);
         setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
@@ -93,7 +99,14 @@ export const DataBuilder = () => {
           teachers: (results[3] || []) as ItemType[] 
         });
         // Notify other components that data has changed
-        window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
+        window.dispatchEvent(new CustomEvent('dataChanged', { 
+          detail: { 
+            type, 
+            action: 'update',
+            itemId: item.id,
+            item: item 
+          } 
+        }));
       } else if (action === 'delete' && item?.id) {
         await OPS.delete[type](item.id);
         setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));

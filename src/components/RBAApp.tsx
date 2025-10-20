@@ -130,10 +130,19 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       console.log(`RBAApp: Data changed for type: ${type}, checking if refresh needed...`);
       
       // Only reload data for changes that affect the main app view
-      // Skip individual student deletions to prevent unnecessary refreshes
-      if (type === 'users' || type === 'classes' || type === 'teachers') {
+      // Skip individual student deletions and class updates to prevent unnecessary refreshes
+      if (type === 'users' || type === 'teachers') {
         console.log(`RBAApp: Refreshing for ${type}`);
         loadData();
+      } else if (type === 'classes') {
+        // For classes, only reload if it's not an update (to avoid refreshing the whole app)
+        const { action } = event.detail;
+        if (action !== 'update') {
+          console.log(`RBAApp: Refreshing for class ${action}`);
+          loadData();
+        } else {
+          console.log(`RBAApp: Skipping refresh for class update`);
+        }
       } else if (type === 'students') {
         // For students, only reload if it's not a deletion or bulk import (to avoid refreshing the whole app)
         const { action } = event.detail;

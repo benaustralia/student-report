@@ -29,9 +29,9 @@ export const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     <div className={`p-4 border rounded-lg ${className}`}>
       {isEditing ? (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="font-medium">Editing {title}</span>
-            <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <span className="font-medium truncate">Editing {title}</span>
+            <div className="flex gap-2 flex-shrink-0">
               {onSave && (
                 <Button size="sm" onClick={onSave}>
                   <Save className="h-4 w-4" />
@@ -47,14 +47,14 @@ export const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           {children}
         </div>
       ) : (
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="font-medium">{title}</div>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="font-medium truncate">{title}</div>
             {subtitle && (
-              <div className="text-sm text-muted-foreground">{subtitle}</div>
+              <div className="text-sm text-muted-foreground truncate">{subtitle}</div>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <Button size="sm" variant="outline" onClick={onEdit}>
               <Edit className="h-4 w-4" />
             </Button>
@@ -63,7 +63,6 @@ export const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
               variant="destructive" 
               onClick={onDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
