@@ -206,14 +206,33 @@ export const importUsers = async (usersData: AdminUser[]): Promise<void> => {
   if (teachers.length > 0) await Promise.all(teachers.map(teacher => createDoc('teachers', { ...teacher }, `${teacher.firstName}-${teacher.lastName}`)));
 };
 export const importClasses = async (classesData: Class[]): Promise<void> => {
-  const users = await getAllUsers();
-  const userMap = new Map(users.map(user => [user.email, user]));
-  await Promise.all(classesData.map(classData => {
+  const [adminUsers, teachers] = await Promise.all([
+    getAllUsers(), // Gets adminUsers collection
+    getAllTeachers() // Gets teachers collection
+  ]);
+  
+  // Combine both collections into one user map
+  const allUsers = [...adminUsers, ...teachers];
+  const userMap = new Map(allUsers.map(user => [user.email, user]));
+  
+  await Promise.all(classesData.map(async (classData, index) => {
     const teacher = userMap.get(classData.teacherEmail);
-    if (!teacher && !classData.teacherFirstName) throw new Error(`Teacher ${classData.teacherEmail} not found`);
+    
+    if (!teacher && !classData.teacherFirstName) {
+      throw new Error(`Teacher ${classData.teacherEmail} not found`);
+    }
+    
     const teacherName = teacher ? `${teacher.firstName}-${teacher.lastName}` : classData.teacherEmail.split('@')[0];
     const classId = `${classData.classDay}-${classData.classTime.replace(/[^a-zA-Z0-9]/g, '')}-${teacherName}`;
-    return createDoc('classes', { ...classData, teacherFirstName: teacher?.firstName, teacherLastName: teacher?.lastName }, classId);
+    
+    const classDocData = { 
+      ...classData, 
+      teacherFirstName: teacher?.firstName, 
+      teacherLastName: teacher?.lastName 
+    };
+    
+    const result = await createDoc('classes', classDocData, classId);
+    return result;
   }));
 };
 export const importStudents = async (studentsData: Student[]): Promise<void> => {
