@@ -56,6 +56,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
     }
   }, [state.showDataBuilder, state.isAdmin]);
 
+  // Listen for data changes from DataBuilder
+  useEffect(() => {
+    const handleDataChanged = (event: CustomEvent) => {
+      const { type } = event.detail;
+      console.log(`AdminPanel: Data changed for type: ${type}, reloading data...`);
+      loadData();
+    };
+
+    window.addEventListener('dataChanged', handleDataChanged as EventListener);
+    return () => {
+      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
+    };
+  }, []);
+
   if (state.loading) return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin mr-2" /><span>Loading admin panel...</span></div>;
   if (!state.isAdmin) return (
     <Card className="w-full max-w-2xl mx-auto">

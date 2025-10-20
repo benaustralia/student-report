@@ -123,6 +123,20 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     loadData();
   }, [loadData]);
 
+  // Listen for data changes from DataBuilder
+  useEffect(() => {
+    const handleDataChanged = (event: CustomEvent) => {
+      const { type } = event.detail;
+      console.log(`RBAApp: Data changed for type: ${type}, reloading data...`);
+      loadData();
+    };
+
+    window.addEventListener('dataChanged', handleDataChanged as EventListener);
+    return () => {
+      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
+    };
+  }, [loadData]);
+
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
