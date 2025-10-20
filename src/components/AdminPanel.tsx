@@ -60,7 +60,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
   useEffect(() => {
     const handleDataChanged = (event: CustomEvent) => {
       const { type } = event.detail;
-      console.log(`AdminPanel: Data changed for type: ${type}, reloading data...`);
+      console.log(`AdminPanel: Data changed for type: ${type}, reloading all data...`);
+      
+      // Reload all data since AdminPanel displays users, classes, students, teachers, and reports
+      // Any change in any of these collections affects the admin view
       loadData();
     };
 

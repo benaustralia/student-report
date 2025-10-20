@@ -53,6 +53,9 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       lastSavedTextRef.current = state.reportText.trim();
       setState(prev => ({ ...prev, showAutoSave: true, hasUnsavedChanges: false }));
       setTimeout(() => setState(prev => ({ ...prev, showAutoSave: false })), isAutoSave ? 1000 : 2000);
+      
+      // Notify other components that reports data has changed
+      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'reports' } }));
     } catch (error) {
       console.error('Error saving report:', error);
       alert('Failed to save report. Please try again.');
