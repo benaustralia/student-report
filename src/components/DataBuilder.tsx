@@ -5,9 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
-import { Plus, CheckCircle, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, CheckCircle, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload } from 'lucide-react';
 import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher } from '@/services/firebaseService';
 import { StatisticsBar } from './StatisticsBar';
+import { BulkStudentImport } from './BulkStudentImport';
 import type { AdminUser, Class, Student, Teacher } from '@/types';
 
 type DataType = 'users' | 'classes' | 'students' | 'teachers';
@@ -35,6 +36,7 @@ export const DataBuilder = () => {
   const [message, setMessage] = useState('');
   const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ users: true, classes: true, students: true, teachers: true });
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [showBulkImport, setShowBulkImport] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all(OPS.getAll.map(fn => fn()))
@@ -249,27 +251,39 @@ export const DataBuilder = () => {
             {openGroups[`${type}-${teacher}`] && (
               <div className="ml-6 space-y-2">
                 {groupItems.map(item => (
-                  <CollapsibleItem
-                    key={item.id}
-                    title={`${(item as Class).classDay} ${(item as Class).classTime}`}
-                    subtitle={(item as Class).classLocation}
-                    isEditing={editing.has(item.id!)}
-                    onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
-                    onSave={() => handleAction('update', type, item, 0)}
-                    onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))}
-                    onDelete={() => handleAction('delete', type, item, 0)}
-                  >
-                    {editing.has(item.id!) && (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {config.fields.map((field: string) => (
-                          <div key={field}>
-                            <label className="text-sm font-medium">{field}</label>
-                            {renderField(type, item, field, 0, false)}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CollapsibleItem>
+                  <div key={item.id} className="space-y-2">
+                    <CollapsibleItem
+                      title={`${(item as Class).classDay} ${(item as Class).classTime}`}
+                      subtitle={(item as Class).classLocation}
+                      isEditing={editing.has(item.id!)}
+                      onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
+                      onSave={() => handleAction('update', type, item, 0)}
+                      onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))}
+                      onDelete={() => handleAction('delete', type, item, 0)}
+                    >
+                      {editing.has(item.id!) && (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {config.fields.map((field: string) => (
+                            <div key={field}>
+                              <label className="text-sm font-medium">{field}</label>
+                              {renderField(type, item, field, 0, false)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CollapsibleItem>
+                    <div className="ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBulkImport(item.id!)}
+                        className="text-xs"
+                      >
+                        <Upload className="h-3 w-3 mr-1" />
+                        Import Students
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -313,6 +327,30 @@ export const DataBuilder = () => {
           </CollapsibleCard>
         );
       })}
+      
+      {/* Bulk Student Import Modal */}
+      <BulkStudentImport
+        classData={(data.classes as Class[]).find(c => c.id === showBulkImport) || null}
+        isOpen={showBulkImport !== null}
+        onClose={() => setShowBulkImport(null)}
+        onSuccess={() => {
+          // Reload data to show new students
+          Promise.all(OPS.getAll.map(fn => fn()))
+            .then(([users, classes, students, teachers]) => setData({ 
+              users: (users || []) as ItemType[], 
+              classes: (classes || []) as ItemType[], 
+              students: (students || []) as ItemType[], 
+              teachers: (teachers || []) as ItemType[] 
+            }))
+            .catch(() => setData({ users: [], classes: [], students: [], teachers: [] }));
+          
+          setMessage('Students imported successfully!');
+          setShowBulkImport(null);
+          
+          // Notify other components that data has changed
+          window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'students' } }));
+        }}
+      />
     </div>
   );
 };

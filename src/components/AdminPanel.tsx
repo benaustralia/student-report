@@ -4,11 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRight, FileText, Eye, GraduationCap, Upload } from 'lucide-react';
+import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRight, FileText, Eye, GraduationCap } from 'lucide-react';
 import { TypographyH3, TypographySmall } from '@/components/ui/typography';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
-import { BulkStudentImport } from './BulkStudentImport';
 import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports } from '@/services/firebaseService';
 import type { User } from 'firebase/auth';
 import type { Class, Student, AdminUser, Teacher, ReportData } from '@/types';
@@ -19,7 +18,7 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStudent }) => {
-  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[], showBulkImport: null as string | null });
+  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[] });
 
   const loadData = async () => {
     try {
@@ -244,14 +243,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
                         <Badge variant="outline" className="text-xs">
                           {studentCount} students
                         </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setState(prev => ({ ...prev, showBulkImport: classData.id }))}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Import Students
-                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -367,16 +358,5 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
         <AlertDescription>{state.error}</AlertDescription>
       </Alert>
     )}
-
-    {/* Bulk Student Import Modal */}
-    <BulkStudentImport
-      classData={state.data.classes.find(c => c.id === state.showBulkImport) || null}
-      isOpen={state.showBulkImport !== null}
-      onClose={() => setState(prev => ({ ...prev, showBulkImport: null }))}
-      onSuccess={() => {
-        loadData(); // Reload data to show new students
-        setState(prev => ({ ...prev, showBulkImport: null }));
-      }}
-    />
   </CardContent></Card></div>;
 };
