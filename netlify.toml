@@ -1,6 +1,6 @@
 [build]
   publish = "dist"
-  command = "npm ci --force && npm run build"
+  command = "bun install && bun run build"
   functions = "netlify/functions"
 
 [functions]
@@ -11,11 +11,11 @@
 
 # Production branch settings
 [context.production]
-  command = "npm ci --force && npm run build"
+  command = "bun install && bun run build"
 
 # Development branch settings  
 [context.development]
-  command = "npm ci --force && npm run build"
+  command = "bun install && bun run build"
 
 [[redirects]]
   from = "/*"
