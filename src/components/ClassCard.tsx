@@ -57,13 +57,24 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
 
   // Listen for data changes from DataBuilder to refresh student count and list
   React.useEffect(() => {
-    const handleDataChange = (event: CustomEvent) => {
+    const handleDataChange = async (event: CustomEvent) => {
+      const { type, action, itemId } = event.detail || {};
+      
       // Only refresh when students are added/updated/deleted
-      if (event.detail?.type === 'students') {
-        loadStudentCount();
-        // Also reload the student list if it has been loaded before
-        if (hasLoadedStudents) {
-          loadStudents(true);
+      if (type === 'students') {
+        if (action === 'delete' && itemId && hasLoadedStudents) {
+          // For deletions, just remove the specific student from local state
+          // This preserves the state of other StudentCard components
+          setStudents(prev => prev.filter(student => student.id !== itemId));
+          setStudentCount(prev => Math.max(0, (prev || 0) - 1));
+        } else {
+          // For additions/updates, reload the full list
+          loadStudentCount();
+          if (hasLoadedStudents) {
+            setTimeout(() => {
+              loadStudents(true);
+            }, 100);
+          }
         }
       }
     };

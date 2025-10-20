@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, Download, Upload, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { importStudents } from '@/services/firebaseService';
 import type { Class, Student } from '@/types';
@@ -162,7 +162,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
@@ -262,7 +262,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={isProcessing}>
               Cancel
             </Button>
@@ -282,7 +282,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </div>
       </DialogContent>
     </Dialog>

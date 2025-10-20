@@ -128,7 +128,18 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     const handleDataChanged = (event: CustomEvent) => {
       const { type } = event.detail;
       console.log(`RBAApp: Data changed for type: ${type}, reloading data...`);
-      loadData();
+      
+      // Only reload data for changes that affect the main app view
+      // Skip individual student deletions to prevent unnecessary refreshes
+      if (type === 'users' || type === 'classes' || type === 'teachers') {
+        loadData();
+      } else if (type === 'students') {
+        // For students, only reload if it's not a deletion (to avoid refreshing the whole app)
+        const { action } = event.detail;
+        if (action !== 'delete') {
+          loadData();
+        }
+      }
     };
 
     window.addEventListener('dataChanged', handleDataChanged as EventListener);

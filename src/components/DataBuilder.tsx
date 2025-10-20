@@ -98,8 +98,15 @@ export const DataBuilder = () => {
         await OPS.delete[type](item.id);
         setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
         setMessage(`Deleted ${type.slice(0, -1)}!`);
-        // Notify other components that data has changed
-        window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type } }));
+        // Notify other components that data has changed with specific details
+        window.dispatchEvent(new CustomEvent('dataChanged', { 
+          detail: { 
+            type, 
+            action: 'delete', 
+            itemId: item.id,
+            item: item 
+          } 
+        }));
       }
     } catch (error: unknown) { setMessage(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };
