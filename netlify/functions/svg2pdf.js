@@ -272,6 +272,10 @@ exports.handler = async (event) => {
     
     // Convert SVG to PDF
     console.log('Converting SVG to PDF...');
+    console.log('SVG length:', modifiedSvg.length);
+    console.log('SVG contains image elements:', modifiedSvg.includes('<image'));
+    console.log('SVG contains data: URLs:', modifiedSvg.includes('data:image'));
+    
     try {
       // Add the SVG as background (graphics only, no text)
       SVGtoPDF(doc, modifiedSvg, 0, 0, {
@@ -292,6 +296,8 @@ exports.handler = async (event) => {
       console.log('All vector text added successfully');
     } catch (svgError) {
       console.error('ERROR: SVG to PDF conversion failed:', svgError);
+      console.error('SVG Error stack:', svgError.stack);
+      console.error('SVG content preview:', modifiedSvg.substring(0, 500));
       return {
         statusCode: 500,
         headers: {

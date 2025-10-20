@@ -64,7 +64,8 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
       const line = lines[i].trim();
       if (!line) continue;
       
-      const parts = line.split(',').map(part => part.trim());
+      // Split by comma, tab, or multiple spaces
+      const parts = line.split(/[,\t]+|\s{2,}/).map(part => part.trim());
       
       if (parts.length < 2) {
         students.push({
@@ -161,7 +162,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
@@ -203,7 +204,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
                 disabled={isProcessing}
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Format: firstName,lastName (one student per line)
+                Format: firstName,lastName or firstName lastName or firstName	lastName (one student per line)
               </p>
             </CardContent>
           </Card>
@@ -217,7 +218,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-2">
                   {parsedStudents.map((student, index) => (
                     <div key={index} className="flex items-center gap-2 p-2 rounded border">
                       <div className="flex-1">
