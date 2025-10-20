@@ -4,10 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRight, FileText, Eye } from 'lucide-react';
+import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRight, FileText, Eye, GraduationCap, Upload } from 'lucide-react';
 import { TypographyH3, TypographySmall } from '@/components/ui/typography';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
+import { BulkStudentImport } from './BulkStudentImport';
 import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports } from '@/services/firebaseService';
 import type { User } from 'firebase/auth';
 import type { Class, Student, AdminUser, Teacher, ReportData } from '@/types';
@@ -18,7 +19,7 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStudent }) => {
-  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[] });
+  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[], showBulkImport: null as string | null });
 
   const loadData = async () => {
     try {
@@ -199,6 +200,69 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
       </Collapsible></Card>
     )}
 
+    {!state.showDataBuilder && state.data.classes.length > 0 && (
+      <Card>
+        <Collapsible open={state.openSections.classes} onOpenChange={() => setState(prev => ({ ...prev, openSections: { ...prev.openSections, classes: !prev.openSections.classes } }))}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">Classes</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs flex-shrink-0">
+                    {state.data.classes.length} classes
+                  </Badge>
+                </CardTitle>
+                {state.openSections.classes ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-2">
+              {state.data.classes.map((classData, i) => {
+                const teacher = state.data.teachers.find(t => t.email === classData.teacherEmail);
+                const studentCount = state.data.students.filter(s => s.classId === classData.id).length;
+                
+                return (
+                  <Card key={`class-${i}`} className="p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
+                          <div className="space-y-1">
+                            <div className="font-medium truncate">
+                              {classData.classLevel} - {classData.classLocation}
+                            </div>
+                            <TypographySmall className="text-muted-foreground truncate">
+                              {classData.classDay} at {classData.classTime} • {teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher'}
+                            </TypographySmall>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {studentCount} students
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setState(prev => ({ ...prev, showBulkImport: classData.id }))}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Import Students
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    )}
+
     {!state.showDataBuilder && state.incompleteReports.length > 0 && (
       <Card>
         <Collapsible open={state.openSections.incompleteReports} onOpenChange={() => setState(prev => ({ ...prev, openSections: { ...prev.openSections, incompleteReports: !prev.openSections.incompleteReports } }))}>
@@ -303,5 +367,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
         <AlertDescription>{state.error}</AlertDescription>
       </Alert>
     )}
+
+    {/* Bulk Student Import Modal */}
+    <BulkStudentImport
+      classData={state.data.classes.find(c => c.id === state.showBulkImport) || null}
+      isOpen={state.showBulkImport !== null}
+      onClose={() => setState(prev => ({ ...prev, showBulkImport: null }))}
+      onSuccess={() => {
+        loadData(); // Reload data to show new students
+        setState(prev => ({ ...prev, showBulkImport: null }));
+      }}
+    />
   </CardContent></Card></div>;
 };
