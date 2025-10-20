@@ -100,7 +100,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onNavigateToStuden
     </Card>
   );
 
-  return <div className="space-y-6"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Database className="h-5 w-5" />Admin Panel</CardTitle></CardHeader><CardContent className="space-y-4">
+  return <div className="space-y-4 sm:space-y-6 p-2 sm:p-0"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Database className="h-5 w-5" />Admin Panel</CardTitle></CardHeader><CardContent className="space-y-4">
     <div className="flex flex-col sm:flex-row gap-4">
       <Button onClick={() => setState(prev => ({ ...prev, showDataBuilder: !prev.showDataBuilder }))} variant={state.showDataBuilder ? "default" : "outline"}>
         <Settings className="h-4 w-4 mr-2" />

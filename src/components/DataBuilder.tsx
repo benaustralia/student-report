@@ -197,19 +197,19 @@ export const DataBuilder = () => {
 
         return (
           <div key={teacher} className="mb-4">
-            <div className="flex items-center cursor-pointer p-2 bg-gray-100 dark:bg-gray-800 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
+            <div className="flex items-center cursor-pointer p-2 bg-muted rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
               {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
               <span className="font-medium">{getTeacherName(teacher)}</span>
-              <span className="ml-2 text-sm text-gray-500">({groupItems.length})</span>
+              <span className="ml-2 text-sm text-muted-foreground">({groupItems.length})</span>
             </div>
             {openGroups[`${type}-${teacher}`] && (
               <div className="ml-6 space-y-3">
                 {Object.entries(classGroups).map(([className, classItems]: [string, ItemType[]]) => (
                   <div key={className}>
-                    <div className="flex items-center cursor-pointer p-2 bg-gray-50 dark:bg-gray-700 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}-${className}`]: !prev[`${type}-${teacher}-${className}`] }))}>
+                    <div className="flex items-center cursor-pointer p-2 bg-muted/50 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}-${className}`]: !prev[`${type}-${teacher}-${className}`] }))}>
                       {openGroups[`${type}-${teacher}-${className}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
                       <span className="font-medium text-sm">{className}</span>
-                      <span className="ml-2 text-xs text-gray-500">({classItems.length})</span>
+                      <span className="ml-2 text-xs text-muted-foreground">({classItems.length})</span>
                     </div>
                     {openGroups[`${type}-${teacher}-${className}`] && (
                       <div className="ml-6 space-y-2">
@@ -225,7 +225,7 @@ export const DataBuilder = () => {
                             onDelete={() => handleAction('delete', type, item, 0)}
                           >
                             {editing.has(item.id!) && (
-                              <div className="grid gap-4 md:grid-cols-2">
+                              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                                 {config.fields.map((field: string) => (
                                   <div key={field}>
                                     <label className="text-sm font-medium">{field}</label>
@@ -250,10 +250,10 @@ export const DataBuilder = () => {
       return Object.entries(groupByTeacher(items, item => (item as Class).teacherEmail || '', type))
         .map(([teacher, groupItems]: [string, ItemType[]]) => (
           <div key={teacher} className="mb-4">
-            <div className="flex items-center cursor-pointer p-2 bg-gray-100 dark:bg-gray-800 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
+            <div className="flex items-center cursor-pointer p-2 bg-muted rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
               {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
               <span className="font-medium">{getTeacherName(teacher)}</span>
-              <span className="ml-2 text-sm text-gray-500">({groupItems.length})</span>
+              <span className="ml-2 text-sm text-muted-foreground">({groupItems.length})</span>
             </div>
             {openGroups[`${type}-${teacher}`] && (
               <div className="ml-6 space-y-2">
@@ -269,7 +269,7 @@ export const DataBuilder = () => {
                       onDelete={() => handleAction('delete', type, item, 0)}
                     >
                       {editing.has(item.id!) && (
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                           {config.fields.map((field: string) => (
                             <div key={field}>
                               <label className="text-sm font-medium">{field}</label>
@@ -302,12 +302,12 @@ export const DataBuilder = () => {
   const renderFlatItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => 
     items.map(item => (
       <CollapsibleItem key={item.id} title={`${(item as AdminUser & { id: string } | Teacher).firstName} ${(item as AdminUser & { id: string } | Teacher).lastName}`} subtitle={(item as AdminUser & { id: string } | Teacher).email} isEditing={editing.has(item.id!)} onEdit={() => setEditing(prev => new Set([...prev, item.id!]))} onSave={() => handleAction('update', type, item, 0)} onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))} onDelete={() => handleAction('delete', type, item, 0)}>
-        {editing.has(item.id!) && <div className="grid gap-4 md:grid-cols-2">{config.fields.map((field: string) => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(type, item, field, 0, false)}</div>)}</div>}
+        {editing.has(item.id!) && <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">{config.fields.map((field: string) => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(type, item, field, 0, false)}</div>)}</div>}
       </CollapsibleItem>
     ));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
       <StatisticsBar adminCount={data.users.filter(u => (u as AdminUser & { id: string }).isAdmin).length} teacherCount={data.teachers.length} classCount={data.classes.length} studentCount={data.students.length} loading={loading} />
       {message && <Alert><CheckCircle className="h-4 w-4" /><AlertDescription>{message}</AlertDescription></Alert>}
       
@@ -320,7 +320,7 @@ export const DataBuilder = () => {
             {['students', 'classes'].includes(dataType) ? renderGroupedItems(dataType, items, config) : renderFlatItems(dataType, items, config)}
             {newItems[dataType]?.map((item, index) => (
               <div key={index} className="p-4 border rounded-lg space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">{config.fields.map(field => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(dataType, item, field, index, true)}</div>)}</div>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">{config.fields.map(field => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(dataType, item, field, index, true)}</div>)}</div>
               </div>
             ))}
             {newItems[dataType]?.length > 0 && (
