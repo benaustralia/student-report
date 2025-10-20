@@ -18,10 +18,6 @@ let app;
 try {
   app = initializeApp(firebaseConfig);
   
-  // Only log in development mode
-  if (import.meta.env.DEV) {
-    console.log('Firebase initialized successfully');
-  }
   
   // Add connection state monitoring
   if (typeof window !== 'undefined') {

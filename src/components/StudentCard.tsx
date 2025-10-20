@@ -80,14 +80,12 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   }, [isSelected]);
 
   const loadReports = useCallback(async () => {
-    console.log('🔍 loadReports:', student.id, 'already loaded:', hasLoadedRef.current);
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
     setState(prev => ({ ...prev, loading: true }));
     try {
       await cleanupDuplicateReports(student.id);
       const reportsData = await getReportsForStudent(student.id);
-      console.log('🔍 Got reports:', reportsData.length, 'for', student.firstName, student.lastName);
       setState(prev => ({ ...prev, reports: reportsData }));
       if (reportsData.length > 0) {
         const latestReport = reportsData[0];
@@ -122,7 +120,6 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   }, [loadReports]);
 
   const handleToggle = () => {
-    console.log('🔍 StudentCard toggle:', student.firstName, student.lastName, 'isOpen:', state.isOpen);
     if (!state.isOpen) {
       loadReports();
     }
@@ -178,18 +175,11 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       let generatedText = data.choices[0]?.message?.content?.trim();
       
       // DEBUG: Log raw AI output
-      console.log('🔍 DEBUG: Raw AI output:', generatedText);
-      console.log('🔍 DEBUG: Raw output length:', generatedText?.length);
-      
       if (generatedText) {
         // Clean up any unwanted formatting
         generatedText = generatedText
           .replace(/\[.*?\]/g, '')
           .trim();
-        
-        // DEBUG: Log after cleaning
-        console.log('🔍 DEBUG: After cleaning:', generatedText);
-        console.log('🔍 DEBUG: Cleaned length:', generatedText.length);
         
         // AI handles character limit - no truncation needed
         

@@ -15,7 +15,6 @@ import { useAuthContext } from '@/hooks/useAuthContext';
 interface RBAAppProps { user: User; }
 
 export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
-  console.log('🔍 RBAApp render - user:', user.email);
   const { signOut } = useAuthContext();
   
   // Split large state into focused pieces

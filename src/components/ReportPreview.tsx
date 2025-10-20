@@ -295,10 +295,8 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
 
             // Add artwork image if available
             if (artworkUrl) {
-              console.log('🔍 DEBUG: Processing artwork image:', artworkUrl);
               try {
                 const dataUrl = await convertUrlToDataUrl(artworkUrl);
-                console.log('🔍 DEBUG: Image converted to data URL:', dataUrl.substring(0, 100) + '...');
                 
                 const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
                 imageElement.setAttribute('href', dataUrl);
@@ -308,13 +306,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 imageElement.setAttribute('height', '250');
                 imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
                 svgClone.appendChild(imageElement);
-                
-                console.log('🔍 DEBUG: Image element added to SVG');
               } catch (error) { 
-                console.error('❌ DEBUG: Failed to load artwork image:', error); 
+                console.error('Failed to load artwork image:', error); 
               }
-            } else {
-              console.log('🔍 DEBUG: No artwork URL provided');
             }
             
             // Logo will be added in PDF generation from file system
