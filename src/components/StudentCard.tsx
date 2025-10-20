@@ -445,7 +445,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     <FeedbackViewer 
                       teacherEmail={classData.teacherEmail}
                       trigger={
-                        <Button size="sm" variant="outline" className="text-xs">
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto">
                           📌 Corkboard
                         </Button>
                       }
