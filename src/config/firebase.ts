@@ -17,17 +17,25 @@ const firebaseConfig = {
 let app;
 try {
   app = initializeApp(firebaseConfig);
-  console.log('Firebase initialized successfully');
+  
+  // Only log in development mode
+  if (import.meta.env.DEV) {
+    console.log('Firebase initialized successfully');
+  }
   
   // Add connection state monitoring
   if (typeof window !== 'undefined') {
     // Monitor online/offline state
     window.addEventListener('online', () => {
-      console.log('Network: Online');
+      if (import.meta.env.DEV) {
+        console.log('Network: Online');
+      }
     });
     
     window.addEventListener('offline', () => {
-      console.log('Network: Offline');
+      if (import.meta.env.DEV) {
+        console.log('Network: Offline');
+      }
     });
   }
 } catch (error) {

@@ -11,6 +11,7 @@ import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } f
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { ReportPreview } from '@/components/ReportPreview';
+import { FeedbackViewer } from '@/components/FeedbackViewer';
 import type { Student, Class, ReportData } from '@/types';
 
 interface StudentCardProps { 
@@ -79,12 +80,14 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   }, [isSelected]);
 
   const loadReports = useCallback(async () => {
+    console.log('🔍 loadReports:', student.id, 'already loaded:', hasLoadedRef.current);
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
     setState(prev => ({ ...prev, loading: true }));
     try {
       await cleanupDuplicateReports(student.id);
       const reportsData = await getReportsForStudent(student.id);
+      console.log('🔍 Got reports:', reportsData.length, 'for', student.firstName, student.lastName);
       setState(prev => ({ ...prev, reports: reportsData }));
       if (reportsData.length > 0) {
         const latestReport = reportsData[0];
@@ -119,7 +122,10 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   }, [loadReports]);
 
   const handleToggle = () => {
-    if (!state.isOpen) loadReports();
+    console.log('🔍 StudentCard toggle:', student.firstName, student.lastName, 'isOpen:', state.isOpen);
+    if (!state.isOpen) {
+      loadReports();
+    }
     setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
   };
 
@@ -434,6 +440,16 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                         </AlertDialogContent>
                       </AlertDialog>
                     )}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <FeedbackViewer 
+                      teacherEmail={classData.teacherEmail}
+                      trigger={
+                        <Button size="sm" variant="outline" className="text-xs">
+                          📌 Corkboard
+                        </Button>
+                      }
+                    />
                   </div>
                   <ReportPreview
                     student={student}
