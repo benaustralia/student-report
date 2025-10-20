@@ -131,7 +131,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
           return textElement;
         };
 
-        const addWrappedTextElement = (x: number, y: number, text: string, className: string = 'st5', lineHeight: number = 20) => {
+        const addWrappedTextElement = (x: number, y: number, text: string, className: string = 'st5', lineHeight: number = 16) => {
           const maxPixelWidth = 350; // Same as PDF generation
           const wrappedLines = wrapTextWithNotoSans(text, maxPixelWidth);
           const textElements: SVGTextElement[] = [];
@@ -166,7 +166,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
         textElements.forEach(({ x, y, text }) => svgClone.appendChild(addTextElement(x, y, text, 'st5')));
 
         if (comments?.trim()) {
-          addWrappedTextElement(179.27, 590.33, comments, 'st5', 20).forEach(element => svgClone.appendChild(element));
+          addWrappedTextElement(179.27, 590.33, comments, 'st5', 16).forEach(element => svgClone.appendChild(element));
         }
 
         if (artwork) {

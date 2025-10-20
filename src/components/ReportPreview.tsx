@@ -234,7 +234,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               return lines;
             };
 
-            const addWrappedTextElement = (x: number, y: number, text: string, lineHeight: number = 20) => {
+            const addWrappedTextElement = (x: number, y: number, text: string, lineHeight: number = 16) => {
               const maxPixelWidth = 350; // Increased wrap width
               const wrappedLines = wrapTextWithNotoSans(text, maxPixelWidth);
               const textElements: SVGTextElement[] = [];
