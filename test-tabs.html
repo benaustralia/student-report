@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Tabs</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@radix-ui/react-tabs@1.0.4/dist/index.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .tabs-root { width: 100%; }
+        .tabs-list { 
+            display: inline-flex; 
+            height: 40px; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 6px; 
+            background-color: #f1f5f9; 
+            padding: 4px; 
+            color: #64748b; 
+        }
+        .tabs-trigger { 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            white-space: nowrap; 
+            border-radius: 4px; 
+            padding: 6px 12px; 
+            font-size: 14px; 
+            font-weight: 500; 
+            transition: all 0.2s; 
+            cursor: pointer;
+        }
+        .tabs-trigger[data-state="active"] { 
+            background-color: white; 
+            color: #0f172a; 
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); 
+        }
+        .tabs-trigger[data-state="inactive"] { 
+            background-color: transparent; 
+            color: #64748b; 
+        }
+        .tabs-content { 
+            margin-top: 8px; 
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script>
+        const { createElement: h, useState } = React;
+        const { Root: TabsRoot, List: TabsList, Trigger: TabsTrigger, Content: TabsContent } = RadixUIReactTabs;
+        
+        function TestTabs() {
+            const [value, setValue] = useState("browse");
+            
+            return h(TabsRoot, { 
+                value: value, 
+                onValueChange: setValue,
+                className: "tabs-root"
+            }, [
+                h(TabsList, { className: "tabs-list" }, [
+                    h(TabsTrigger, { 
+                        value: "browse", 
+                        className: "tabs-trigger"
+                    }, "Browse"),
+                    h(TabsTrigger, { 
+                        value: "build", 
+                        className: "tabs-trigger"
+                    }, "Build")
+                ]),
+                h(TabsContent, { 
+                    value: "browse", 
+                    className: "tabs-content"
+                }, "Browse Content"),
+                h(TabsContent, { 
+                    value: "build", 
+                    className: "tabs-content"
+                }, "Build Content")
+            ]);
+        }
+        
+        ReactDOM.render(h(TestTabs), document.getElementById('root'));
+    </script>
+</body>
+</html>

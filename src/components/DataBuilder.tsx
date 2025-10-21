@@ -2,19 +2,22 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
-import { Plus, CheckCircle, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload } from 'lucide-react';
-import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher } from '@/services/firebaseService';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X } from 'lucide-react';
+import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher, getAllRequests, importRequests, updateRequest, deleteRequest, approveRequest, declineRequest } from '@/services/firebaseService';
 import { StatisticsBar } from './StatisticsBar';
 import { BulkStudentImport } from './BulkStudentImport';
-import type { AdminUser, Class, Student, Teacher } from '@/types';
+import { toast } from 'sonner';
+import type { AdminUser, Class, Student, Teacher, Request } from '@/types';
+import { useAuthContext } from '@/hooks/useAuthContext';
 
-type DataType = 'users' | 'classes' | 'students' | 'teachers';
-type ItemType = AdminUser | Class | Student | Teacher;
+type DataType = 'requests' | 'users' | 'classes' | 'students' | 'teachers';
+type ItemType = AdminUser | Class | Student | Teacher | Request;
 
 const CONFIG = {
+  requests: { icon: FileText, title: 'Requests', fields: ['type', 'status', 'teacherEmail', 'classId', 'studentId', 'studentFirstName', 'studentLastName', 'notes'], empty: { type: 'add_student', status: 'pending', teacherEmail: '', classId: '', notes: '' } },
   users: { icon: Users, title: 'Admins', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: false } },
   classes: { icon: BookOpen, title: 'Classes', fields: ['classLevel', 'classDay', 'classTime', 'classLocation', 'teacherEmail'], empty: { classLevel: '', classDay: '', classTime: '', classLocation: '', teacherEmail: '' } },
   students: { icon: GraduationCap, title: 'Students', fields: ['firstName', 'lastName', 'classId'], empty: { firstName: '', lastName: '', classId: '' } },
@@ -22,32 +25,43 @@ const CONFIG = {
 };
 
 const OPS = { 
-  import: { users: importUsers, classes: importClasses, students: importStudents, teachers: importTeachers }, 
-  update: { users: updateUser, classes: updateClass, students: updateStudent, teachers: updateTeacher }, 
-  delete: { users: deleteUser, classes: deleteClass, students: deleteStudent, teachers: deleteTeacher }, 
-  getAll: [getAllUsers, getAllClasses, getAllStudents, getAllTeachers] 
+  import: { users: importUsers, classes: importClasses, students: importStudents, teachers: importTeachers, requests: importRequests }, 
+  update: { users: updateUser, classes: updateClass, students: updateStudent, teachers: updateTeacher, requests: updateRequest }, 
+  delete: { users: deleteUser, classes: deleteClass, students: deleteStudent, teachers: deleteTeacher, requests: deleteRequest }, 
+  getAll: [getAllUsers, getAllClasses, getAllStudents, getAllTeachers, getAllRequests] 
 };
 
 export const DataBuilder = () => {
-  const [data, setData] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [] });
-  const [newItems, setNewItems] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [] });
+  const { user } = useAuthContext();
+  const [data, setData] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [], requests: [] });
+  const [newItems, setNewItems] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [], requests: [] });
   const [editing, setEditing] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
-  const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ users: true, classes: true, students: true, teachers: true });
+  const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ requests: true, users: true, classes: false, students: false, teachers: false });
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [showBulkImport, setShowBulkImport] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all(OPS.getAll.map(fn => fn()))
-      .then(([users, classes, students, teachers]) => setData({ 
-        users: (users || []) as ItemType[], 
-        classes: (classes || []) as ItemType[], 
-        students: (students || []) as ItemType[], 
-        teachers: (teachers || []) as ItemType[] 
-      }))
-      .catch(() => setData({ users: [], classes: [], students: [], teachers: [] }))
-      .finally(() => setLoading(false));
+    const loadData = async () => {
+      try {
+        const [users, classes, students, teachers, requests] = await Promise.all(OPS.getAll.map(fn => fn()));
+        setData({ 
+          users: (users || []) as ItemType[], 
+          classes: (classes || []) as ItemType[], 
+          students: (students || []) as ItemType[], 
+          teachers: (teachers || []) as ItemType[],
+          requests: (requests || []) as ItemType[]
+        });
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setData({ users: [], classes: [], students: [], teachers: [], requests: [] });
+        setMessage('Failed to load some data. Please check your connection.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
 
   const updateItem = (type: DataType, index: number | string, field: string, value: unknown, isNew = false) => {
@@ -96,7 +110,8 @@ export const DataBuilder = () => {
           users: (results[0] || []) as ItemType[], 
           classes: (results[1] || []) as ItemType[], 
           students: (results[2] || []) as ItemType[], 
-          teachers: (results[3] || []) as ItemType[] 
+          teachers: (results[3] || []) as ItemType[],
+          requests: (results[4] || []) as ItemType[]
         });
         // Notify other components that data has changed
         window.dispatchEvent(new CustomEvent('dataChanged', { 
@@ -145,7 +160,8 @@ export const DataBuilder = () => {
                 users: (results[0] || []) as ItemType[], 
                 classes: (results[1] || []) as ItemType[], 
                 students: (results[2] || []) as ItemType[], 
-                teachers: (results[3] || []) as ItemType[] 
+                teachers: (results[3] || []) as ItemType[],
+                requests: (results[4] || []) as ItemType[]
               });
             } catch (error: unknown) {
               console.error('Failed to save class assignment:', error);
@@ -312,6 +328,106 @@ export const DataBuilder = () => {
     }
   };
 
+
+  const handleApproveRequest = async (request: Request) => {
+    if (!user?.email) return;
+    try {
+      await approveRequest(request.id, user.email);
+      
+      toast.success(`Request approved and ${request.type === 'add_student' ? 'student added' : 'student removed'}!`);
+      
+      // Refresh all data
+      const results = await Promise.all(OPS.getAll.map(fn => fn()));
+      setData({ 
+        users: (results[0] || []) as ItemType[], 
+        classes: (results[1] || []) as ItemType[], 
+        students: (results[2] || []) as ItemType[], 
+        teachers: (results[3] || []) as ItemType[],
+        requests: (results[4] || []) as ItemType[]
+      });
+      
+      // Notify other components that a request was approved
+      window.dispatchEvent(new CustomEvent('dataChanged', { 
+        detail: { 
+          type: 'requests', 
+          action: 'approve',
+          requestType: request.type
+        } 
+      }));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to approve request');
+    }
+  };
+
+  const handleDeclineRequest = async (request: Request) => {
+    if (!user?.email) return;
+    try {
+      await declineRequest(request.id, user.email);
+      
+      toast.success("Request declined");
+      
+      // Refresh requests
+      const results = await Promise.all(OPS.getAll.map(fn => fn()));
+      setData({ 
+        users: (results[0] || []) as ItemType[], 
+        classes: (results[1] || []) as ItemType[], 
+        students: (results[2] || []) as ItemType[], 
+        teachers: (results[3] || []) as ItemType[],
+        requests: (results[4] || []) as ItemType[]
+      });
+      
+      // Notify other components that a request was declined
+      window.dispatchEvent(new CustomEvent('dataChanged', { 
+        detail: { 
+          type: 'requests', 
+          action: 'decline'
+        } 
+      }));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to decline request');
+    }
+  };
+
+  const renderRequestItem = (request: Request) => {
+    const classData = data.classes.find(c => c.id === request.classId) as Class | undefined;
+    const student = request.studentId ? data.students.find(s => s.id === request.studentId) as Student | undefined : undefined;
+    
+    const title = request.type === 'add_student' 
+      ? `Add: ${request.studentFirstName} ${request.studentLastName}`
+      : `Remove: ${student ? `${student.firstName} ${student.lastName}` : 'Unknown Student'}`;
+    
+    const subtitle = `${classData ? `${classData.classLevel} - ${classData.classDay} ${classData.classTime}` : 'Unknown Class'} • ${request.teacherEmail}`;
+    
+    return (
+      <div key={request.id} className="p-4 border rounded-lg">
+        <div className="flex flex-col sm:flex-row justify-between gap-4">
+          <div className="flex-1">
+            <div className="text-lg font-semibold">{title}</div>
+            <div className="text-sm text-muted-foreground mt-1">{subtitle}</div>
+          </div>
+          <div className="flex gap-2 sm:flex-col">
+            <Button
+              onClick={() => handleApproveRequest(request)}
+              variant="default"
+              size="sm"
+            >
+              <Check className="h-4 w-4 mr-1" />
+              Approve
+            </Button>
+            <Button
+              onClick={() => handleDeclineRequest(request)}
+              variant="destructive"
+              size="sm"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Decline
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderFlatItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => 
     items.map(item => (
       <CollapsibleItem key={item.id} title={`${(item as AdminUser & { id: string } | Teacher).firstName} ${(item as AdminUser & { id: string } | Teacher).lastName}`} subtitle={(item as AdminUser & { id: string } | Teacher).email} isEditing={editing.has(item.id!)} onEdit={() => setEditing(prev => new Set([...prev, item.id!]))} onSave={() => handleAction('update', type, item, 0)} onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))} onDelete={() => handleAction('delete', type, item, 0)}>
@@ -321,29 +437,54 @@ export const DataBuilder = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
-      <StatisticsBar adminCount={data.users.filter(u => (u as AdminUser & { id: string }).isAdmin).length} teacherCount={data.teachers.length} classCount={data.classes.length} studentCount={data.students.length} loading={loading} />
-      {message && <Alert><CheckCircle className="h-4 w-4" /><AlertDescription>{message}</AlertDescription></Alert>}
+      <StatisticsBar />
       
       {Object.entries(CONFIG).map(([type, config]) => {
         const Icon = config.icon;
         const dataType = type as DataType;
         const items = data[dataType] || [];
+        const pendingCount = dataType === 'requests' ? (items as Request[]).filter(r => r.status === 'pending').length : 0;
+        
         return (
-          <CollapsibleCard key={type} title={config.title} icon={Icon} badge={`${newItems[dataType]?.length || 0} new | ${items.length} existing`} isOpen={openSections[dataType]} onToggle={open => setOpenSections(prev => ({ ...prev, [dataType]: open }))}>
-            {['students', 'classes'].includes(dataType) ? renderGroupedItems(dataType, items, config) : renderFlatItems(dataType, items, config)}
-            {newItems[dataType]?.map((item, index) => (
-              <div key={index} className="p-4 border rounded-lg space-y-4">
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">{config.fields.map(field => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(dataType, item, field, index, true)}</div>)}</div>
+          <CollapsibleCard 
+            key={type} 
+            title={config.title} 
+            icon={Icon} 
+            badge={dataType === 'requests' 
+              ? `${pendingCount}`
+              : `${newItems[dataType]?.length || 0} new | ${items.length} existing`
+            } 
+            isOpen={openSections[dataType]} 
+            onToggle={open => setOpenSections(prev => ({ ...prev, [dataType]: open }))}
+          >
+            {dataType === 'requests' ? (
+              // Special rendering for requests - only show pending requests
+              <div className="space-y-3">
+                {pendingCount === 0 ? (
+                  <div className="p-6 text-center text-muted-foreground">No pending requests</div>
+                ) : (
+                  (items as Request[]).filter(r => r.status === 'pending').map(request => renderRequestItem(request))
+                )}
               </div>
-            ))}
-            {newItems[dataType]?.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                <Button onClick={() => handleAction('submit', dataType, null, 0)} className="bg-green-600 hover:bg-green-700 text-white">Submit {newItems[dataType].length} New {CONFIG[dataType].title}</Button>
-              </div>
+            ) : (
+              // Normal rendering for other types
+              <>
+                {['students', 'classes'].includes(dataType) ? renderGroupedItems(dataType, items, config) : renderFlatItems(dataType, items, config)}
+                {newItems[dataType]?.map((item, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-4">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">{config.fields.map(field => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(dataType, item, field, index, true)}</div>)}</div>
+                  </div>
+                ))}
+                {newItems[dataType]?.length > 0 && (
+                  <div className="flex gap-2 flex-wrap">
+                    <Button onClick={() => handleAction('submit', dataType, null, 0)} className="bg-green-600 hover:bg-green-700 text-white">Submit {newItems[dataType].length} New {CONFIG[dataType].title}</Button>
+                  </div>
+                )}
+                <div className="flex gap-2 flex-wrap">
+                  <Button onClick={() => handleAction('add', dataType, null, 0)} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" />Add New</Button>
+                </div>
+              </>
             )}
-            <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => handleAction('add', dataType, null, 0)} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" />Add New</Button>
-            </div>
           </CollapsibleCard>
         );
       })}
@@ -356,13 +497,14 @@ export const DataBuilder = () => {
         onSuccess={() => {
           // Reload data to show new students
           Promise.all(OPS.getAll.map(fn => fn()))
-            .then(([users, classes, students, teachers]) => setData({ 
+            .then(([users, classes, students, teachers, requests]) => setData({ 
               users: (users || []) as ItemType[], 
               classes: (classes || []) as ItemType[], 
               students: (students || []) as ItemType[], 
-              teachers: (teachers || []) as ItemType[] 
+              teachers: (teachers || []) as ItemType[],
+              requests: (requests || []) as ItemType[]
             }))
-            .catch(() => setData({ users: [], classes: [], students: [], teachers: [] }));
+            .catch(() => setData({ users: [], classes: [], students: [], teachers: [], requests: [] }));
           
           setMessage('Students imported successfully!');
           setShowBulkImport(null);

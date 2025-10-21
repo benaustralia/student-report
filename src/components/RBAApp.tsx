@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographyH1, TypographyH2, TypographyMuted, TypographySmall } from '@/components/ui/typography';
-import { Loader2, Users, Shield, LogOut } from 'lucide-react';
+import { Loader2, Users, Shield, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
 import { getAllClasses, isUserAdmin, getUserDisplayName } from '@/services/firebaseService';
 import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
@@ -25,6 +27,8 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [teacherDisplayNames, setTeacherDisplayNames] = useState<Record<string, string>>({});
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState({ adminPanel: true, allClasses: true });
+  const [activeAdminTab, setActiveAdminTab] = useState('browse');
 
 
   const handleNavigateToStudent = async (studentId: string) => {
@@ -208,26 +212,71 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         </div>
       </div>
     </div>
-    {isAdmin && <AdminPanel user={user} onNavigateToStudent={handleNavigateToStudent} />}
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><TypographyH2>{isAdmin ? 'All Classes' : 'Your Classes'} ({classes.length})</TypographyH2></div>
-      {classes.length === 0 ? (
-        <Card><CardContent className="text-center py-12"><Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><p className="text-muted-foreground mb-4">{isAdmin ? 'No classes found in the system.' : 'No classes assigned to you yet. Contact your administrator.'}</p></CardContent></Card>
-      ) : (
-        <div className="space-y-4">
-          {isAdmin ? Object.values(classes.reduce((acc, classData) => {
-            const teacherKey = `${classData.teacherEmail}`;
-            if (!acc[teacherKey]) acc[teacherKey] = { teacherName: teacherDisplayNames[classData.teacherEmail] || 'Unknown Teacher', teacherEmail: classData.teacherEmail, classes: [] };
-            acc[teacherKey].classes.push(classData);
-            return acc;
-          }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
-            <TeacherCard key={teacherData.teacherEmail} teacherName={teacherData.teacherName} teacherEmail={teacherData.teacherEmail} classes={teacherData.classes} selectedStudentId={selectedStudentId} onStudentSelected={handleNavigateToStudent} />
-          )) : classes.map((classData) => (
-            <ClassCard key={classData.id} classData={classData} selectedStudentId={selectedStudentId} onStudentSelected={handleNavigateToStudent} />
-          ))}
-        </div>
-      )}
-    </div>
+    {isAdmin && (
+      <Card>
+        <Collapsible open={openSections.adminPanel} onOpenChange={() => setOpenSections(prev => ({ ...prev, adminPanel: !prev.adminPanel }))}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5 flex-shrink-0" />
+                  <span>Admin Panel</span>
+                </CardTitle>
+                {openSections.adminPanel ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <AdminPanel user={user} onNavigateToStudent={handleNavigateToStudent} onTabChange={setActiveAdminTab} />
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    )}
+    {activeAdminTab !== 'build' && (
+      <Card>
+      <Collapsible open={openSections.allClasses} onOpenChange={() => setOpenSections(prev => ({ ...prev, allClasses: !prev.allClasses }))}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 flex-shrink-0" />
+                <span>{isAdmin ? 'All Classes' : 'Your Classes'}</span>
+                <Badge variant="secondary" className="text-xs">{classes.length}</Badge>
+              </CardTitle>
+              {openSections.allClasses ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-4">
+            {classes.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  {isAdmin ? 'No classes found in the system.' : 'No classes assigned to you yet. Contact your administrator.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {isAdmin ? Object.values(classes.reduce((acc, classData) => {
+                  const teacherKey = `${classData.teacherEmail}`;
+                  if (!acc[teacherKey]) acc[teacherKey] = { teacherName: teacherDisplayNames[classData.teacherEmail] || 'Unknown Teacher', teacherEmail: classData.teacherEmail, classes: [] };
+                  acc[teacherKey].classes.push(classData);
+                  return acc;
+                }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
+                  <TeacherCard key={teacherData.teacherEmail} teacherName={teacherData.teacherName} teacherEmail={teacherData.teacherEmail} classes={teacherData.classes} selectedStudentId={selectedStudentId} onStudentSelected={handleNavigateToStudent} />
+                )) : classes.map((classData) => (
+                  <ClassCard key={classData.id} classData={classData} selectedStudentId={selectedStudentId} onStudentSelected={handleNavigateToStudent} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+    )}
     <footer className="text-center py-4 border-t">
       <TypographySmall className="text-muted-foreground">V. 35 - by hand and Cursor.ai with love Wenli and Ben</TypographySmall>
     </footer>

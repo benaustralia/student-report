@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographyMuted } from '@/components/ui/typography';
 import { StatisticItem } from '@/components/ui/statistic-item';
-import { ChevronDown, ChevronRight, Users, Download } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, Download, UserPlus } from 'lucide-react';
 import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses } from '@/services/firebaseService';
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
+import { ClassStudentManagementModal } from './ClassStudentManagementModal';
 import { generateClassZIP, type ClassReport } from '@/services/zipService';
 
 interface ClassCardProps {
@@ -23,6 +24,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
   const [isDownloading, setIsDownloading] = useState(false);
   const [studentCount, setStudentCount] = useState<number | null>(null);
   const [hasLoadedStudents, setHasLoadedStudents] = useState(false);
+  const [showStudentModal, setShowStudentModal] = useState(false);
 
   const loadStudents = async (forceReload = false) => {
     if (students.length > 0 && !forceReload) return; // Already loaded, unless forced
@@ -202,9 +204,6 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                 <ChevronRight className="h-4 w-4 flex-shrink-0" />
               )}
             </div>
-            <TypographyMuted className="ml-7">
-              {classData.teacherEmail}
-            </TypographyMuted>
             <div className="flex items-center gap-6 ml-7">
               <StatisticItem
                 icon={Users}
@@ -224,9 +223,27 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                 <span className="ml-2">Loading students...</span>
               </div>
             ) : students.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No students assigned to this class yet.
-              </div>
+              <>
+                <div className="text-center py-8 text-muted-foreground">
+                  No students assigned to this class yet.
+                </div>
+                
+                {/* Show +/- Students button even when no students */}
+                <CardFooter className="pt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowStudentModal(true);
+                    }}
+                    aria-label={`Manage students for ${classData.classLevel} class`}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    +/- Students
+                  </Button>
+                </CardFooter>
+              </>
             ) : (
               <>
                 <div className="space-y-4">
@@ -241,9 +258,21 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                   ))}
                 </div>
                 
-                {/* Download ZIP Button */}
-                {students.length > 0 && (
-                  <CardFooter className="pt-4">
+                {/* Action Buttons */}
+                <CardFooter className="pt-4 flex gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowStudentModal(true);
+                    }}
+                    aria-label={`Manage students for ${classData.classLevel} class`}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    +/- Students
+                  </Button>
+                  {students.length > 0 && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -254,13 +283,21 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                       <Download className="h-4 w-4 mr-2" />
                       {isDownloading ? 'Downloading...' : 'Download ZIP'}
                     </Button>
-                  </CardFooter>
-                )}
+                  )}
+                </CardFooter>
               </>
             )}
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+      
+      {/* Class Student Management Modal */}
+      <ClassStudentManagementModal
+        classData={classData}
+        teacherEmail={classData.teacherEmail}
+        isOpen={showStudentModal}
+        onClose={() => setShowStudentModal(false)}
+      />
     </Card>
   );
 });

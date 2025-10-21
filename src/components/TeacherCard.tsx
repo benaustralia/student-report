@@ -117,9 +117,6 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
                 <ChevronRight className="h-4 w-4 flex-shrink-0" />
               )}
             </div>
-            <TypographyMuted className="ml-7">
-              {teacherEmail}
-            </TypographyMuted>
             <div className="flex items-center gap-6 ml-7">
               <StatisticItem
                 icon={BookOpen}

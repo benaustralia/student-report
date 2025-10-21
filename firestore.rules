@@ -1,14 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is admin by looking up their email in adminUsers collection
-    function isAdmin() {
-      return request.auth != null && 
-        exists(/databases/$(database)/documents/adminUsers/$(request.auth.token.email)) &&
-        get(/databases/$(database)/documents/adminUsers/$(request.auth.token.email)).data.isAdmin == true;
-    }
-    
-    // Alternative admin check that queries the adminUsers collection by email field
+    // Admin check by email whitelist
     function isAdminByEmailQuery() {
       return request.auth != null && 
         request.auth.token.email in ['bahinton@gmail.com', 'yoc31397@gmail.com', 'wenli11651@gmail.com'];
@@ -67,6 +60,22 @@ service cloud.firestore {
         request.auth.token.email == 'bahinton@gmail.com' ||
         isAdminByEmailQuery()
       );
+    }
+    
+    // Requests collection - teachers can create/read their own requests, admins can read/update all
+    match /requests/{requestId} {
+      // Teachers can read their own requests, admins can read all
+      allow read: if request.auth != null && (
+        request.auth.token.email == resource.data.teacherEmail ||
+        isAdminByEmailQuery()
+      );
+      // Teachers can create requests for their own classes, admins can create for any class
+      allow create: if request.auth != null && (
+        (request.auth.token.email == request.resource.data.teacherEmail) ||
+        isAdminByEmailQuery()
+      ) && request.resource.data.status == 'pending';
+      // Only admins can update (approve/decline) or delete requests
+      allow update, delete: if request.auth != null && isAdminByEmailQuery();
     }
   }
 }

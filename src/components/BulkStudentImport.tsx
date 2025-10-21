@@ -174,10 +174,10 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
           {/* Template Download */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
+              <h3 className="text-base font-semibold flex items-center gap-2">
                 <Download className="h-4 w-4" />
                 CSV Template
-              </CardTitle>
+              </h3>
             </CardHeader>
             <CardContent className="pt-0">
               <p className="text-sm text-muted-foreground mb-3">
@@ -193,7 +193,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
           {/* CSV Input */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Student Data</CardTitle>
+              <h3 className="text-base font-semibold">Student Data</h3>
             </CardHeader>
             <CardContent className="pt-0">
               <Textarea
@@ -213,9 +213,9 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
           {parsedStudents.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
+                <h3 className="text-base font-semibold flex items-center gap-2">
                   Preview ({validCount} valid, {invalidCount} invalid)
-                </CardTitle>
+                </h3>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-2">

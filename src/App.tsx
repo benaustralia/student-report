@@ -5,6 +5,7 @@ import { useAuthContext } from './hooks/useAuthContext';
 import { RBAApp } from './components/RBAApp';
 import { signInWithGoogle } from './services/firebaseService';
 import { useState, useEffect } from 'react';
+import { Toaster } from '@/components/ui/sonner';
 
 // TypeScript declaration for Google Identity Services
 interface GoogleConfig {
@@ -212,6 +213,7 @@ export default function TeacherReports() {
   return (
     <AuthProvider>
       <AppContent />
+      <Toaster />
     </AuthProvider>
   );
 }

@@ -130,7 +130,7 @@ export const FeedbackViewer: React.FC<FeedbackViewerProps> = ({
                 Object.entries(groupedReports).map(([studentName, studentReports]) => (
                 <Card key={studentName}>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center justify-between">
+                    <CardTitle className="flex items-center justify-between">
                       <span className="truncate">{studentName}</span>
                       <Badge variant="secondary" className="shrink-0 ml-2">
                         {studentReports.length} feedback{studentReports.length !== 1 ? 's' : ''}

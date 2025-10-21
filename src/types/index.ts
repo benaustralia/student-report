@@ -83,3 +83,21 @@ export interface AdminUser {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Request type for teacher-initiated student management requests
+export interface Request {
+  id: string;
+  type: 'add_student' | 'remove_student';
+  status: 'pending' | 'approved' | 'declined';
+  teacherEmail: string;
+  classId: string;
+  studentId?: string; // For remove requests
+  studentFirstName?: string; // For add requests
+  studentLastName?: string; // For add requests
+  requestedAt: Date;
+  resolvedAt?: Date;
+  resolvedBy?: string; // Admin email who approved/declined
+  notes?: string; // Optional notes from teacher
+  createdAt: Date;
+  updatedAt: Date;
+}

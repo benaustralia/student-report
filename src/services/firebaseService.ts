@@ -1,7 +1,7 @@
 import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider } from 'firebase/auth';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, deleteField, writeBatch, setDoc, enableNetwork, disableNetwork } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../config/firebase';
-import type { Class, Student, ReportData, Teacher, AdminUser, LegacyReportData } from '../types';
+import type { Class, Student, ReportData, Teacher, AdminUser, LegacyReportData, Request } from '../types';
 
 export interface UserData { uid: string; email: string; displayName: string; isWhitelisted: boolean; }
 
@@ -405,6 +405,92 @@ export const updateTeacher = async (teacherId: string, updates: Partial<Teacher>
 
 export const deleteTeacher = async (teacherId: string): Promise<void> => {
   await deleteDocById('teachers', teacherId);
+};
+
+// Request management functions
+export const createRequest = async (requestData: Omit<Request, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  return await createDoc('requests', requestData);
+};
+
+export const getAllRequests = async (): Promise<Request[]> => {
+  return await getDocsByQuery<Request>('requests');
+};
+
+export const getRequestsForTeacher = async (teacherEmail: string): Promise<Request[]> => {
+  return await getDocsByQuery<Request>('requests', [['teacherEmail', '==', teacherEmail]]);
+};
+
+export const getPendingRequests = async (): Promise<Request[]> => {
+  return await getDocsByQuery<Request>('requests', [['status', '==', 'pending']]);
+};
+
+export const updateRequest = async (requestId: string, updates: Partial<Request>): Promise<void> => {
+  await updateDocById('requests', requestId, updates);
+};
+
+export const deleteRequest = async (requestId: string): Promise<void> => {
+  await deleteDocById('requests', requestId);
+};
+
+export const approveRequest = async (requestId: string, adminEmail: string): Promise<void> => {
+  const requests = await getDocsByQuery<Request>('requests', []);
+  const request = requests.find(r => r.id === requestId);
+  
+  if (!request) {
+    throw new Error('Request not found');
+  }
+
+  if (request.type === 'add_student' && request.studentFirstName && request.studentLastName) {
+    // Create new student
+    const studentData: Omit<Student, 'id' | 'createdAt' | 'updatedAt'> = {
+      firstName: request.studentFirstName,
+      lastName: request.studentLastName,
+      classId: request.classId
+    };
+    const studentId = `${request.studentFirstName}-${request.studentLastName}-${request.classId.split('-')[0] || 'unknown'}`;
+    await createDoc('students', studentData, studentId);
+  } else if (request.type === 'remove_student' && request.studentId) {
+    // Delete the student completely from the database
+    await deleteStudent(request.studentId);
+  }
+
+  // Update request status
+  await updateRequest(requestId, {
+    status: 'approved',
+    resolvedAt: new Date(),
+    resolvedBy: adminEmail
+  });
+};
+
+export const declineRequest = async (requestId: string, adminEmail: string): Promise<void> => {
+  await updateRequest(requestId, {
+    status: 'declined',
+    resolvedAt: new Date(),
+    resolvedBy: adminEmail
+  });
+};
+
+export const importRequests = async (requestsData: Request[]): Promise<void> => {
+  await Promise.all(requestsData.map(request => createDoc('requests', request)));
+};
+
+// Find students with empty classId (orphaned students)
+export const getOrphanedStudents = async (): Promise<Student[]> => {
+  return await getDocsByQuery<Student>('students', [['classId', '==', '']]);
+};
+
+// Clean up orphaned students (students with empty classId)
+export const cleanupOrphanedStudents = async (): Promise<{ deleted: number; students: Student[] }> => {
+  const orphanedStudents = await getOrphanedStudents();
+  
+  console.log(`Found ${orphanedStudents.length} orphaned students:`, orphanedStudents.map(s => `${s.firstName} ${s.lastName}`));
+  
+  // Delete all orphaned students
+  await Promise.all(orphanedStudents.map(student => deleteStudent(student.id)));
+  
+  console.log(`Deleted ${orphanedStudents.length} orphaned students`);
+  
+  return { deleted: orphanedStudents.length, students: orphanedStudents };
 };
 
 export const importReports = async (reportsData: LegacyReportData[]): Promise<void> => {
