@@ -4,7 +4,6 @@ import { StatisticItem } from '@/components/ui/statistic-item';
 import { Users, BookOpen, FileText } from 'lucide-react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import type { AdminUser, Teacher, Class, Student } from '@/types';
 
 interface StatisticsBarProps {
   className?: string;

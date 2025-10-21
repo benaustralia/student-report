@@ -4,11 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Trash2, CheckCircle, Loader2, UserPlus, UserMinus, Clock } from 'lucide-react';
+import { Plus, Trash2, Loader2, UserPlus, UserMinus, Clock } from 'lucide-react';
 import { getStudentsForClass, createRequest, getAllRequests } from '@/services/firebaseService';
 import { toast } from 'sonner';
-import type { Class, Student, Request } from '@/types';
+import type { Class, Student } from '@/types';
 
 interface ClassStudentManagementModalProps {
   classData: Class | null;

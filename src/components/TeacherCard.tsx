@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { TypographyMuted } from '@/components/ui/typography';
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, User, BookOpen, Users } from 'lucide-react';
 import type { Class } from '@/types';

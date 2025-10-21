@@ -471,7 +471,7 @@ export const declineRequest = async (requestId: string, adminEmail: string): Pro
 };
 
 export const importRequests = async (requestsData: Request[]): Promise<void> => {
-  await Promise.all(requestsData.map(request => createDoc('requests', request)));
+  await Promise.all(requestsData.map(request => createDoc('requests', request as unknown as Record<string, unknown>)));
 };
 
 // Find students with empty classId (orphaned students)

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Database, AlertCircle, Users, Settings, ChevronDown, ChevronRight, Eye, GraduationCap } from 'lucide-react';
+import { Loader2, AlertCircle, Users, ChevronDown, ChevronRight, GraduationCap } from 'lucide-react';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
 import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports, getUserDisplayName } from '@/services/firebaseService';
@@ -38,7 +37,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
       await Promise.all(uniqueTeacherEmails.map(async (email) => {
         try {
           const displayName = await getUserDisplayName(email);
-          teacherDisplayNames[email] = displayName;
+          teacherDisplayNames[email] = displayName || 'Unknown Teacher';
         } catch (error) {
           console.error(`Failed to get display name for ${email}:`, error);
           teacherDisplayNames[email] = 'Unknown Teacher';

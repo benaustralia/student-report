@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
-import { Badge } from '@/components/ui/badge';
 import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X } from 'lucide-react';
 import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher, getAllRequests, importRequests, updateRequest, deleteRequest, approveRequest, declineRequest } from '@/services/firebaseService';
 import { StatisticsBar } from './StatisticsBar';
@@ -36,7 +35,6 @@ export const DataBuilder = () => {
   const [data, setData] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [], requests: [] });
   const [newItems, setNewItems] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [], requests: [] });
   const [editing, setEditing] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
   const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ requests: true, users: true, classes: false, students: false, teachers: false });
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [showBulkImport, setShowBulkImport] = useState<string | null>(null);
@@ -55,9 +53,6 @@ export const DataBuilder = () => {
       } catch (error) {
         console.error('Error loading data:', error);
         setData({ users: [], classes: [], students: [], teachers: [], requests: [] });
-        setMessage('Failed to load some data. Please check your connection.');
-      } finally {
-        setLoading(false);
       }
     };
     
@@ -84,13 +79,14 @@ export const DataBuilder = () => {
       else if (action === 'submit') {
         await (OPS.import[type] as (items: ItemType[]) => Promise<void>)(newItems[type]);
         setNewItems(prev => ({ ...prev, [type]: [] }));
-        setMessage(`Imported ${newItems[type].length} ${type}!`);
+        console.log(`Imported ${newItems[type].length} ${type}!`);
         const results = await Promise.all(OPS.getAll.map(fn => fn()));
-        setData({ 
-          users: (results[0] || []) as ItemType[], 
-          classes: (results[1] || []) as ItemType[], 
-          students: (results[2] || []) as ItemType[], 
-          teachers: (results[3] || []) as ItemType[] 
+        setData({
+          users: (results[0] || []) as ItemType[],
+          classes: (results[1] || []) as ItemType[],
+          students: (results[2] || []) as ItemType[],
+          teachers: (results[3] || []) as ItemType[],
+          requests: (results[4] || []) as ItemType[]
         });
         // Notify other components that data has changed
         window.dispatchEvent(new CustomEvent('dataChanged', { 
@@ -103,7 +99,7 @@ export const DataBuilder = () => {
       } else if (action === 'update' && item?.id) {
         await OPS.update[type](item.id, item);
         setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
-        setMessage(`Updated ${type.slice(0, -1)}!`);
+        console.log(`Updated ${type.slice(0, -1)}!`);
         // Refresh data after update to ensure UI reflects changes
         const results = await Promise.all(OPS.getAll.map(fn => fn()));
         setData({ 
@@ -125,7 +121,7 @@ export const DataBuilder = () => {
       } else if (action === 'delete' && item?.id) {
         await OPS.delete[type](item.id);
         setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
-        setMessage(`Deleted ${type.slice(0, -1)}!`);
+        console.log(`Deleted ${type.slice(0, -1)}!`);
         // Notify other components that data has changed with specific details
         window.dispatchEvent(new CustomEvent('dataChanged', { 
           detail: { 
@@ -136,7 +132,7 @@ export const DataBuilder = () => {
           } 
         }));
       }
-    } catch (error: unknown) { setMessage(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
+    } catch (error: unknown) { console.error(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };
 
   const renderField = (type: DataType, item: ItemType, field: string, index: number, isNew: boolean) => 
@@ -153,7 +149,7 @@ export const DataBuilder = () => {
             try {
               console.log('Auto-saving class assignment:', { type, updatedItem });
               await OPS.update[type](item.id, updatedItem);
-              setMessage(`Student assigned to class!`);
+              console.log(`Student assigned to class!`);
               // Refresh data to ensure UI reflects the change
               const results = await Promise.all(OPS.getAll.map(fn => fn()));
               setData({ 
@@ -165,7 +161,7 @@ export const DataBuilder = () => {
               });
             } catch (error: unknown) {
               console.error('Failed to save class assignment:', error);
-              setMessage(`Failed to assign student: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              console.error(`Failed to assign student: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           }
         }}
@@ -452,7 +448,7 @@ export const DataBuilder = () => {
             icon={Icon} 
             badge={dataType === 'requests' 
               ? `${pendingCount}`
-              : `${newItems[dataType]?.length || 0} new | ${items.length} existing`
+              : `${items.length}`
             } 
             isOpen={openSections[dataType]} 
             onToggle={open => setOpenSections(prev => ({ ...prev, [dataType]: open }))}
@@ -506,7 +502,7 @@ export const DataBuilder = () => {
             }))
             .catch(() => setData({ users: [], classes: [], students: [], teachers: [], requests: [] }));
           
-          setMessage('Students imported successfully!');
+          console.log('Students imported successfully!');
           setShowBulkImport(null);
           
           // Notify other components that data has changed
