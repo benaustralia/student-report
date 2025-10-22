@@ -66,7 +66,7 @@ function AppContent() {
                 useOneTap={false}
                 theme="outline"
                 size="large"
-                text="sign_in_with"
+                text="signin_with"
                 shape="rectangular"
                 logo_alignment="left"
               />

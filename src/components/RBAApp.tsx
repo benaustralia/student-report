@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { TypographyH1, TypographyH2, TypographyMuted, TypographySmall } from '@/components/ui/typography';
+import { TypographyH1, TypographyMuted, TypographySmall } from '@/components/ui/typography';
 import { Loader2, Users, Shield, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
 import { getAllClasses, isUserAdmin, getUserDisplayName } from '@/services/firebaseService';
 import type { Class } from '@/types';

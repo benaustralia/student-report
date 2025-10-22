@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { TypographyMuted } from '@/components/ui/typography';
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, Users, Download, UserPlus } from 'lucide-react';
 import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses } from '@/services/firebaseService';
