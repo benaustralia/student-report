@@ -20,14 +20,9 @@ function AppContent() {
   }, [user]);
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
-    console.log('🔵 Google Sign-In Success:', 
-      `timestamp: ${new Date().toISOString()}, hasCredential: ${!!credentialResponse.credential}`
-    );
-    console.log('🟡 About to call signInWithGoogle...');
     setIsSigningIn(true);
     try {
       await signInWithGoogle(credentialResponse.credential);
-      console.log('🟢 Firebase Auth Success');
     } catch (error) {
       console.error('🔴 Sign in error:', error);
       alert('Sign in failed. Please try again.');
@@ -39,9 +34,6 @@ function AppContent() {
     console.error('🔴 Google Sign-In failed');
   };
 
-  console.log('🔄 AppContent Render:', 
-    `timestamp: ${new Date().toISOString()}, user: ${user ? `${user.email} (${user.uid})` : 'null'}, loading: ${loading}, error: ${error || 'none'}`
-  );
 
   if (loading) {
     return (
@@ -69,7 +61,6 @@ function AppContent() {
   }
 
   if (!user) {
-    console.log('🟡 Rendering Google Login screen', `isSigningIn: ${isSigningIn}`);
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Card className="mx-auto max-w-sm border-2 border-gray-300">
