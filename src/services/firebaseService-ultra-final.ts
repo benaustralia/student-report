@@ -61,7 +61,6 @@ export const prefetchCriticalData = async () => {
 
 // Ultra-compact query with monadic error handling + function merging
 const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = []): Promise<T[]> => {
-  const startTime = Date.now();
   const queryKey = `${collectionName}_${JSON.stringify(conditions)}`;
   const queryId = `${collectionName}_${Date.now()}`;
   
@@ -69,22 +68,15 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
   if (conditions.length === 0) {
     const prefetched = prefetchCache.get(collectionName);
     if (prefetched && Date.now() - prefetched.timestamp < PREFETCH_CACHE_TTL) {
-      console.log(`🔥 Firebase Query PREFETCHED: ${queryId}`, {
-        collection: collectionName,
-        duration: `${Date.now() - startTime}ms`,
-        documentCount: prefetched.data.length
-      });
       return prefetched.data as T[];
     }
   }
   
   // Deduplication check
   if (queryCache.has(queryKey)) {
-    console.log(`🔥 Firebase Query DEDUPED: ${queryId}`, { collection: collectionName });
     return queryCache.get(queryKey);
   }
   
-  console.log(`🔥 Firebase Query Start: ${queryId}`, { collection: collectionName });
   
   const queryPromise = (async () => {
     try {
@@ -92,12 +84,6 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
         query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : 
         collection(db, collectionName);
       const snapshot = await getDocs(q);
-      
-      console.log(`🔥 Firebase Query Success: ${queryId}`, {
-        collection: collectionName,
-        duration: `${Date.now() - startTime}ms`,
-        documentCount: snapshot.docs.length
-      });
       
       return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
     } catch (error: any) {
@@ -150,17 +136,11 @@ const deleteDocById = withRetry(async (collectionName: string, id: string) =>
 
 // Ultra-compact auth functions with composition + function merging
 export const signInWithGoogle = async (credential?: string) => {
-  const authStartTime = Date.now();
   
   const result = credential ? 
     await signInWithCredential(auth, GoogleAuthProvider.credential(credential)) :
     await signInWithPopup(auth, googleProvider);
   
-  console.log('🔥 Firebase Auth SUCCESS:', {
-    totalDuration: `${Date.now() - authStartTime}ms`,
-    user: result.user.email,
-    uid: result.user.uid
-  });
   return result.user;
 };
 

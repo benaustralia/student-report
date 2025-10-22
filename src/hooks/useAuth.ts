@@ -22,9 +22,6 @@ export const useAuth = () => {
     const unsubscribe = onAuthStateChanged(
       auth,
       (user) => {
-        console.log('🟢 Firebase Auth State Changed:', 
-          `timestamp: ${new Date().toISOString()}, user: ${user ? `${user.email} (${user.uid})` : 'null'}`
-        );
         setAuthState({
           user,
           loading: false,

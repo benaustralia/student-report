@@ -93,10 +93,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     
     isLoadingRef.current = true;
     const loadStartTime = Date.now();
-    console.log('🚀 RBAApp loadData START:', {
-      timestamp: new Date().toISOString(),
-      userEmail: user.email
-    });
     
     try {
       setLoading(true);
@@ -110,13 +106,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         getAllClasses()
       ]);
       
-      const criticalDuration = Date.now() - criticalStartTime;
-      console.log('🚀 Critical data loaded:', {
-        duration: `${criticalDuration}ms`,
-        adminStatus,
-        classesCount: allClasses.length
-      });
-      
       setIsAdmin(adminStatus);
       
       if (adminStatus) {
@@ -129,11 +118,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         // Load teacher names in background (non-blocking)
         const teacherStartTime = Date.now();
         const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
-        
-        console.log('🚀 Starting teacher name lookups:', {
-          teacherCount: uniqueTeacherEmails.length,
-          emails: uniqueTeacherEmails
-        });
         
         Promise.all(
           uniqueTeacherEmails.map(async (email) => ({ 
