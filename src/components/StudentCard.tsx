@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { TypographySmall } from '@/components/ui/typography';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService-ultra-final';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -27,7 +28,6 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     loading: false, 
     reports: [] as ReportData[], 
     reportText: '', 
-    showAutoSave: false, 
     hasUnsavedChanges: false, 
     generatingAI: false, 
     hasSeenAIWarning: false
@@ -48,18 +48,23 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         ...(imageUrl && { artworkUrl: imageUrl })
       };
       await createOrUpdateReport(reportData);
-      await new Promise(resolve => setTimeout(resolve, isAutoSave ? 500 : 1000));
       
       // Update the last saved text and clear unsaved changes flag
       lastSavedTextRef.current = state.reportText.trim();
-      setState(prev => ({ ...prev, showAutoSave: true, hasUnsavedChanges: false }));
-      setTimeout(() => setState(prev => ({ ...prev, showAutoSave: false })), isAutoSave ? 1000 : 2000);
+      setState(prev => ({ ...prev, hasUnsavedChanges: false }));
+      
+      // Show Sonner toast for successful save
+      if (isAutoSave) {
+        toast.success('Report auto-saved', { duration: 2000 });
+      } else {
+        toast.success('Report saved successfully', { duration: 3000 });
+      }
       
       // Notify other components that reports data has changed
       window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'reports' } }));
     } catch (error) {
       console.error('Error saving report:', error);
-      alert('Failed to save report. Please try again.');
+      toast.error('Failed to save report. Please try again.');
     }
   }, [state.reportText, student.id, classData.id, classData.teacherEmail]);
 
@@ -347,32 +352,6 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     className="min-h-[150px]"
                     maxLength={430}
                   />
-                </div>
-                <div className="flex justify-between items-center pt-2">
-                  <TypographySmall className={`transition-opacity duration-200 ${
-                    state.showAutoSave 
-                      ? 'text-green-600 opacity-100' 
-                      : state.hasUnsavedChanges 
-                        ? 'text-orange-600 opacity-100' 
-                        : 'text-muted-foreground opacity-0'
-                  }`}>
-                    {state.showAutoSave 
-                      ? '✓ Saved' 
-                      : state.hasUnsavedChanges 
-                        ? '● Unsaved changes' 
-                        : 'Auto-saves as you type'
-                    }
-                  </TypographySmall>
-                  {state.hasUnsavedChanges && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => saveReport(imageUpload.currentImageUrl, false)}
-                      className="text-xs"
-                    >
-                      Save Now
-                    </Button>
-                  )}
                 </div>
                 <div className="pt-4 space-y-2">
                   <div className="flex justify-end">
