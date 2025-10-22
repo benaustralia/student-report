@@ -1,27 +1,47 @@
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuthContext } from './hooks/useAuthContext';
-import { RBAApp } from './components/RBAApp';
 import { signInWithGoogle } from './services/firebaseService';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { Toaster } from '@/components/ui/sonner';
+import { RBAApp } from './components/RBAApp';
 
 function AppContent() {
   const { user, loading, error } = useAuthContext();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  // Reset signing in state when user changes
+  useEffect(() => {
+    if (!user) {
+      setIsSigningIn(false);
+    }
+  }, [user]);
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
+    console.log('🔵 Google Sign-In Success:', 
+      `timestamp: ${new Date().toISOString()}, hasCredential: ${!!credentialResponse.credential}`
+    );
+    console.log('🟡 About to call signInWithGoogle...');
+    setIsSigningIn(true);
     try {
       await signInWithGoogle(credentialResponse.credential);
+      console.log('🟢 Firebase Auth Success');
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error('🔴 Sign in error:', error);
       alert('Sign in failed. Please try again.');
+      setIsSigningIn(false);
     }
   };
 
   const handleGoogleError = () => {
-    console.error('Google Sign-In failed');
+    console.error('🔴 Google Sign-In failed');
   };
+
+  console.log('🔄 AppContent Render:', 
+    `timestamp: ${new Date().toISOString()}, user: ${user ? `${user.email} (${user.uid})` : 'null'}, loading: ${loading}, error: ${error || 'none'}`
+  );
 
   if (loading) {
     return (
@@ -49,6 +69,7 @@ function AppContent() {
   }
 
   if (!user) {
+    console.log('🟡 Rendering Google Login screen', `isSigningIn: ${isSigningIn}`);
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Card className="mx-auto max-w-sm border-2 border-gray-300">
@@ -60,16 +81,27 @@ function AppContent() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                useOneTap={false}
-                theme="outline"
-                size="large"
-                text="signin_with"
-                shape="rectangular"
-                logo_alignment="left"
-              />
+              {isSigningIn ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                  <span>Signing you in...</span>
+                </div>
+              ) : (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  useOneTap={false}
+                  theme="outline"
+                  size="large"
+                  text="signin_with"
+                  shape="rectangular"
+                  logo_alignment="left"
+                  onClick={() => {
+                    console.log('🟡 Google button clicked - setting loading state');
+                    setIsSigningIn(true);
+                  }}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -77,7 +109,8 @@ function AppContent() {
     );
   }
 
-  return <RBAApp user={user} />;
+        // Render RBAApp directly
+        return <RBAApp user={user} />;
 }
 
 export default function TeacherReports() {

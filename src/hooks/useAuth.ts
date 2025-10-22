@@ -19,9 +19,13 @@ export const useAuth = () => {
   // Modern Firebase v9+ authentication hook
 
   useEffect(() => {
+    console.log('🔵 Setting up Firebase Auth listener');
     const unsubscribe = onAuthStateChanged(
       auth,
       (user) => {
+        console.log('🟢 Firebase Auth State Changed:', 
+          `timestamp: ${new Date().toISOString()}, user: ${user ? `${user.email} (${user.uid})` : 'null'}`
+        );
         setAuthState({
           user,
           loading: false,
@@ -29,6 +33,7 @@ export const useAuth = () => {
         });
       },
       (error) => {
+        console.error('🔴 Firebase Auth Error:', error);
         setAuthState({
           user: null,
           loading: false,
@@ -37,7 +42,10 @@ export const useAuth = () => {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      console.log('🔵 Cleaning up Firebase Auth listener');
+      unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
