@@ -225,11 +225,9 @@ export const cleanReportsWithoutStudentNames = async (): Promise<void> => {
   const reportsToDelete = reports.filter(report => !report.studentName);
   
   if (reportsToDelete.length > 0) {
-    console.log(`Cleaning up ${reportsToDelete.length} reports without student names`);
     const batch = writeBatch(db);
     reportsToDelete.forEach(report => batch.delete(doc(db, 'reports', report.id)));
     await batch.commit();
-    console.log(`Successfully deleted ${reportsToDelete.length} reports`);
   }
 };
 

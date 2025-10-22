@@ -150,7 +150,6 @@ export const DataBuilder = () => {
           if (!isNew && item.id) {
             const updatedItem = { ...item, [field]: v };
             try {
-              console.log('Auto-saving class assignment:', { type, updatedItem });
               await OPS.update[type](item.id, updatedItem);
               toast.success(`Student assigned to class!`);
               // Refresh data to ensure UI reflects the change

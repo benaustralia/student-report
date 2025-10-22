@@ -23,13 +23,13 @@ try {
     // Monitor online/offline state
     window.addEventListener('online', () => {
       if (import.meta.env.DEV) {
-        console.log('Network: Online');
+        // Network is back online
       }
     });
     
     window.addEventListener('offline', () => {
       if (import.meta.env.DEV) {
-        console.log('Network: Offline');
+        // Network is offline
       }
     });
   }

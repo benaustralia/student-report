@@ -99,7 +99,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       setError(null);
       
       // Load critical data first (admin check and classes)
-      const criticalStartTime = Date.now();
       
       const [adminStatus, allClasses] = await Promise.all([
         isUserAdmin(user.email || ''),
@@ -116,7 +115,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         setLoading(false);
         
         // Load teacher names in background (non-blocking)
-        const teacherStartTime = Date.now();
         const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
         
         Promise.all(
@@ -125,12 +123,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
             displayName: (await getUserDisplayName(email)) || 'Unknown Teacher' 
           }))
         ).then(displayNames => {
-          const teacherDuration = Date.now() - teacherStartTime;
-          console.log('🚀 Teacher names loaded:', {
-            duration: `${teacherDuration}ms`,
-            count: displayNames.length,
-            totalLoadTime: `${Date.now() - loadStartTime}ms`
-          });
           
           const displayNameMap = displayNames.reduce((acc, { email, displayName }) => ({ 
             ...acc, 
@@ -143,10 +135,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
         setClasses(teacherClasses);
         setLoading(false);
-        console.log('🚀 Teacher-only user - classes filtered and loaded:', {
-          duration: `${Date.now() - criticalStartTime}ms`,
-          classesCount: teacherClasses.length
-        });
       }
     } catch (err) {
       const errorDuration = Date.now() - loadStartTime;
@@ -176,30 +164,26 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   useEffect(() => {
     const handleDataChanged = (event: CustomEvent) => {
       const { type } = event.detail;
-      console.log(`RBAApp: Data changed for type: ${type}, checking if refresh needed...`);
       
       // Only reload data for changes that affect the main app view
       // Skip individual student deletions and class updates to prevent unnecessary refreshes
       if (type === 'users' || type === 'teachers') {
-        console.log(`RBAApp: Refreshing for ${type}`);
         loadData();
       } else if (type === 'classes') {
         // For classes, only reload if it's not an update (to avoid refreshing the whole app)
         const { action } = event.detail;
         if (action !== 'update') {
-          console.log(`RBAApp: Refreshing for class ${action}`);
           loadData();
         } else {
-          console.log(`RBAApp: Skipping refresh for class update`);
+          // Skip refresh for class updates
         }
       } else if (type === 'students') {
         // For students, only reload if it's not a deletion or bulk import (to avoid refreshing the whole app)
         const { action } = event.detail;
         if (action !== 'delete' && action !== 'bulk_import') {
-          console.log(`RBAApp: Refreshing for student ${action}`);
           loadData();
         } else {
-          console.log(`RBAApp: Skipping refresh for student ${action}`);
+          // Skip refresh for student deletions and bulk imports
         }
       }
     };

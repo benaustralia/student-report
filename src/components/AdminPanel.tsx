@@ -73,34 +73,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
   useEffect(() => {
     const handleDataChanged = (event: CustomEvent) => {
       const { type } = event.detail;
-      console.log(`AdminPanel: Data changed for type: ${type}, checking if refresh needed...`);
       
       // Only reload data for changes that affect the admin panel view
       // Skip individual student deletions and class updates to prevent unnecessary refreshes
       if (type === 'users' || type === 'teachers' || type === 'reports') {
-        console.log(`AdminPanel: Refreshing for ${type}`);
         loadData();
       } else if (type === 'classes') {
         // For classes, only reload if it's not an update (to avoid refreshing the whole app)
         const { action } = event.detail;
         if (action !== 'update') {
-          console.log(`AdminPanel: Refreshing for class ${action}`);
           loadData();
         } else {
-          console.log(`AdminPanel: Skipping refresh for class update`);
+          // Skip refresh for class updates
         }
       } else if (type === 'students') {
         // For students, reload for all actions except bulk import to keep stats updated
         const { action } = event.detail;
         if (action !== 'bulk_import') {
-          console.log(`AdminPanel: Refreshing for student ${action}`);
           loadData();
         } else {
-          console.log(`AdminPanel: Skipping refresh for student ${action}`);
+          // Skip refresh for bulk imports
         }
       } else if (type === 'requests') {
         // Skip refresh for requests - StatisticsBar handles real-time updates
-        console.log(`AdminPanel: Skipping refresh for request action (handled by real-time listeners)`);
       }
     };
 

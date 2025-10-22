@@ -61,25 +61,21 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     const handleDataChange = async (event: CustomEvent) => {
       const { type, action, itemId } = event.detail || {};
       
-      console.log(`ClassCard ${classData.id}: Data change event received`, { type, action, itemId });
       
       // Only refresh when students are added/updated/deleted
       if (type === 'students') {
         if (action === 'delete' && itemId && hasLoadedStudents) {
-          console.log(`ClassCard ${classData.id}: Removing student ${itemId} from local state`);
           // For deletions, just remove the specific student from local state
           // This preserves the state of other StudentCard components
           setStudents(prev => prev.filter(student => student.id !== itemId));
           setStudentCount(prev => Math.max(0, (prev || 0) - 1));
         } else if (action === 'bulk_import' && hasLoadedStudents) {
-          console.log(`ClassCard ${classData.id}: Bulk import detected, reloading student list`);
           // For bulk imports, reload the full list to show new students
           loadStudentCount();
           setTimeout(() => {
             loadStudents(true);
           }, 100);
         } else if (action !== 'delete' && action !== 'bulk_import') {
-          console.log(`ClassCard ${classData.id}: Reloading full student list for ${action}`);
           // For other additions/updates, reload the full list
           loadStudentCount();
           if (hasLoadedStudents) {
