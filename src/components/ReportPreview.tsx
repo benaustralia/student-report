@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, Loader2, Download } from 'lucide-react';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
 import { ReportTemplate } from './ReportTemplate';
-import { getTeacherByEmail } from '@/services/firebaseService';
+import { getTeacherByEmail } from '@/services/firebaseService-ultra-final';
 import type { Student, Class, ReportData, Teacher } from '@/types';
 // PDF generation is now handled server-side via Netlify function
 

@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographyH1, TypographyMuted, TypographySmall } from '@/components/ui/typography';
 import { Loader2, Users, Shield, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
-import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData } from '@/services/firebaseService';
+import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData, getStudentsForClass } from '@/services/firebaseService-ultra-final';
 import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
 import { ClassCard } from './ClassCard';
 import { TeacherCard } from './TeacherCard';
 import { ThemeToggle } from './theme-toggle';
 import { useAuthContext } from '@/hooks/useAuthContext';
+import { BuzzingBee } from './BuzzingBee';
 
 // Lazy load AdminPanel for better performance
 const AdminPanel = React.lazy(() => import('./AdminPanel').then(module => ({ default: module.AdminPanel })));
@@ -41,11 +42,10 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     
     try {
       // First, find which class contains this student
-      const { getStudentsForClass } = await import('@/services/firebaseService');
       
       for (const classData of classes) {
         const students = await getStudentsForClass(classData.id);
-        if (students.some(student => student.id === studentId)) {
+        if (students.some((student: any) => student.id === studentId)) {
           // First expand the teacher card
           window.dispatchEvent(new CustomEvent('expandTeacherForStudent', { 
             detail: { teacherEmail: classData.teacherEmail, classId: classData.id, studentId } 
@@ -247,8 +247,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   if (error) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card className="border-destructive"><CardContent className="text-destructive py-4">{error}</CardContent></Card></div>;
 
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+    <BuzzingBee />
     <div className="flex items-center justify-between">
-      <div><TypographyH1>Student Reports</TypographyH1><TypographyMuted>{isAdmin ? 'Management View - All Classes' : 'Teacher View - Your Classes'}</TypographyMuted></div>
+      <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{isAdmin ? 'Management View' : 'Teacher View - Your Classes'}</TypographyMuted></div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-3">
           <ThemeToggle />

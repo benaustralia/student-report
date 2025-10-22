@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuthContext } from './hooks/useAuthContext';
-import { signInWithGoogle } from './services/firebaseService';
+import { signInWithGoogle } from './services/firebaseService-ultra-final';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { Toaster } from '@/components/ui/sonner';
 import { RBAApp } from './components/RBAApp';
@@ -96,10 +96,6 @@ function AppContent() {
                   text="signin_with"
                   shape="rectangular"
                   logo_alignment="left"
-                  onClick={() => {
-                    console.log('🟡 Google button clicked - setting loading state');
-                    setIsSigningIn(true);
-                  }}
                 />
               )}
             </div>

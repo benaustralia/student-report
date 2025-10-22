@@ -27,6 +27,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "firebase": "^12.3.0",
+    "gsap": "^3.13.0",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
     "jspdf-font": "^1.0.7",

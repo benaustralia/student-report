@@ -227,7 +227,8 @@ export const signInWithGoogle = async (credential?: string) => {
     return result.user;
   }
 };
-export const signOutUser = async () => await signOut(auth);
+// Auth functions
+export const signOutUser = () => signOut(auth);
 export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthStateChanged(auth, callback);
 // Cache admin status to avoid repeated calls
 const adminCache = new Map<string, { isAdmin: boolean; timestamp: number }>();

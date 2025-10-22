@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, Download, Upload, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { importStudents } from '@/services/firebaseService';
+import { importStudents } from '@/services/firebaseService-ultra-final';
 import type { Class, Student } from '@/types';
 
 interface BulkStudentImportProps {

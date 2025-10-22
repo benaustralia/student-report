@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { TypographySmall } from '@/components/ui/typography';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react';
-import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService';
+import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService-ultra-final';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { ReportPreview } from '@/components/ReportPreview';

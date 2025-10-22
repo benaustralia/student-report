@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
 import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X } from 'lucide-react';
-import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher, getAllRequests, importRequests, updateRequest, deleteRequest, approveRequest, declineRequest } from '@/services/firebaseService';
+import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher, getAllRequests, importRequests, updateRequest, deleteRequest, approveRequest, declineRequest } from '@/services/firebaseService-ultra-final';
 import { StatisticsBar } from './StatisticsBar';
 import { BulkStudentImport } from './BulkStudentImport';
 import { toast } from 'sonner';

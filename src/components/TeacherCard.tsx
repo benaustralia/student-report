@@ -5,7 +5,7 @@ import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, User, BookOpen, Users } from 'lucide-react';
 import type { Class } from '@/types';
 import { ClassCard } from './ClassCard';
-import { getStudentCountsForClasses } from '@/services/firebaseService';
+import { getStudentCountsForClasses } from '@/services/firebaseService-ultra-final';
 
 interface TeacherCardProps {
   teacherName: string;

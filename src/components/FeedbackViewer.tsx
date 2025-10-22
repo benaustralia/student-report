@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { getAllReports } from '../services/firebaseService';
+import { getAllReports } from '../services/firebaseService-ultra-final';
 import type { ReportData } from '@/types';
 
 interface FeedbackViewerProps {

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, Users, Download, UserPlus } from 'lucide-react';
-import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses } from '@/services/firebaseService';
+import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses } from '@/services/firebaseService-ultra-final';
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
 import { ClassStudentManagementModal } from './ClassStudentManagementModal';
@@ -119,7 +119,6 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
       // If only studentId is provided, check if this class contains the student
       if (studentId && !classId) {
         try {
-          const { getStudentsForClass } = await import('@/services/firebaseService');
           const classStudents = await getStudentsForClass(classData.id);
           if (classStudents.some(student => student.id === studentId)) {
             setIsOpen(true);

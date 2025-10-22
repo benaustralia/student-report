@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Loader2, UserPlus, UserMinus, Clock } from 'lucide-react';
-import { getStudentsForClass, createRequest, getAllRequests } from '@/services/firebaseService';
+import { getStudentsForClass, createRequest, getAllRequests } from '@/services/firebaseService-ultra-final';
 import { toast } from 'sonner';
 import type { Class, Student } from '@/types';
 
