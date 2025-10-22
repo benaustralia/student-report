@@ -47,13 +47,11 @@ export const storage = getStorage(app);
 if (typeof window !== 'undefined') {
   // Note: db.settings() was deprecated in Firebase v9+
   // Caching is now handled automatically by Firebase
-  console.log('🔥 Firebase initialized with automatic caching enabled');
   
   // Enable offline persistence for instant data loading
   try {
     // Firebase v9+ automatically enables offline persistence
     // We can also manually control network state for better performance
-    console.log('🔥 Firebase offline persistence enabled');
   } catch (error) {
     console.warn('Firebase offline persistence setup warning:', error);
   }

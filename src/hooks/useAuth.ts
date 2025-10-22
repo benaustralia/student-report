@@ -19,7 +19,6 @@ export const useAuth = () => {
   // Modern Firebase v9+ authentication hook
 
   useEffect(() => {
-    console.log('🔵 Setting up Firebase Auth listener');
     const unsubscribe = onAuthStateChanged(
       auth,
       (user) => {
@@ -43,7 +42,6 @@ export const useAuth = () => {
     );
 
     return () => {
-      console.log('🔵 Cleaning up Firebase Auth listener');
       unsubscribe();
     };
   }, []);

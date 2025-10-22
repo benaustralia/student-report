@@ -88,7 +88,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const loadData = React.useCallback(async () => {
     // Prevent duplicate loading in React strict mode
     if (isLoadingRef.current) {
-      console.log('🚀 RBAApp loadData SKIPPED: Already loading');
       return;
     }
     
@@ -104,7 +103,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       setError(null);
       
       // Load critical data first (admin check and classes)
-      console.log('🚀 Starting critical data load...');
       const criticalStartTime = Date.now();
       
       const [adminStatus, allClasses] = await Promise.all([
@@ -127,7 +125,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         
         // Set loading to false immediately after classes are loaded
         setLoading(false);
-        console.log('🚀 UI ready - classes displayed, loading teacher names in background');
         
         // Load teacher names in background (non-blocking)
         const teacherStartTime = Date.now();
@@ -185,7 +182,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     
     // Start background prefetching after initial load
     const prefetchTimer = setTimeout(() => {
-      console.log('🚀 Starting background prefetch...');
       prefetchCriticalData();
     }, 2000); // Start prefetching 2 seconds after initial load
     

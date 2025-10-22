@@ -46,18 +46,10 @@ const [PREFETCH_CACHE_TTL, ADMIN_CACHE_TTL, DISPLAY_NAME_CACHE_TTL] = [2 * 60 * 
 
 // Ultra-compact prefetch with parallel composition + function merging
 export const prefetchCriticalData = async () => {
-  const prefetchStartTime = Date.now();
-  console.log('🚀 Starting background data prefetch...');
   
   try {
     const collections = ['adminUsers', 'classes', 'teachers', 'students', 'reports'];
     const results = await Promise.all(collections.map(name => getDocsByQuery(name, [])));
-    
-    const prefetchDuration = Date.now() - prefetchStartTime;
-    console.log('🚀 Background prefetch complete:', {
-      duration: `${prefetchDuration}ms`,
-      ...Object.fromEntries(collections.map((name, i) => [name, results[i].length]))
-    });
     
     collections.forEach((name, i) => 
       prefetchCache.set(name, { data: results[i], timestamp: Date.now() })
@@ -159,7 +151,6 @@ const deleteDocById = withRetry(async (collectionName: string, id: string) =>
 // Ultra-compact auth functions with composition + function merging
 export const signInWithGoogle = async (credential?: string) => {
   const authStartTime = Date.now();
-  console.log('🔥 Firebase Auth START:', { hasCredential: !!credential });
   
   const result = credential ? 
     await signInWithCredential(auth, GoogleAuthProvider.credential(credential)) :
@@ -178,16 +169,13 @@ export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthSt
 
 // Ultra-compact admin check with monadic composition + function merging
 export const isUserAdmin = async (email: string): Promise<boolean> => {
-  const adminStartTime = Date.now();
   
   const cached = adminCache.get(email);
   if (cached && Date.now() - cached.timestamp < ADMIN_CACHE_TTL) {
-    console.log('🔥 Admin check CACHED:', { email, isAdmin: cached.isAdmin });
     return cached.isAdmin;
   }
   
   const result = (await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]])).length > 0;
-  console.log('🔥 Admin check COMPLETE:', { email, duration: `${Date.now() - adminStartTime}ms`, isAdmin: result });
   
   adminCache.set(email, { isAdmin: result, timestamp: Date.now() });
   return result;
@@ -195,11 +183,9 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
 
 // Ultra-compact display name lookup with monadic composition + function merging
 export const getUserDisplayName = async (email: string): Promise<string | null> => {
-  const displayStartTime = Date.now();
   
   const cached = displayNameCache.get(email);
   if (cached && Date.now() - cached.timestamp < DISPLAY_NAME_CACHE_TTL) {
-    console.log('🔥 Display name CACHED:', { email, displayName: cached.displayName });
     return cached.displayName;
   }
   
@@ -212,7 +198,6 @@ export const getUserDisplayName = async (email: string): Promise<string | null> 
     `${adminUsers[0].firstName} ${adminUsers[0].lastName}`.trim() :
     teachers.length > 0 ? `${teachers[0].firstName} ${teachers[0].lastName}`.trim() : null;
   
-  console.log('🔥 Display name lookup COMPLETE:', { email, duration: `${Date.now() - displayStartTime}ms`, displayName });
   displayNameCache.set(email, { displayName, timestamp: Date.now() });
   return displayName;
 };
