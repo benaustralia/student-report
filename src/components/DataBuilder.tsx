@@ -53,6 +53,9 @@ export const DataBuilder = () => {
       } catch (error) {
         console.error('Error loading data:', error);
         setData({ users: [], classes: [], students: [], teachers: [], requests: [] });
+        toast.error('Failed to load some data. Please check your connection.');
+      } finally {
+        // Loading state removed
       }
     };
     
@@ -79,12 +82,12 @@ export const DataBuilder = () => {
       else if (action === 'submit') {
         await (OPS.import[type] as (items: ItemType[]) => Promise<void>)(newItems[type]);
         setNewItems(prev => ({ ...prev, [type]: [] }));
-        console.log(`Imported ${newItems[type].length} ${type}!`);
+        toast.success(`Imported ${newItems[type].length} ${type}!`);
         const results = await Promise.all(OPS.getAll.map(fn => fn()));
-        setData({
-          users: (results[0] || []) as ItemType[],
-          classes: (results[1] || []) as ItemType[],
-          students: (results[2] || []) as ItemType[],
+        setData({ 
+          users: (results[0] || []) as ItemType[], 
+          classes: (results[1] || []) as ItemType[], 
+          students: (results[2] || []) as ItemType[], 
           teachers: (results[3] || []) as ItemType[],
           requests: (results[4] || []) as ItemType[]
         });
@@ -99,7 +102,7 @@ export const DataBuilder = () => {
       } else if (action === 'update' && item?.id) {
         await OPS.update[type](item.id, item);
         setEditing(prev => new Set([...prev].filter(id => id !== item.id)));
-        console.log(`Updated ${type.slice(0, -1)}!`);
+        toast.success(`Updated ${type.slice(0, -1)}!`);
         // Refresh data after update to ensure UI reflects changes
         const results = await Promise.all(OPS.getAll.map(fn => fn()));
         setData({ 
@@ -121,7 +124,7 @@ export const DataBuilder = () => {
       } else if (action === 'delete' && item?.id) {
         await OPS.delete[type](item.id);
         setData(prev => ({ ...prev, [type]: prev[type].filter(i => i.id !== item.id) }));
-        console.log(`Deleted ${type.slice(0, -1)}!`);
+        toast.success(`Deleted ${type.slice(0, -1)}!`);
         // Notify other components that data has changed with specific details
         window.dispatchEvent(new CustomEvent('dataChanged', { 
           detail: { 
@@ -132,7 +135,7 @@ export const DataBuilder = () => {
           } 
         }));
       }
-    } catch (error: unknown) { console.error(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
+    } catch (error: unknown) { toast.error(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };
 
   const renderField = (type: DataType, item: ItemType, field: string, index: number, isNew: boolean) => 
@@ -149,7 +152,7 @@ export const DataBuilder = () => {
             try {
               console.log('Auto-saving class assignment:', { type, updatedItem });
               await OPS.update[type](item.id, updatedItem);
-              console.log(`Student assigned to class!`);
+              toast.success(`Student assigned to class!`);
               // Refresh data to ensure UI reflects the change
               const results = await Promise.all(OPS.getAll.map(fn => fn()));
               setData({ 
@@ -161,7 +164,7 @@ export const DataBuilder = () => {
               });
             } catch (error: unknown) {
               console.error('Failed to save class assignment:', error);
-              console.error(`Failed to assign student: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              toast.error(`Failed to assign student: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           }
         }}
@@ -502,7 +505,7 @@ export const DataBuilder = () => {
             }))
             .catch(() => setData({ users: [], classes: [], students: [], teachers: [], requests: [] }));
           
-          console.log('Students imported successfully!');
+          toast.success('Students imported successfully!');
           setShowBulkImport(null);
           
           // Notify other components that data has changed

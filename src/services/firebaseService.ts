@@ -12,31 +12,147 @@ const createDoc = async (collectionName: string, data: Record<string, unknown>, 
   }
   return (await addDoc(collection(db, collectionName), { ...data, createdAt: new Date(), updatedAt: new Date() })).id;
 };
-const getDocsByQuery = async <T>(collectionName: string, conditions: [string, '==' | '!=' | '<' | '<=' | '>' | '>=' | 'array-contains' | 'in' | 'not-in' | 'array-contains-any', unknown][] = []): Promise<T[]> => {
+// Query deduplication cache
+const queryCache = new Map<string, Promise<any>>();
+
+// Data prefetching cache for instant loading
+const prefetchCache = new Map<string, { data: any; timestamp: number }>();
+const PREFETCH_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+// Prefetch critical data in background
+export const prefetchCriticalData = async () => {
+  const prefetchStartTime = Date.now();
+  console.log('🚀 Starting background data prefetch...');
+  
   try {
-    const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
-    const snapshot = await getDocs(q);
+    // Prefetch all critical collections in parallel
+    const [adminUsers, classes, teachers, students, reports] = await Promise.all([
+      getDocsByQuery('adminUsers', []),
+      getDocsByQuery('classes', []),
+      getDocsByQuery('teachers', []),
+      getDocsByQuery('students', []),
+      getDocsByQuery('reports', [])
+    ]);
     
-    // Always use Firestore document ID as the single source of truth
-    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
-  } catch (error: any) {
-    // Handle network errors gracefully
-    if (error?.code === 'unavailable' || error?.message?.includes('network')) {
-      console.warn(`Network error accessing ${collectionName}, retrying...`);
-      // Wait a bit and retry once
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      try {
-        const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
-        const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
-      } catch (retryError) {
-        console.error(`Failed to fetch ${collectionName} after retry:`, retryError);
-        return [];
-      }
-    }
-    console.error(`Error fetching ${collectionName}:`, error);
-    return [];
+    const prefetchDuration = Date.now() - prefetchStartTime;
+    console.log('🚀 Background prefetch complete:', {
+      duration: `${prefetchDuration}ms`,
+      adminUsers: adminUsers.length,
+      classes: classes.length,
+      teachers: teachers.length,
+      students: students.length,
+      reports: reports.length
+    });
+    
+    // Cache the prefetched data
+    prefetchCache.set('adminUsers', { data: adminUsers, timestamp: Date.now() });
+    prefetchCache.set('classes', { data: classes, timestamp: Date.now() });
+    prefetchCache.set('teachers', { data: teachers, timestamp: Date.now() });
+    prefetchCache.set('students', { data: students, timestamp: Date.now() });
+    prefetchCache.set('reports', { data: reports, timestamp: Date.now() });
+    
+  } catch (error) {
+    console.error('🚀 Background prefetch failed:', error);
   }
+};
+
+// Enhanced getDocsByQuery with prefetch support
+const getDocsByQuery = async <T>(collectionName: string, conditions: [string, '==' | '!=' | '<' | '<=' | '>' | '>=' | 'array-contains' | 'in' | 'not-in' | 'array-contains-any', unknown][] = []): Promise<T[]> => {
+  const startTime = Date.now();
+  const queryKey = `${collectionName}_${JSON.stringify(conditions)}`;
+  const queryId = `${collectionName}_${Date.now()}`;
+  
+  // Check prefetch cache first for instant results
+  if (conditions.length === 0) {
+    const prefetched = prefetchCache.get(collectionName);
+    if (prefetched && Date.now() - prefetched.timestamp < PREFETCH_CACHE_TTL) {
+      const duration = Date.now() - startTime;
+      console.log(`🔥 Firebase Query PREFETCHED: ${queryId}`, {
+        collection: collectionName,
+        duration: `${duration}ms`,
+        documentCount: prefetched.data.length,
+        cacheAge: `${Date.now() - prefetched.timestamp}ms`
+      });
+      return prefetched.data as T[];
+    }
+  }
+  
+  // Check if this exact query is already running
+  if (queryCache.has(queryKey)) {
+    console.log(`🔥 Firebase Query DEDUPED: ${queryId}`, {
+      collection: collectionName,
+      conditions: conditions.length,
+      reason: 'Duplicate query in progress'
+    });
+    return queryCache.get(queryKey);
+  }
+  
+  console.log(`🔥 Firebase Query Start: ${queryId}`, {
+    collection: collectionName,
+    conditions: conditions.length,
+    timestamp: new Date().toISOString()
+  });
+  
+  const queryPromise = (async () => {
+    try {
+      const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
+      const snapshot = await getDocs(q);
+      
+      const duration = Date.now() - startTime;
+      console.log(`🔥 Firebase Query Success: ${queryId}`, {
+        collection: collectionName,
+        duration: `${duration}ms`,
+        documentCount: snapshot.docs.length,
+        fromCache: snapshot.metadata.fromCache,
+        hasPendingWrites: snapshot.metadata.hasPendingWrites
+      });
+      
+      // Always use Firestore document ID as the single source of truth
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      console.error(`🔥 Firebase Query Error: ${queryId}`, {
+        collection: collectionName,
+        duration: `${duration}ms`,
+        error: error.message,
+        code: error.code
+      });
+      
+      // Handle network errors gracefully
+      if (error?.code === 'unavailable' || error?.message?.includes('network')) {
+        console.warn(`Network error accessing ${collectionName}, retrying...`);
+        // Wait a bit and retry once
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          const retryStartTime = Date.now();
+          const q = conditions.length ? query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : collection(db, collectionName);
+          const snapshot = await getDocs(q);
+          const retryDuration = Date.now() - retryStartTime;
+          
+          console.log(`🔥 Firebase Query Retry Success: ${queryId}`, {
+            collection: collectionName,
+            retryDuration: `${retryDuration}ms`,
+            totalDuration: `${duration + retryDuration}ms`,
+            documentCount: snapshot.docs.length
+          });
+          
+          return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+        } catch (retryError) {
+          console.error(`Failed to fetch ${collectionName} after retry:`, retryError);
+          return [];
+        }
+      }
+      console.error(`Error fetching ${collectionName}:`, error);
+      return [];
+    } finally {
+      // Remove from cache when done
+      queryCache.delete(queryKey);
+    }
+  })();
+  
+  // Cache the promise
+  queryCache.set(queryKey, queryPromise);
+  return queryPromise;
 };
 const updateDocById = async (collectionName: string, id: string, updates: Record<string, unknown>) => {
   try {
@@ -63,18 +179,97 @@ const deleteDocById = async (collectionName: string, id: string) => {
 };
 
 export const signInWithGoogle = async (credential?: string) => {
+  const authStartTime = Date.now();
+  console.log('🔥 Firebase Auth START:', {
+    timestamp: new Date().toISOString(),
+    hasCredential: !!credential,
+    method: credential ? 'credential' : 'popup'
+  });
+  
   if (credential) {
     // Use Google Identity Services credential
+    console.log('🔥 Creating Google credential...');
+    const credentialStartTime = Date.now();
     const googleCredential = GoogleAuthProvider.credential(credential);
-    return (await signInWithCredential(auth, googleCredential)).user;
+    const credentialDuration = Date.now() - credentialStartTime;
+    
+    console.log('🔥 Calling signInWithCredential...', {
+      credentialDuration: `${credentialDuration}ms`
+    });
+    
+    const signInStartTime = Date.now();
+    const result = await signInWithCredential(auth, googleCredential);
+    const signInDuration = Date.now() - signInStartTime;
+    const totalDuration = Date.now() - authStartTime;
+    
+    console.log('🔥 Firebase Auth SUCCESS:', {
+      totalDuration: `${totalDuration}ms`,
+      credentialDuration: `${credentialDuration}ms`,
+      signInDuration: `${signInDuration}ms`,
+      user: result.user.email,
+      uid: result.user.uid
+    });
+    return result.user;
   } else {
     // Fallback to popup method
-    return (await signInWithPopup(auth, googleProvider)).user;
+    console.log('🔥 Using popup method...');
+    const popupStartTime = Date.now();
+    const result = await signInWithPopup(auth, googleProvider);
+    const popupDuration = Date.now() - popupStartTime;
+    const totalDuration = Date.now() - authStartTime;
+    
+    console.log('🔥 Firebase Auth SUCCESS (popup):', {
+      totalDuration: `${totalDuration}ms`,
+      popupDuration: `${popupDuration}ms`,
+      user: result.user.email,
+      uid: result.user.uid
+    });
+    return result.user;
   }
 };
 export const signOutUser = async () => await signOut(auth);
 export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthStateChanged(auth, callback);
-export const isUserAdmin = async (email: string): Promise<boolean> => (await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]])).length > 0;
+// Cache admin status to avoid repeated calls
+const adminCache = new Map<string, { isAdmin: boolean; timestamp: number }>();
+const ADMIN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Cache user display names to avoid repeated calls
+const displayNameCache = new Map<string, { displayName: string | null; timestamp: number }>();
+const DISPLAY_NAME_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+export const isUserAdmin = async (email: string): Promise<boolean> => {
+  const adminStartTime = Date.now();
+  
+  // Check cache first
+  const cached = adminCache.get(email);
+  if (cached && Date.now() - cached.timestamp < ADMIN_CACHE_TTL) {
+    console.log('🔥 Admin check CACHED:', {
+      email,
+      duration: `${Date.now() - adminStartTime}ms`,
+      isAdmin: cached.isAdmin,
+      cacheAge: `${Date.now() - cached.timestamp}ms`
+    });
+    return cached.isAdmin;
+  }
+  
+  console.log('🔥 Admin check START:', {
+    email,
+    timestamp: new Date().toISOString()
+  });
+  
+  const result = (await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]])).length > 0;
+  const duration = Date.now() - adminStartTime;
+  
+  console.log('🔥 Admin check COMPLETE:', {
+    email,
+    duration: `${duration}ms`,
+    isAdmin: result,
+    cached: false
+  });
+  
+  adminCache.set(email, { isAdmin: result, timestamp: Date.now() });
+  return result;
+};
 
 export const createLegacyReport = async (reportData: Omit<ReportData, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => await createDoc('reports', reportData);
 export const getReportsByUser = async (userId: string): Promise<ReportData[]> => (await getDocsByQuery<ReportData>('reports', [['userId', '==', userId]])).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -170,6 +365,25 @@ export const updateReport = async (reportId: string, updates: Partial<ReportData
 export const deleteReport = async (reportId: string): Promise<void> => await deleteDocById('reports', reportId);
 
 export const getUserDisplayName = async (email: string): Promise<string | null> => {
+  const displayStartTime = Date.now();
+  
+  // Check cache first
+  const cached = displayNameCache.get(email);
+  if (cached && Date.now() - cached.timestamp < DISPLAY_NAME_CACHE_TTL) {
+    console.log('🔥 Display name CACHED:', {
+      email,
+      duration: `${Date.now() - displayStartTime}ms`,
+      displayName: cached.displayName,
+      cacheAge: `${Date.now() - cached.timestamp}ms`
+    });
+    return cached.displayName;
+  }
+  
+  console.log('🔥 Display name lookup START:', {
+    email,
+    timestamp: new Date().toISOString()
+  });
+  
   // Check both adminUsers and teachers collections
   const [adminUsers, teachers] = await Promise.all([
     getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]),
@@ -177,14 +391,26 @@ export const getUserDisplayName = async (email: string): Promise<string | null> 
   ]);
   
   // Return the first match from either collection
+  let displayName: string | null = null;
   if (adminUsers.length > 0) {
-    return `${adminUsers[0].firstName} ${adminUsers[0].lastName}`.trim();
-  }
-  if (teachers.length > 0) {
-    return `${teachers[0].firstName} ${teachers[0].lastName}`.trim();
+    displayName = `${adminUsers[0].firstName} ${adminUsers[0].lastName}`.trim();
+  } else if (teachers.length > 0) {
+    displayName = `${teachers[0].firstName} ${teachers[0].lastName}`.trim();
   }
   
-  return null;
+  const duration = Date.now() - displayStartTime;
+  console.log('🔥 Display name lookup COMPLETE:', {
+    email,
+    duration: `${duration}ms`,
+    displayName,
+    adminUsersFound: adminUsers.length,
+    teachersFound: teachers.length,
+    cached: false
+  });
+  
+  // Cache the result
+  displayNameCache.set(email, { displayName, timestamp: Date.now() });
+  return displayName;
 };
 export const getAllUsers = async (): Promise<AdminUser[]> => await getDocsByQuery<AdminUser>('adminUsers').catch(() => []);
 

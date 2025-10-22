@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographyH1, TypographyMuted, TypographySmall } from '@/components/ui/typography';
 import { Loader2, Users, Shield, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
-import { getAllClasses, isUserAdmin, getUserDisplayName } from '@/services/firebaseService';
+import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData } from '@/services/firebaseService';
 import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
 import { ClassCard } from './ClassCard';
 import { TeacherCard } from './TeacherCard';
-import { AdminPanel } from './AdminPanel';
 import { ThemeToggle } from './theme-toggle';
 import { useAuthContext } from '@/hooks/useAuthContext';
+
+// Lazy load AdminPanel for better performance
+const AdminPanel = React.lazy(() => import('./AdminPanel').then(module => ({ default: module.AdminPanel })));
 
 interface RBAAppProps { user: User; }
 
@@ -29,6 +31,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState({ adminPanel: true, allClasses: true });
   const [activeAdminTab, setActiveAdminTab] = useState('browse');
+  
+  // Prevent duplicate loading in React strict mode
+  const isLoadingRef = React.useRef(false);
 
 
   const handleNavigateToStudent = async (studentId: string) => {
@@ -81,50 +86,110 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   };
 
   const loadData = React.useCallback(async () => {
+    // Prevent duplicate loading in React strict mode
+    if (isLoadingRef.current) {
+      console.log('🚀 RBAApp loadData SKIPPED: Already loading');
+      return;
+    }
+    
+    isLoadingRef.current = true;
+    const loadStartTime = Date.now();
+    console.log('🚀 RBAApp loadData START:', {
+      timestamp: new Date().toISOString(),
+      userEmail: user.email
+    });
+    
     try {
       setLoading(true);
       setError(null);
       
-      // Batch the admin check and classes loading
+      // Load critical data first (admin check and classes)
+      console.log('🚀 Starting critical data load...');
+      const criticalStartTime = Date.now();
+      
       const [adminStatus, allClasses] = await Promise.all([
         isUserAdmin(user.email || ''),
         getAllClasses()
       ]);
       
+      const criticalDuration = Date.now() - criticalStartTime;
+      console.log('🚀 Critical data loaded:', {
+        duration: `${criticalDuration}ms`,
+        adminStatus,
+        classesCount: allClasses.length
+      });
       
       setIsAdmin(adminStatus);
       
       if (adminStatus) {
-        // For all admin users (admin-only and admin+teacher), use all classes and batch teacher name lookups
+        // For all admin users, use all classes
         setClasses(allClasses);
         
+        // Set loading to false immediately after classes are loaded
+        setLoading(false);
+        console.log('🚀 UI ready - classes displayed, loading teacher names in background');
+        
+        // Load teacher names in background (non-blocking)
+        const teacherStartTime = Date.now();
         const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
-        const displayNames = await Promise.all(
+        
+        console.log('🚀 Starting teacher name lookups:', {
+          teacherCount: uniqueTeacherEmails.length,
+          emails: uniqueTeacherEmails
+        });
+        
+        Promise.all(
           uniqueTeacherEmails.map(async (email) => ({ 
             email, 
             displayName: (await getUserDisplayName(email)) || 'Unknown Teacher' 
           }))
-        );
-        const displayNameMap = displayNames.reduce((acc, { email, displayName }) => ({ 
-          ...acc, 
-          [email]: displayName 
-        }), {} as Record<string, string>);
-        setTeacherDisplayNames(displayNameMap);
+        ).then(displayNames => {
+          const teacherDuration = Date.now() - teacherStartTime;
+          console.log('🚀 Teacher names loaded:', {
+            duration: `${teacherDuration}ms`,
+            count: displayNames.length,
+            totalLoadTime: `${Date.now() - loadStartTime}ms`
+          });
+          
+          const displayNameMap = displayNames.reduce((acc, { email, displayName }) => ({ 
+            ...acc, 
+            [email]: displayName 
+          }), {} as Record<string, string>);
+          setTeacherDisplayNames(displayNameMap);
+        });
       } else {
         // For teacher-only users, filter classes by their email
         const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
         setClasses(teacherClasses);
+        setLoading(false);
+        console.log('🚀 Teacher-only user - classes filtered and loaded:', {
+          duration: `${Date.now() - criticalStartTime}ms`,
+          classesCount: teacherClasses.length
+        });
       }
     } catch (err) {
-      console.error('Error loading data:', err);
+      const errorDuration = Date.now() - loadStartTime;
+      console.error('🚀 RBAApp loadData ERROR:', {
+        duration: `${errorDuration}ms`,
+        error: err
+      });
       setError('Failed to load data');
-    } finally {
       setLoading(false);
+    } finally {
+      isLoadingRef.current = false;
     }
   }, [user.email]);
 
   useEffect(() => {
     loadData();
+    
+    // Start background prefetching after initial load
+    const prefetchTimer = setTimeout(() => {
+      console.log('🚀 Starting background prefetch...');
+      prefetchCriticalData();
+    }, 2000); // Start prefetching 2 seconds after initial load
+    
+    return () => clearTimeout(prefetchTimer);
   }, [loadData]);
 
   // Listen for data changes from DataBuilder
@@ -228,7 +293,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent>
-              <AdminPanel user={user} onNavigateToStudent={handleNavigateToStudent} onTabChange={setActiveAdminTab} />
+              <Suspense fallback={<div className="p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
+                <AdminPanel user={user} onNavigateToStudent={handleNavigateToStudent} onTabChange={setActiveAdminTab} />
+              </Suspense>
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
