@@ -147,7 +147,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
                 return <div key={u.id || i} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-medium truncate">{u.firstName} {u.lastName}</span>
-                    <Badge variant="secondary" className="text-xs flex-shrink-0">Admin</Badge>
                   </div>
                   <span className="text-sm text-muted-foreground truncate">{u.email}</span>
                 </div>

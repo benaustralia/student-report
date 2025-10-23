@@ -213,7 +213,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
     <BuzzingBee />
     <div className="flex items-center justify-between">
-      <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{isAdmin ? 'Management View' : 'Teacher View - Your Classes'}</TypographyMuted></div>
+      <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{isAdmin ? '' : 'Teacher View - Your Classes'}</TypographyMuted></div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-3">
           <ThemeToggle />
