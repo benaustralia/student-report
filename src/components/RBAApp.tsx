@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographyH1, TypographyMuted, TypographySmall } from '@/components/ui/typography';
-import { Loader2, Users, Shield, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
+import { Loader2, Users, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
 import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData, getStudentsForClass } from '@/services/firebaseService-ultra-final';
 import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
@@ -230,8 +230,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         <div className="flex items-center gap-2">
           {isAdmin ? (
             <>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-              <TypographySmall className="text-muted-foreground">Admin</TypographySmall>
             </>
           ) : (
             <>
