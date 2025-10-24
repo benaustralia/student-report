@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Combobox } from '@/components/ui/combobox';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
 import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X } from 'lucide-react';
@@ -194,12 +193,21 @@ export const DataBuilder = () => {
       );
     } else if (field === 'classLevel' && type === 'classes') {
       return (
-        <Combobox
+        <Select
           value={(item as Class)[field as keyof Class] as string || ''}
           onValueChange={(value) => updateItem(type, isNew ? index : item.id || '', field, value, isNew)}
-          options={CLASS_LEVEL_OPTIONS}
-          placeholder="Select class level..."
-        />
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select class level..." />
+          </SelectTrigger>
+          <SelectContent>
+            {CLASS_LEVEL_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       );
     } else {
       return (

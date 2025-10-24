@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -9,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Eye, Loader2, Download } from 'lucide-react';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
-import { ReportTemplate } from './ReportTemplate';
+import nsalogoPng from '@/assets/NSALogo.png?url';
 import { getTeacherByEmail } from '@/services/firebaseService-ultra-final';
 import type { Student, Class, ReportData, Teacher } from '@/types';
 // PDF generation is now handled server-side via Netlify function
@@ -34,12 +35,210 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchedTeacherEmail, setFetchedTeacherEmail] = useState<string | null>(null);
+  const [pngDataUrl, setPngDataUrl] = useState<string | null>(null);
+  const [generatingPng, setGeneratingPng] = useState(false);
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Loading...';
   
   // Download is always enabled
   const canDownload = true;
+
+  // Convert URL to data URL for images
+  const convertUrlToDataUrl = async (url: string): Promise<string> => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { 
+          reject(new Error('Could not get canvas context'));
+          return; 
+        }
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      } catch (error) { 
+        console.error('Canvas conversion failed:', error);
+        reject(error);
+      }
+    };
+    img.onerror = () => {
+      console.error('Image load failed:', url);
+      reject(new Error(`Failed to load image: ${url}`));
+    };
+    img.src = url;
+  });
+
+  // Generate PNG from SVG for preview
+  const generatePngPreview = async () => {
+    if (!teacher) return;
+    
+    setGeneratingPng(true);
+    try {
+      // Create a temporary ReportTemplate component to get the SVG
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '-9999px';
+      tempDiv.style.width = '595px';
+      tempDiv.style.height = '600px';
+      document.body.appendChild(tempDiv);
+
+      // Create SVG element
+      const response = await fetch(reportTemplateSvg);
+      const svgText = await response.text();
+      const parser = new DOMParser();
+      const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+      const svgElement = svgDoc.querySelector('svg');
+      if (!svgElement) throw new Error('Could not parse SVG template');
+      
+      const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
+      
+      // Process SVG (same logic as ReportTemplate)
+      const textElements = [
+        { x: 206.17, y: 222.41, text: studentName },
+        { x: 206.17, y: 250.43, text: classData.classLevel },
+        { x: 206.44, y: 278.45, text: classData.classLocation },
+        { x: 327.71, y: 727.44, text: teacherName },
+        { x: 327.71, y: 745.52, text: date }
+      ];
+
+      // Add text elements
+      textElements.forEach(({ x, y, text }) => {
+        const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textElement.setAttribute('x', x.toString());
+        textElement.setAttribute('y', y.toString());
+        textElement.setAttribute('class', 'st5');
+        textElement.setAttribute('fill', 'black');
+        textElement.setAttribute('font-family', 'Noto Sans SC, Arial, sans-serif');
+        textElement.setAttribute('font-size', '11');
+        textElement.textContent = text;
+        svgClone.appendChild(textElement);
+      });
+
+      // Add comments if present with proper text wrapping for Chinese characters
+      if (reportText?.trim()) {
+        const wrapText = (text: string, maxWidth: number): string[] => {
+          const lines: string[] = [];
+          let currentLine = '';
+          
+          // Split by characters (not words) for Chinese text
+          for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const testLine = currentLine + char;
+            
+            // Estimate width: Chinese chars ~11px, English chars ~6.5px
+            let estimatedWidth = 0;
+            for (let j = 0; j < testLine.length; j++) {
+              const c = testLine[j];
+              // Check if character is Chinese (CJK)
+              if (/[\u4e00-\u9fff]/.test(c)) {
+                estimatedWidth += 11; // Chinese character width
+              } else {
+                estimatedWidth += 6.5; // English character width
+              }
+            }
+            
+            if (estimatedWidth > maxWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = char;
+            } else {
+              currentLine = testLine;
+            }
+          }
+          if (currentLine) lines.push(currentLine);
+          return lines;
+        };
+        
+        const wrappedLines = wrapText(reportText, 350); // Max width for comments area
+        wrappedLines.forEach((line, index) => {
+          const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
+          textElement.setAttribute('x', '179.27');
+          textElement.setAttribute('y', (590.33 + index * 15).toString());
+          textElement.setAttribute('class', 'st5');
+          textElement.setAttribute('fill', 'black');
+          textElement.setAttribute('font-family', 'Noto Sans SC, Arial, sans-serif');
+          textElement.setAttribute('font-size', '11');
+          textElement.textContent = line;
+          svgClone.appendChild(textElement);
+        });
+      }
+
+      // Add artwork if present
+      if (artworkUrl) {
+        try {
+          const artworkDataUrl = await convertUrlToDataUrl(artworkUrl);
+          const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+          artworkElement.setAttribute('href', artworkDataUrl);
+          artworkElement.setAttribute('x', '97.64');
+          artworkElement.setAttribute('y', '308.45');
+          artworkElement.setAttribute('width', '400');
+          artworkElement.setAttribute('height', '250');
+          artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svgClone.appendChild(artworkElement);
+        } catch (error) {
+          console.error('Failed to load artwork image:', error);
+        }
+      }
+
+      // Add school logo
+      try {
+        const logoDataUrl = await convertUrlToDataUrl(nsalogoPng);
+        const logoElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+        logoElement.setAttribute('href', logoDataUrl);
+        logoElement.setAttribute('x', '55');
+        logoElement.setAttribute('y', '680');
+        logoElement.setAttribute('width', '80');
+        logoElement.setAttribute('height', '80');
+        logoElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svgClone.appendChild(logoElement);
+      } catch (error) {
+        console.error('Failed to load logo:', error);
+      }
+
+      // Set SVG attributes for 300 DPI
+      const scale = 300 / 72;
+      svgClone.setAttribute('width', (595 * scale).toString());
+      svgClone.setAttribute('height', (842 * scale).toString());
+      svgClone.setAttribute('viewBox', '0 0 595.28 841.89');
+
+      tempDiv.appendChild(svgClone);
+
+      // Convert to PNG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+      
+      // Use same scale for canvas
+      canvas.width = 595 * scale; // 2481px
+      canvas.height = 842 * scale; // 3511px
+      
+      const img = new Image();
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngDataUrl = canvas.toDataURL('image/png');
+        setPngDataUrl(pngDataUrl);
+        URL.revokeObjectURL(svgUrl);
+        document.body.removeChild(tempDiv);
+        setGeneratingPng(false);
+      };
+      
+      img.src = svgUrl;
+      
+    } catch (error) {
+      console.error('Error generating PNG preview:', error);
+      setGeneratingPng(false);
+      const tempDiv = document.querySelector('div[style*="-9999px"]');
+      if (tempDiv) document.body.removeChild(tempDiv);
+    }
+  };
   // Handle both Firestore timestamp objects and JavaScript Date objects
   const getDateFromTimestamp = (timestamp: unknown): Date => {
     if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
@@ -78,53 +277,64 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     fetchTeacher();
   }, [classData.teacherEmail, fetchedTeacherEmail]);
 
-  return (
-    <div className="flex flex-col sm:flex-row gap-2">
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            disabled={isImageUploading}
-            className="w-full sm:w-auto"
-          >
-            {isImageUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Uploading Image...
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4 mr-2" />
-                Preview
-              </>
-            )}
-          </Button>
-        </DialogTrigger>
-      <DialogContent className="w-[95vw] max-w-7xl h-[95vh] max-h-[95vh] p-0 overflow-hidden">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>Report Preview - {studentName}</DialogTitle>
-        </DialogHeader>
-        <div className="flex-1 overflow-hidden p-2">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span>Loading teacher information...</span>
-            </div>
-          ) : (
-            <ReportTemplate
-              studentName={studentName}
-              classLevel={classData.classLevel}
-              classLocation={classData.classLocation}
-              comments={reportText}
-              teacher={teacherName}
-              date={date}
-              artwork={artworkUrl || undefined}
-            />
-          )}
-        </div>
-      </DialogContent>
-      </Dialog>
+  // Generate PNG preview when teacher data is available
+  useEffect(() => {
+    if (teacher && !pngDataUrl) {
+      generatePngPreview();
+    }
+  }, [teacher, pngDataUrl]);
+
+      return (
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={isImageUploading}
+                className="w-full sm:w-auto"
+              >
+                {isImageUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Uploading Image...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview
+                  </>
+                )}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl p-2">
+              <DialogHeader className="flex-shrink-0">
+                <DialogTitle>Report Preview - {studentName}</DialogTitle>
+                <DialogDescription>
+                  Preview of the student report for {studentName} in {classData.classLevel}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="overflow-auto max-h-[85vh] flex justify-center">
+                {loading || generatingPng ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>{loading ? 'Loading teacher information...' : 'Generating preview...'}</span>
+                  </div>
+                ) : pngDataUrl ? (
+                  <img 
+                    src={pngDataUrl} 
+                    alt={`Report preview for ${studentName}`}
+                    className="w-full h-auto"
+                    style={{ maxHeight: 'none', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center py-8">
+                    <span>Preview not available</span>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
       <Button 
         variant="outline" 
         size="sm" 

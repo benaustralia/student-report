@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, Download, Upload, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { importStudents } from '@/services/firebaseService-ultra-final';
 import type { Class, Student } from '@/types';
@@ -64,8 +64,8 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
       const line = lines[i].trim();
       if (!line) continue;
       
-      // Split by comma, tab, or multiple spaces
-      const parts = line.split(/[,\t]+|\s{2,}/).map(part => part.trim());
+      // Split by comma, tab, or spaces (single or multiple)
+      const parts = line.split(/[,\t]+|\s+/).map(part => part.trim());
       
       if (parts.length < 2) {
         students.push({
@@ -168,6 +168,9 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
             <Upload className="h-5 w-5" />
             Import Students for {classData?.classLevel} - {classData?.classDay} at {classData?.classTime}
           </DialogTitle>
+          <DialogDescription>
+            Import multiple students at once using CSV format. Download the template below for the correct format.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">

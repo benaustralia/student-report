@@ -194,7 +194,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
 
         svgClone.setAttribute('width', '100%');
         svgClone.setAttribute('height', 'auto');
-        svgClone.setAttribute('viewBox', '0 0 595.28 841.89');
+        svgClone.setAttribute('viewBox', '0 0 595.28 600'); // Crop to content area, remove bottom whitespace
         svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
         const styleElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
@@ -220,11 +220,11 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
           }
           svg { 
             max-width: 100%; 
-            height: auto; 
+            height: 100%; 
             width: 100%;
           }
           @media (max-width: 768px) {
-            svg { max-width: 100%; height: auto; }
+            svg { max-width: 100%; height: 100%; }
           }
         `;
         svgClone.appendChild(styleElement);
@@ -244,27 +244,16 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
 
 
   return state.isLoading ? (
-    <div className="flex items-center justify-center p-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <span className="ml-2">Loading report template...</span>
+    <div className="flex items-center justify-center p-4">
+      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+      <span className="ml-2 text-sm">Loading...</span>
     </div>
   ) : (
-    <div className="w-full bg-white p-4">
-      <div className="border rounded-lg overflow-hidden shadow-lg">
-        <div 
-          ref={svgRef} 
-          className="w-full overflow-y-auto overflow-x-hidden"
-          style={{ 
-            maxHeight: 'calc(95vh - 160px)',
-            maxWidth: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            padding: '20px'
-          }}
-          dangerouslySetInnerHTML={{ __html: state.processedSvg }} 
-        />
-      </div>
-    </div>
+    <div 
+      ref={svgRef} 
+      className="w-full h-full overflow-auto flex items-start justify-center"
+      dangerouslySetInnerHTML={{ __html: state.processedSvg }} 
+    />
   );
 };
 

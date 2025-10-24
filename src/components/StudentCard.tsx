@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TypographySmall } from '@/components/ui/typography';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react';
@@ -250,44 +250,37 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       data-student-id={student.id}
     >
       <Collapsible open={state.isOpen}>
-        <CardHeader className="p-0">
-          <div 
-            className="flex items-center justify-between p-6"
-            onClick={(e) => {
-              // Only allow clicks on the specific clickable area
-              if (!e.target || !(e.target as Element).closest('[role="button"]')) {
-                e.preventDefault();
-                e.stopPropagation();
+        <CollapsibleTrigger asChild>
+          <CardHeader 
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => {
+              if (onStudentSelected) {
+                onStudentSelected(student.id);
               }
+              handleToggle();
             }}
-          >
-            <div 
-              className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors p-2 -m-2 rounded"
-              role="button"
-              tabIndex={0}
-              aria-expanded={state.isOpen}
-              aria-label={`${state.isOpen ? 'Collapse' : 'Expand'} student details for ${student.firstName} ${student.lastName}`}
-              onClick={() => {
+            role="button"
+            tabIndex={0}
+            aria-expanded={state.isOpen}
+            aria-label={`${state.isOpen ? 'Collapse' : 'Expand'} student details for ${student.firstName} ${student.lastName}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
                 if (onStudentSelected) {
                   onStudentSelected(student.id);
                 }
                 handleToggle();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  if (onStudentSelected) {
-                    onStudentSelected(student.id);
-                  }
-                  handleToggle();
-                }
-              }}
-            >
-              {state.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              <CardTitle>{student.firstName} {student.lastName}</CardTitle>
+              }
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {state.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                <CardTitle>{student.firstName} {student.lastName}</CardTitle>
+              </div>
             </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
+        </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="pt-0">
             {state.loading ? (

@@ -13,7 +13,6 @@ import { TeacherCard } from './TeacherCard';
 import { ThemeToggle } from './theme-toggle';
 import { useAuthContext } from '@/hooks/useAuthContext';
 import { BuzzingBee } from './BuzzingBee';
-import { DebugWindow } from './DebugWindow';
 
 // Lazy load AdminPanel for better performance
 const AdminPanel = React.lazy(() => import('./AdminPanel').then(module => ({ default: module.AdminPanel })));
@@ -33,7 +32,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState({ adminPanel: true, allClasses: true });
   const [activeAdminTab, setActiveAdminTab] = useState('browse');
-  const [showDebugWindow, setShowDebugWindow] = useState(false);
   
   // Prevent duplicate loading in React strict mode
   const isLoadingRef = React.useRef(false);
@@ -94,38 +92,16 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     }
     
     isLoadingRef.current = true;
-    const loadStartTime = Date.now();
     
     try {
       setLoading(true);
       setError(null);
       
       // Load critical data first (admin check and classes)
-      
-      console.log('🔍 TEACHER LOGIN DEBUG START:', {
-        userEmail: user.email,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href
-      });
-
       const [adminStatus, allClasses] = await Promise.all([
         isUserAdmin(user.email || ''),
         getAllClasses()
       ]);
-      
-      console.log('🔍 ADMIN CHECK RESULT:', {
-        userEmail: user.email,
-        adminStatus,
-        timestamp: new Date().toISOString()
-      });
-
-      console.log('🔍 ALL CLASSES LOADED:', {
-        totalClasses: allClasses.length,
-        teacherEmails: [...new Set(allClasses.map(cls => cls.teacherEmail))],
-        classesForThisTeacher: allClasses.filter(cls => cls.teacherEmail === user.email).length,
-        timestamp: new Date().toISOString()
-      });
       
       setIsAdmin(adminStatus);
       
@@ -145,7 +121,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
             displayName: (await getUserDisplayName(email)) || 'Unknown Teacher' 
           }))
         ).then(displayNames => {
-          
           const displayNameMap = displayNames.reduce((acc, { email, displayName }) => ({ 
             ...acc, 
             [email]: displayName 
@@ -154,79 +129,11 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         });
       } else {
         // For teacher-only users, filter classes by their email
-        console.log('🔍 DETAILED EMAIL ANALYSIS:', {
-          userEmail: user.email,
-          userEmailLength: user.email?.length,
-          userEmailCharCodes: user.email?.split('').map(c => c.charCodeAt(0)),
-          userEmailBytes: new TextEncoder().encode(user.email || ''),
-          timestamp: new Date().toISOString()
-        });
-
-        // Detailed class analysis
-        const classAnalysis = allClasses.map(cls => ({
-          id: cls.id,
-          teacherEmail: cls.teacherEmail,
-          teacherEmailLength: cls.teacherEmail?.length,
-          teacherEmailCharCodes: cls.teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
-          teacherEmailBytes: new TextEncoder().encode(cls.teacherEmail || ''),
-          exactMatch: cls.teacherEmail === user.email,
-          caseInsensitiveMatch: cls.teacherEmail?.toLowerCase() === user.email?.toLowerCase(),
-          trimmedMatch: cls.teacherEmail?.trim() === user.email?.trim(),
-          includesMatch: cls.teacherEmail?.includes(user.email || '') || user.email?.includes(cls.teacherEmail || ''),
-          classLevel: cls.classLevel,
-          classDay: cls.classDay,
-          classTime: cls.classTime
-        }));
-
-        console.log('🔍 DETAILED CLASS ANALYSIS:', {
-          totalClasses: allClasses.length,
-          classAnalysis: classAnalysis,
-          timestamp: new Date().toISOString()
-        });
-
         const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
-        
-        console.log('🔍 TEACHER CLASSES FILTERED:', {
-          userEmail: user.email,
-          teacherClassesCount: teacherClasses.length,
-          teacherClasses: teacherClasses.map(cls => ({
-            id: cls.id,
-            teacherEmail: cls.teacherEmail,
-            classLevel: cls.classLevel,
-            classDay: cls.classDay,
-            classTime: cls.classTime
-          })),
-          timestamp: new Date().toISOString()
-        });
-
-        // Additional debugging for empty results
-        if (teacherClasses.length === 0) {
-          console.log('🔍 NO CLASSES FOUND - DETAILED DEBUG:', {
-            userEmail: user.email,
-            allTeacherEmails: allClasses.map(cls => ({
-              email: cls.teacherEmail,
-              length: cls.teacherEmail?.length,
-              charCodes: cls.teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
-              bytes: new TextEncoder().encode(cls.teacherEmail || ''),
-              id: cls.id
-            })),
-            potentialMatches: allClasses.filter(cls => 
-              cls.teacherEmail?.toLowerCase().includes(user.email?.toLowerCase() || '') ||
-              user.email?.toLowerCase().includes(cls.teacherEmail?.toLowerCase() || '')
-            ),
-            timestamp: new Date().toISOString()
-          });
-        }
-        
         setClasses(teacherClasses);
         setLoading(false);
       }
     } catch (err) {
-      const errorDuration = Date.now() - loadStartTime;
-      console.error('🚀 RBAApp loadData ERROR:', {
-        duration: `${errorDuration}ms`,
-        error: err
-      });
       setError('Failed to load data');
       setLoading(false);
     } finally {
@@ -235,12 +142,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   }, [user.email]);
 
   useEffect(() => {
-    console.log('🚀 RBAApp Component Mounted:', {
-      userEmail: user.email,
-      timestamp: new Date().toISOString(),
-      component: 'RBAApp'
-    });
-    
     loadData();
     
     // Start background prefetching after initial load
@@ -304,27 +205,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
     <BuzzingBee />
     
-    {/* Debug window for hidido2016@gmail.com */}
-    {(user.email === 'hidido2016@gmail.com' || user.email === 'bahinton@gmail.com') && (
-      <DebugWindow 
-        userEmail={user.email}
-        isOpen={showDebugWindow}
-        onClose={() => setShowDebugWindow(false)}
-      />
-    )}
-    
-    {/* Debug button for hidido2016@gmail.com */}
-    {(user.email === 'hidido2016@gmail.com' || user.email === 'bahinton@gmail.com') && !showDebugWindow && (
-      <div className="fixed top-4 right-4 z-40">
-        <Button 
-          onClick={() => setShowDebugWindow(true)}
-          variant="outline"
-          className="bg-red-100 border-4 border-red-500 text-red-800 hover:bg-red-200 font-bold shadow-lg"
-        >
-          🐛 Debug Logs
-        </Button>
-      </div>
-    )}
     <div className="flex items-center justify-between">
       <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{isAdmin ? '' : 'Teacher View - Your Classes'}</TypographyMuted></div>
       <div className="flex flex-col items-end gap-2">
@@ -339,6 +219,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
             <LogOut className="h-4 w-4 mr-2" />
             {isSigningOut ? 'Signing Out...' : 'Sign Out'}
           </Button>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {user.email}
         </div>
         <div className="flex items-center gap-2">
           {isAdmin ? (
