@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
 import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X } from 'lucide-react';
@@ -14,6 +15,16 @@ import { useAuthContext } from '@/hooks/useAuthContext';
 
 type DataType = 'requests' | 'users' | 'classes' | 'students' | 'teachers';
 type ItemType = AdminUser | Class | Student | Teacher | Request;
+
+const CLASS_LEVEL_OPTIONS = [
+  'Early Learning',
+  'Primary', 
+  'Intermediate',
+  'Advanced',
+  'Master',
+  'Adult',
+  'Sketching'
+];
 
 const CONFIG = {
   requests: { icon: FileText, title: 'Requests', fields: ['type', 'status', 'teacherEmail', 'classId', 'studentId', 'studentFirstName', 'studentLastName', 'notes'], empty: { type: 'add_student', status: 'pending', teacherEmail: '', classId: '', notes: '' } },
@@ -138,61 +149,75 @@ export const DataBuilder = () => {
     } catch (error: unknown) { toast.error(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };
 
-  const renderField = (type: DataType, item: ItemType, field: string, index: number, isNew: boolean) => 
-    field === 'classId' && type === 'students' ? (
-      <Select 
-        value={((item as Student)[field as keyof Student] as string) || ''} 
-        onValueChange={async (v) => {
-          // Update local state first
-          updateItem(type, isNew ? index : (item.id || ''), field, v, isNew);
-          
-          // If not a new item, automatically save to Firebase
-          if (!isNew && item.id) {
-            const updatedItem = { ...item, [field]: v };
-            try {
-              await OPS.update[type](item.id, updatedItem);
-              toast.success(`Student assigned to class!`);
-              // Refresh data to ensure UI reflects the change
-              const results = await Promise.all(OPS.getAll.map(fn => fn()));
-              setData({ 
-                users: (results[0] || []) as ItemType[], 
-                classes: (results[1] || []) as ItemType[], 
-                students: (results[2] || []) as ItemType[], 
-                teachers: (results[3] || []) as ItemType[],
-                requests: (results[4] || []) as ItemType[]
-              });
-            } catch (error: unknown) {
-              console.error('Failed to save class assignment:', error);
-              toast.error(`Failed to assign student: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  const renderField = (type: DataType, item: ItemType, field: string, index: number, isNew: boolean) => {
+    if (field === 'classId' && type === 'students') {
+      return (
+        <Select 
+          value={((item as Student)[field as keyof Student] as string) || ''} 
+          onValueChange={async (v) => {
+            // Update local state first
+            updateItem(type, isNew ? index : (item.id || ''), field, v, isNew);
+            
+            // If not a new item, automatically save to Firebase
+            if (!isNew && item.id) {
+              const updatedItem = { ...item, [field]: v };
+              try {
+                await OPS.update[type](item.id, updatedItem);
+                toast.success(`Student assigned to class!`);
+                // Refresh data to ensure UI reflects the change
+                const results = await Promise.all(OPS.getAll.map(fn => fn()));
+                setData({ 
+                  users: (results[0] || []) as ItemType[], 
+                  classes: (results[1] || []) as ItemType[], 
+                  students: (results[2] || []) as ItemType[], 
+                  teachers: (results[3] || []) as ItemType[],
+                  requests: (results[4] || []) as ItemType[]
+                });
+              } catch (error: unknown) {
+                console.error('Failed to save class assignment:', error);
+                toast.error(`Failed to assign student: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              }
             }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select class" />
+          </SelectTrigger>
+          <SelectContent>
+            {data.classes.map(cls => (
+              <SelectItem key={cls.id} value={cls.id || ''}>
+                {(cls as Class).classDay} {(cls as Class).classTime} - {(cls as Class).classLevel}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    } else if (field === 'classLevel' && type === 'classes') {
+      return (
+        <Combobox
+          value={(item as Class)[field as keyof Class] as string || ''}
+          onValueChange={(value) => updateItem(type, isNew ? index : item.id || '', field, value, isNew)}
+          options={CLASS_LEVEL_OPTIONS}
+          placeholder="Select class level..."
+        />
+      );
+    } else {
+      return (
+        <Input
+          value={(item as unknown as Record<string, unknown>)[field] as string || ''}
+          onChange={e =>
+            updateItem(
+              type,
+              isNew ? index : item.id || '',
+              field,
+              e.target.value,
+              isNew
+            )
           }
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select class" />
-        </SelectTrigger>
-        <SelectContent>
-          {data.classes.map(cls => (
-            <SelectItem key={cls.id} value={cls.id || ''}>
-              {(cls as Class).classDay} {(cls as Class).classTime} - {(cls as Class).classLevel}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    ) : (
-      <Input
-        value={(item as unknown as Record<string, unknown>)[field] as string || ''}
-        onChange={e =>
-          updateItem(
-            type,
-            isNew ? index : item.id || '',
-            field,
-            e.target.value,
-            isNew
-          )
-        }
-      />
-    );
+        />
+      );
+    }
+  };
 
   const groupByTeacher = (items: ItemType[], getTeacher: (item: ItemType) => string, type: DataType) => 
     items.reduce((groups: Record<string, ItemType[]>, item: ItemType) => {

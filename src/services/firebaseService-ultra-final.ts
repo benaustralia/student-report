@@ -85,7 +85,32 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
         collection(db, collectionName);
       const snapshot = await getDocs(q);
       
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+      const results = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+      
+      // Detailed logging for classes collection
+      if (collectionName === 'classes') {
+        console.log('📚 FIREBASE QUERY DETAILED RESULTS:', {
+          collectionName,
+          conditions,
+          docCount: snapshot.docs.length,
+          queryType: conditions.length > 0 ? 'filtered' : 'all',
+          results: results.map(r => ({
+            id: r.id,
+            teacherEmail: (r as any).teacherEmail,
+            teacherEmailLength: (r as any).teacherEmail?.length,
+            teacherEmailCharCodes: (r as any).teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
+            teacherEmailBytes: new TextEncoder().encode((r as any).teacherEmail || ''),
+            classLevel: (r as any).classLevel,
+            classDay: (r as any).classDay,
+            classTime: (r as any).classTime,
+            createdAt: (r as any).createdAt,
+            updatedAt: (r as any).updatedAt
+          })),
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return results;
     } catch (error: any) {
       console.error(`🔥 Firebase Query Error: ${queryId}`, { collection: collectionName, error: error.message });
       
@@ -150,14 +175,57 @@ export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthSt
 // Ultra-compact admin check with monadic composition + function merging
 export const isUserAdmin = async (email: string): Promise<boolean> => {
   
+  console.log('🔍 ADMIN CHECK DETAILED:', {
+    email,
+    emailLength: email.length,
+    emailCharCodes: email.split('').map(c => c.charCodeAt(0)),
+    emailBytes: new TextEncoder().encode(email),
+    timestamp: new Date().toISOString()
+  });
+  
   const cached = adminCache.get(email);
   if (cached && Date.now() - cached.timestamp < ADMIN_CACHE_TTL) {
+    console.log('🔍 ADMIN CHECK CACHED:', {
+      email,
+      isAdmin: cached.isAdmin,
+      cacheAge: Date.now() - cached.timestamp,
+      timestamp: new Date().toISOString()
+    });
     return cached.isAdmin;
   }
   
-  const result = (await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]])).length > 0;
+  console.log('🔍 ADMIN CHECK FIREBASE QUERY:', {
+    email,
+    queryConditions: [['email', '==', email], ['isAdmin', '==', true]],
+    timestamp: new Date().toISOString()
+  });
+  
+  const adminUsers = await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]]);
+  
+  console.log('🔍 ADMIN CHECK FIREBASE RESULTS:', {
+    email,
+    adminUsersFound: adminUsers.length,
+    adminUsers: adminUsers.map(user => ({
+      id: user.id,
+      email: (user as any).email,
+      emailLength: (user as any).email?.length,
+      emailCharCodes: (user as any).email?.split('').map((c: string) => c.charCodeAt(0)),
+      emailBytes: new TextEncoder().encode((user as any).email || ''),
+      isAdmin: (user as any).isAdmin
+    })),
+    timestamp: new Date().toISOString()
+  });
+  
+  const result = adminUsers.length > 0;
   
   adminCache.set(email, { isAdmin: result, timestamp: Date.now() });
+  
+  console.log('🔍 ADMIN CHECK FINAL RESULT:', {
+    email,
+    isAdmin: result,
+    timestamp: new Date().toISOString()
+  });
+  
   return result;
 };
 
