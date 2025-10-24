@@ -95,7 +95,7 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
           docCount: snapshot.docs.length,
           queryType: conditions.length > 0 ? 'filtered' : 'all',
           results: results.map(r => ({
-            id: r.id,
+            id: (r as any).id,
             teacherEmail: (r as any).teacherEmail,
             teacherEmailLength: (r as any).teacherEmail?.length,
             teacherEmailCharCodes: (r as any).teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
@@ -205,7 +205,7 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
   console.log('🔍 ADMIN CHECK FIREBASE RESULTS:', {
     email,
     adminUsersFound: adminUsers.length,
-    adminUsers: adminUsers.map(user => ({
+    adminUsers: adminUsers.map((user: any) => ({
       id: user.id,
       email: (user as any).email,
       emailLength: (user as any).email?.length,

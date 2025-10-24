@@ -13,7 +13,6 @@ import { TeacherCard } from './TeacherCard';
 import { ThemeToggle } from './theme-toggle';
 import { useAuthContext } from '@/hooks/useAuthContext';
 import { BuzzingBee } from './BuzzingBee';
-import { DebugWindow } from './DebugWindow';
 
 // Lazy load AdminPanel for better performance
 const AdminPanel = React.lazy(() => import('./AdminPanel').then(module => ({ default: module.AdminPanel })));
@@ -33,7 +32,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState({ adminPanel: true, allClasses: true });
   const [activeAdminTab, setActiveAdminTab] = useState('browse');
-  const [showDebugWindow, setShowDebugWindow] = useState(false);
   
   // Prevent duplicate loading in React strict mode
   const isLoadingRef = React.useRef(false);
@@ -167,7 +165,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
           id: cls.id,
           teacherEmail: cls.teacherEmail,
           teacherEmailLength: cls.teacherEmail?.length,
-          teacherEmailCharCodes: cls.teacherEmail?.split('').map(c => c.charCodeAt(0)),
+          teacherEmailCharCodes: cls.teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
           teacherEmailBytes: new TextEncoder().encode(cls.teacherEmail || ''),
           exactMatch: cls.teacherEmail === user.email,
           caseInsensitiveMatch: cls.teacherEmail?.toLowerCase() === user.email?.toLowerCase(),
@@ -206,7 +204,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
             allTeacherEmails: allClasses.map(cls => ({
               email: cls.teacherEmail,
               length: cls.teacherEmail?.length,
-              charCodes: cls.teacherEmail?.split('').map(c => c.charCodeAt(0)),
+              charCodes: cls.teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
               bytes: new TextEncoder().encode(cls.teacherEmail || ''),
               id: cls.id
             })),
@@ -304,27 +302,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
     <BuzzingBee />
     
-    {/* Debug window for hidido2016@gmail.com */}
-    {(user.email === 'hidido2016@gmail.com' || user.email === 'bahinton@gmail.com') && (
-      <DebugWindow 
-        userEmail={user.email}
-        isOpen={showDebugWindow}
-        onClose={() => setShowDebugWindow(false)}
-      />
-    )}
-    
-    {/* Debug button for hidido2016@gmail.com */}
-    {(user.email === 'hidido2016@gmail.com' || user.email === 'bahinton@gmail.com') && !showDebugWindow && (
-      <div className="fixed top-4 right-4 z-40">
-        <Button 
-          onClick={() => setShowDebugWindow(true)}
-          variant="outline"
-          className="bg-red-100 border-4 border-red-500 text-red-800 hover:bg-red-200 font-bold shadow-lg"
-        >
-          🐛 Debug Logs
-        </Button>
-      </div>
-    )}
     <div className="flex items-center justify-between">
       <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{isAdmin ? '' : 'Teacher View - Your Classes'}</TypographyMuted></div>
       <div className="flex flex-col items-end gap-2">
