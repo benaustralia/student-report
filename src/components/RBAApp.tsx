@@ -142,6 +142,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   }, [user.email]);
 
   useEffect(() => {
+    // Force refresh data when user logs in to get latest student counts
     loadData();
     
     // Start background prefetching after initial load
@@ -177,6 +178,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         } else {
           // Skip refresh for student deletions and bulk imports
         }
+      } else if (type === 'requests' && event.detail?.action === 'approve') {
+        // Listen for request approvals to refresh teacher data
+        loadData();
       }
     };
 

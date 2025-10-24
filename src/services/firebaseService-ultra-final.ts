@@ -289,8 +289,35 @@ export const getPendingRequests = () => getDocsByQuery<Request>('requests', [['s
 export const updateRequest = (requestId: string, updates: Partial<Request>) => updateDocById('requests', requestId, updates);
 export const deleteRequest = (requestId: string) => deleteDocById('requests', requestId);
 
-export const approveRequest = async (requestId: string, adminEmail: string): Promise<void> => 
-  updateDocById('requests', requestId, { status: 'approved', approvedBy: adminEmail, approvedAt: new Date() });
+export const approveRequest = async (requestId: string, adminEmail: string): Promise<void> => {
+  const requests = await getDocsByQuery<Request>('requests', []);
+  const request = requests.find(r => r.id === requestId);
+  
+  if (!request) {
+    throw new Error('Request not found');
+  }
+
+  if (request.type === 'add_student' && request.studentFirstName && request.studentLastName) {
+    // Create new student
+    const studentData: Omit<Student, 'id' | 'createdAt' | 'updatedAt'> = {
+      firstName: request.studentFirstName,
+      lastName: request.studentLastName,
+      classId: request.classId
+    };
+    const studentId = `${request.studentFirstName}-${request.studentLastName}-${request.classId.split('-')[0] || 'unknown'}`;
+    await createDoc('students', studentData, studentId);
+  } else if (request.type === 'remove_student' && request.studentId) {
+    // Delete the student completely from the database
+    await deleteStudent(request.studentId);
+  }
+
+  // Update request status
+  await updateDocById('requests', requestId, { 
+    status: 'approved', 
+    approvedBy: adminEmail, 
+    approvedAt: new Date() 
+  });
+};
 
 export const declineRequest = async (requestId: string, adminEmail: string): Promise<void> => 
   updateDocById('requests', requestId, { status: 'declined', declinedBy: adminEmail, declinedAt: new Date() });

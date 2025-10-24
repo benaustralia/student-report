@@ -257,7 +257,16 @@ export const ClassStudentManagementModal: React.FC<ClassStudentManagementModalPr
         </div>
 
         <div className="flex justify-end mt-4">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={() => {
+            // Dispatch event to refresh student data when modal closes
+            window.dispatchEvent(new CustomEvent('dataChanged', { 
+              detail: { 
+                type: 'students', 
+                action: 'refresh'
+              } 
+            }));
+            onClose();
+          }}>
             Close
           </Button>
         </div>

@@ -61,7 +61,6 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     const handleDataChange = async (event: CustomEvent) => {
       const { type, action, itemId } = event.detail || {};
       
-      
       // Only refresh when students are added/updated/deleted
       if (type === 'students') {
         if (action === 'delete' && itemId && hasLoadedStudents) {
@@ -75,7 +74,13 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           setTimeout(() => {
             loadStudents(true);
           }, 100);
-        } else if (action !== 'delete' && action !== 'bulk_import') {
+        } else if (action === 'refresh' && hasLoadedStudents) {
+          // Force refresh when modal closes
+          loadStudentCount();
+          setTimeout(() => {
+            loadStudents(true);
+          }, 100);
+        } else if (action !== 'delete' && action !== 'bulk_import' && action !== 'refresh') {
           // For other additions/updates, reload the full list
           loadStudentCount();
           if (hasLoadedStudents) {
@@ -83,6 +88,18 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
               loadStudents(true);
             }, 100);
           }
+        }
+      }
+      
+      // Also listen for request approvals that might affect this class
+      if (type === 'requests' && action === 'approve') {
+        // Refresh student count and list when any request is approved
+        // This ensures we catch student additions/removals from other sessions
+        if (hasLoadedStudents) {
+          loadStudentCount();
+          setTimeout(() => {
+            loadStudents(true);
+          }, 100);
         }
       }
     };
