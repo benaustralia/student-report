@@ -87,6 +87,32 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
       
       const results = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
       
+<<<<<<< HEAD
+=======
+      // Detailed logging for classes collection
+      if (collectionName === 'classes') {
+        console.log('📚 FIREBASE QUERY DETAILED RESULTS:', {
+          collectionName,
+          conditions,
+          docCount: snapshot.docs.length,
+          queryType: conditions.length > 0 ? 'filtered' : 'all',
+          results: results.map(r => ({
+            id: (r as any).id,
+            teacherEmail: (r as any).teacherEmail,
+            teacherEmailLength: (r as any).teacherEmail?.length,
+            teacherEmailCharCodes: (r as any).teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
+            teacherEmailBytes: new TextEncoder().encode((r as any).teacherEmail || ''),
+            classLevel: (r as any).classLevel,
+            classDay: (r as any).classDay,
+            classTime: (r as any).classTime,
+            createdAt: (r as any).createdAt,
+            updatedAt: (r as any).updatedAt
+          })),
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+>>>>>>> development
       return results;
     } catch (error: any) {
       console.error(`Firebase Query Error: ${queryId}`, { collection: collectionName, error: error.message });
@@ -158,6 +184,23 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
   
   const adminUsers = await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]]);
   
+<<<<<<< HEAD
+=======
+  console.log('🔍 ADMIN CHECK FIREBASE RESULTS:', {
+    email,
+    adminUsersFound: adminUsers.length,
+    adminUsers: adminUsers.map((user: any) => ({
+      id: user.id,
+      email: (user as any).email,
+      emailLength: (user as any).email?.length,
+      emailCharCodes: (user as any).email?.split('').map((c: string) => c.charCodeAt(0)),
+      emailBytes: new TextEncoder().encode((user as any).email || ''),
+      isAdmin: (user as any).isAdmin
+    })),
+    timestamp: new Date().toISOString()
+  });
+  
+>>>>>>> development
   const result = adminUsers.length > 0;
   
   adminCache.set(email, { isAdmin: result, timestamp: Date.now() });
