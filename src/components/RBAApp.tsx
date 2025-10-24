@@ -167,7 +167,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
           id: cls.id,
           teacherEmail: cls.teacherEmail,
           teacherEmailLength: cls.teacherEmail?.length,
-          teacherEmailCharCodes: cls.teacherEmail?.split('').map(c => c.charCodeAt(0)),
+          teacherEmailCharCodes: cls.teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
           teacherEmailBytes: new TextEncoder().encode(cls.teacherEmail || ''),
           exactMatch: cls.teacherEmail === user.email,
           caseInsensitiveMatch: cls.teacherEmail?.toLowerCase() === user.email?.toLowerCase(),
@@ -206,7 +206,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
             allTeacherEmails: allClasses.map(cls => ({
               email: cls.teacherEmail,
               length: cls.teacherEmail?.length,
-              charCodes: cls.teacherEmail?.split('').map(c => c.charCodeAt(0)),
+              charCodes: cls.teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
               bytes: new TextEncoder().encode(cls.teacherEmail || ''),
               id: cls.id
             })),
