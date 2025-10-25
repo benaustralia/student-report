@@ -48,8 +48,9 @@ const CLASS_LOCATION_OPTIONS = [
   'Camberwell',
   'Doncaster Gardens Primary School',
   'Preston',
-  'Doncaster',
+  'Pines',
   'Glen Waverley Primary School'
+  'Serpell Primary School'
 ];
 
 const CONFIG = {
