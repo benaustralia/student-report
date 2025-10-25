@@ -129,74 +129,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         });
       } else {
         // For teacher-only users, filter classes by their email
-<<<<<<< HEAD
         const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
-=======
-        console.log('🔍 DETAILED EMAIL ANALYSIS:', {
-          userEmail: user.email,
-          userEmailLength: user.email?.length,
-          userEmailCharCodes: user.email?.split('').map(c => c.charCodeAt(0)),
-          userEmailBytes: new TextEncoder().encode(user.email || ''),
-          timestamp: new Date().toISOString()
-        });
-
-        // Detailed class analysis
-        const classAnalysis = allClasses.map(cls => ({
-          id: cls.id,
-          teacherEmail: cls.teacherEmail,
-          teacherEmailLength: cls.teacherEmail?.length,
-          teacherEmailCharCodes: cls.teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
-          teacherEmailBytes: new TextEncoder().encode(cls.teacherEmail || ''),
-          exactMatch: cls.teacherEmail === user.email,
-          caseInsensitiveMatch: cls.teacherEmail?.toLowerCase() === user.email?.toLowerCase(),
-          trimmedMatch: cls.teacherEmail?.trim() === user.email?.trim(),
-          includesMatch: cls.teacherEmail?.includes(user.email || '') || user.email?.includes(cls.teacherEmail || ''),
-          classLevel: cls.classLevel,
-          classDay: cls.classDay,
-          classTime: cls.classTime
-        }));
-
-        console.log('🔍 DETAILED CLASS ANALYSIS:', {
-          totalClasses: allClasses.length,
-          classAnalysis: classAnalysis,
-          timestamp: new Date().toISOString()
-        });
-
-        const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
-        
-        console.log('🔍 TEACHER CLASSES FILTERED:', {
-          userEmail: user.email,
-          teacherClassesCount: teacherClasses.length,
-          teacherClasses: teacherClasses.map(cls => ({
-            id: cls.id,
-            teacherEmail: cls.teacherEmail,
-            classLevel: cls.classLevel,
-            classDay: cls.classDay,
-            classTime: cls.classTime
-          })),
-          timestamp: new Date().toISOString()
-        });
-
-        // Additional debugging for empty results
-        if (teacherClasses.length === 0) {
-          console.log('🔍 NO CLASSES FOUND - DETAILED DEBUG:', {
-            userEmail: user.email,
-            allTeacherEmails: allClasses.map(cls => ({
-              email: cls.teacherEmail,
-              length: cls.teacherEmail?.length,
-              charCodes: cls.teacherEmail?.split('').map((c: string) => c.charCodeAt(0)),
-              bytes: new TextEncoder().encode(cls.teacherEmail || ''),
-              id: cls.id
-            })),
-            potentialMatches: allClasses.filter(cls => 
-              cls.teacherEmail?.toLowerCase().includes(user.email?.toLowerCase() || '') ||
-              user.email?.toLowerCase().includes(cls.teacherEmail?.toLowerCase() || '')
-            ),
-            timestamp: new Date().toISOString()
-          });
-        }
-        
->>>>>>> development
         setClasses(teacherClasses);
         setLoading(false);
       }

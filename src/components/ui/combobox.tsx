@@ -64,10 +64,12 @@ export function Combobox({
                 <CommandItem
                   key={option}
                   value={option}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue)
+                  onSelect={() => {
+                    onValueChange(option === value ? "" : option)
                     setOpen(false)
                   }}
+                  className="cursor-pointer opacity-100 pointer-events-auto"
+                  data-disabled="false"
                 >
                   <Check
                     className={cn(

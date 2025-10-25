@@ -25,6 +25,34 @@ const CLASS_LEVEL_OPTIONS = [
   'Sketching'
 ];
 
+const CLASS_DAY_OPTIONS = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday'
+];
+
+const CLASS_TIME_OPTIONS = [
+  '10:30am',
+  '1:30pm',
+  '3:45pm',
+  '4:30pm'
+];
+
+const CLASS_LOCATION_OPTIONS = [
+  'Mount Waverley',
+  'Box Hill',
+  'Balwyn North Primary School',
+  'Camberwell',
+  'Doncaster Gardens Primary School',
+  'Preston',
+  'Doncaster',
+  'Glen Waverley Primary School'
+];
+
 const CONFIG = {
   requests: { icon: FileText, title: 'Requests', fields: ['type', 'status', 'teacherEmail', 'classId', 'studentId', 'studentFirstName', 'studentLastName', 'notes'], empty: { type: 'add_student', status: 'pending', teacherEmail: '', classId: '', notes: '' } },
   users: { icon: Users, title: 'Admins', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: false } },
@@ -204,6 +232,78 @@ export const DataBuilder = () => {
             {CLASS_LEVEL_OPTIONS.map((option) => (
               <SelectItem key={option} value={option}>
                 {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    } else if (field === 'classDay' && type === 'classes') {
+      return (
+        <Select
+          value={(item as Class)[field as keyof Class] as string || ''}
+          onValueChange={(value) => updateItem(type, isNew ? index : item.id || '', field, value, isNew)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select class day..." />
+          </SelectTrigger>
+          <SelectContent>
+            {CLASS_DAY_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    } else if (field === 'classTime' && type === 'classes') {
+      return (
+        <Select
+          value={(item as Class)[field as keyof Class] as string || ''}
+          onValueChange={(value) => updateItem(type, isNew ? index : item.id || '', field, value, isNew)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select class time..." />
+          </SelectTrigger>
+          <SelectContent>
+            {CLASS_TIME_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    } else if (field === 'classLocation' && type === 'classes') {
+      return (
+        <Select
+          value={(item as Class)[field as keyof Class] as string || ''}
+          onValueChange={(value) => updateItem(type, isNew ? index : item.id || '', field, value, isNew)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select class location..." />
+          </SelectTrigger>
+          <SelectContent>
+            {CLASS_LOCATION_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    } else if (field === 'teacherEmail' && type === 'classes') {
+      return (
+        <Select
+          value={(item as Class)[field as keyof Class] as string || ''}
+          onValueChange={(value) => updateItem(type, isNew ? index : item.id || '', field, value, isNew)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select teacher..." />
+          </SelectTrigger>
+          <SelectContent>
+            {data.teachers.map((teacher) => (
+              <SelectItem key={teacher.id} value={(teacher as Teacher).email}>
+                {(teacher as Teacher).firstName} {(teacher as Teacher).lastName} ({(teacher as Teacher).email})
               </SelectItem>
             ))}
           </SelectContent>

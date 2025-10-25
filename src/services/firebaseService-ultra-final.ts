@@ -87,8 +87,6 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
       
       const results = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
       
-<<<<<<< HEAD
-=======
       // Detailed logging for classes collection
       if (collectionName === 'classes') {
         console.log('📚 FIREBASE QUERY DETAILED RESULTS:', {
@@ -111,8 +109,6 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
           timestamp: new Date().toISOString()
         });
       }
-      
->>>>>>> development
       return results;
     } catch (error: any) {
       console.error(`Firebase Query Error: ${queryId}`, { collection: collectionName, error: error.message });
@@ -184,8 +180,6 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
   
   const adminUsers = await getDocsByQuery('adminUsers', [['email', '==', email], ['isAdmin', '==', true]]);
   
-<<<<<<< HEAD
-=======
   console.log('🔍 ADMIN CHECK FIREBASE RESULTS:', {
     email,
     adminUsersFound: adminUsers.length,
@@ -199,8 +193,6 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
     })),
     timestamp: new Date().toISOString()
   });
-  
->>>>>>> development
   const result = adminUsers.length > 0;
   
   adminCache.set(email, { isAdmin: result, timestamp: Date.now() });
