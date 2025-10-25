@@ -14,16 +14,22 @@ interface ClassCardProps {
   classData: Class;
   selectedStudentId?: string | null;
   onStudentSelected?: (studentId: string) => void;
+  isOpen?: boolean;
+  onToggle?: (isOpen: boolean) => void;
 }
 
-export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, selectedStudentId, onStudentSelected }) => {
+export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, selectedStudentId, onStudentSelected, isOpen: externalIsOpen, onToggle }) => {
   const [students, setStudents] = useState<Student[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [studentCount, setStudentCount] = useState<number | null>(null);
   const [hasLoadedStudents, setHasLoadedStudents] = useState(false);
   const [showStudentModal, setShowStudentModal] = useState(false);
+
+  // Use external state if provided, otherwise use internal state
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = onToggle || setInternalIsOpen;
 
   const loadStudents = async (forceReload = false) => {
     if (students.length > 0 && !forceReload) return; // Already loaded, unless forced

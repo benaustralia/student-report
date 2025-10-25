@@ -54,7 +54,7 @@ const CLASS_LOCATION_OPTIONS = [
 
 const CONFIG = {
   requests: { icon: FileText, title: 'Requests', fields: ['type', 'status', 'teacherEmail', 'classId', 'studentId', 'studentFirstName', 'studentLastName', 'notes'], empty: { type: 'add_student', status: 'pending', teacherEmail: '', classId: '', notes: '' } },
-  users: { icon: Users, title: 'Admins', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: false } },
+  users: { icon: Users, title: 'Admins', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: true } },
   classes: { icon: BookOpen, title: 'Classes', fields: ['classLevel', 'classDay', 'classTime', 'classLocation', 'teacherEmail'], empty: { classLevel: '', classDay: '', classTime: '', classLocation: '', teacherEmail: '' } },
   students: { icon: GraduationCap, title: 'Students', fields: ['firstName', 'lastName', 'classId'], empty: { firstName: '', lastName: '', classId: '' } },
   teachers: { icon: Users, title: 'Teachers', fields: ['firstName', 'lastName', 'email'], empty: { firstName: '', lastName: '', email: '' } }
@@ -65,6 +65,14 @@ const OPS = {
   update: { users: updateUser, classes: updateClass, students: updateStudent, teachers: updateTeacher, requests: updateRequest }, 
   delete: { users: deleteUser, classes: deleteClass, students: deleteStudent, teachers: deleteTeacher, requests: deleteRequest }, 
   getAll: [getAllUsers, getAllClasses, getAllStudents, getAllTeachers, getAllRequests] 
+};
+
+// Utility function to convert camelCase to title case
+const formatFieldLabel = (field: string): string => {
+  return field
+    .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+    .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+    .trim(); // Remove any leading/trailing spaces
 };
 
 export const DataBuilder = () => {
@@ -322,6 +330,22 @@ export const DataBuilder = () => {
           </SelectContent>
         </Select>
       );
+    } else if (field === 'isAdmin' && type === 'users') {
+      // Only show isAdmin field when editing existing users, not when creating new ones
+      if (isNew) {
+        return null; // Don't render the field for new admin users
+      }
+      return (
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={(item as AdminUser)[field as keyof AdminUser] as boolean || false}
+            onChange={(e) => updateItem(type, isNew ? index : item.id || '', field, e.target.checked, isNew)}
+            className="rounded border-gray-300"
+          />
+          <span className="text-sm text-muted-foreground">Admin privileges</span>
+        </div>
+      );
     } else {
       return (
         <Input
@@ -399,12 +423,17 @@ export const DataBuilder = () => {
                           >
                             {editing.has(item.id!) && (
                               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                                {config.fields.map((field: string) => (
-                                  <div key={field}>
-                                    <label className="text-sm font-medium">{field}</label>
-                                    {renderField(type, item, field, 0, false)}
-                                  </div>
-                                ))}
+                                {config.fields.map((field: string) => {
+                                  const fieldElement = renderField(type, item, field, 0, false);
+                                  // Don't render label if field is hidden (returns null)
+                                  if (fieldElement === null) return null;
+                                  return (
+                                    <div key={field}>
+                                      <label className="text-sm font-medium">{formatFieldLabel(field)}</label>
+                                      {fieldElement}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </CollapsibleItem>
@@ -575,7 +604,12 @@ export const DataBuilder = () => {
   const renderFlatItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => 
     items.map(item => (
       <CollapsibleItem key={item.id} title={`${(item as AdminUser & { id: string } | Teacher).firstName} ${(item as AdminUser & { id: string } | Teacher).lastName}`} subtitle={(item as AdminUser & { id: string } | Teacher).email} isEditing={editing.has(item.id!)} onEdit={() => setEditing(prev => new Set([...prev, item.id!]))} onSave={() => handleAction('update', type, item, 0)} onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))} onDelete={() => handleAction('delete', type, item, 0)}>
-        {editing.has(item.id!) && <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">{config.fields.map((field: string) => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(type, item, field, 0, false)}</div>)}</div>}
+        {editing.has(item.id!) && <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">{config.fields.map((field: string) => {
+          const fieldElement = renderField(type, item, field, 0, false);
+          // Don't render label if field is hidden (returns null)
+          if (fieldElement === null) return null;
+          return <div key={field}><label className="text-sm font-medium">{formatFieldLabel(field)}</label>{fieldElement}</div>;
+        })}</div>}
       </CollapsibleItem>
     ));
 
@@ -614,16 +648,21 @@ export const DataBuilder = () => {
                 {['students', 'classes'].includes(dataType) ? renderGroupedItems(dataType, items, config) : renderFlatItems(dataType, items, config)}
                 {newItems[dataType]?.map((item, index) => (
                   <div key={index} className="p-4 border rounded-lg space-y-4">
-                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">{config.fields.map(field => <div key={field}><label className="text-sm font-medium">{field}</label>{renderField(dataType, item, field, index, true)}</div>)}</div>
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">{config.fields.map(field => {
+                      const fieldElement = renderField(dataType, item, field, index, true);
+                      // Don't render label if field is hidden (returns null)
+                      if (fieldElement === null) return null;
+                      return <div key={field}><label className="text-sm font-medium">{formatFieldLabel(field)}</label>{fieldElement}</div>;
+                    })}</div>
                   </div>
                 ))}
                 {newItems[dataType]?.length > 0 && (
                   <div className="flex gap-2 flex-wrap">
-                    <Button onClick={() => handleAction('submit', dataType, null, 0)} className="bg-green-600 hover:bg-green-700 text-white">Submit {newItems[dataType].length} New {CONFIG[dataType].title}</Button>
+                    <Button onClick={() => handleAction('submit', dataType, null, 0)} variant="default">Submit {newItems[dataType].length} New {CONFIG[dataType].title}</Button>
                   </div>
                 )}
                 <div className="flex gap-2 flex-wrap">
-                  <Button onClick={() => handleAction('add', dataType, null, 0)} className="bg-primary hover:bg-primary/90"><Plus className="h-4 w-4 mr-2" />Add New</Button>
+                  <Button onClick={() => handleAction('add', dataType, null, 0)} variant="default"><Plus />Add New</Button>
                 </div>
               </>
             )}

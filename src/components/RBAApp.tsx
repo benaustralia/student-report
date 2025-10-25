@@ -32,6 +32,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState({ adminPanel: true, allClasses: false });
   const [activeAdminTab, setActiveAdminTab] = useState('browse');
+  const [openClassCardId, setOpenClassCardId] = useState<string | null>(null);
   
   // Prevent duplicate loading in React strict mode
   const isLoadingRef = React.useRef(false);
@@ -49,6 +50,17 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       // If closing a section, just update that section
       return { ...prev, [section]: false };
     });
+  };
+
+  // Handle class card toggle with auto-close functionality
+  const handleClassCardToggle = (classId: string, isOpen: boolean) => {
+    if (isOpen) {
+      // Opening a class card - close all others
+      setOpenClassCardId(classId);
+    } else {
+      // Closing a class card
+      setOpenClassCardId(null);
+    }
   };
 
 
@@ -311,9 +323,25 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
                   acc[teacherKey].classes.push(classData);
                   return acc;
                 }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
-                  <TeacherCard key={teacherData.teacherEmail} teacherName={teacherData.teacherName} teacherEmail={teacherData.teacherEmail} classes={teacherData.classes} selectedStudentId={selectedStudentId} onStudentSelected={handleNavigateToStudent} />
+                  <TeacherCard 
+                    key={teacherData.teacherEmail} 
+                    teacherName={teacherData.teacherName} 
+                    teacherEmail={teacherData.teacherEmail} 
+                    classes={teacherData.classes} 
+                    selectedStudentId={selectedStudentId} 
+                    onStudentSelected={handleNavigateToStudent}
+                    openClassCardId={openClassCardId}
+                    onClassCardToggle={handleClassCardToggle}
+                  />
                 )) : classes.map((classData) => (
-                  <ClassCard key={classData.id} classData={classData} selectedStudentId={selectedStudentId} onStudentSelected={handleNavigateToStudent} />
+                  <ClassCard 
+                    key={classData.id} 
+                    classData={classData} 
+                    selectedStudentId={selectedStudentId} 
+                    onStudentSelected={handleNavigateToStudent}
+                    isOpen={openClassCardId === classData.id}
+                    onToggle={(isOpen) => handleClassCardToggle(classData.id, isOpen)}
+                  />
                 ))}
               </div>
             )}

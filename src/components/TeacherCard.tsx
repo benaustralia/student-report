@@ -13,6 +13,8 @@ interface TeacherCardProps {
   classes: Class[];
   selectedStudentId?: string | null;
   onStudentSelected?: (studentId: string) => void;
+  openClassCardId?: string | null;
+  onClassCardToggle?: (classId: string, isOpen: boolean) => void;
 }
 
 export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({ 
@@ -20,7 +22,9 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
   teacherEmail, 
   classes,
   selectedStudentId,
-  onStudentSelected
+  onStudentSelected,
+  openClassCardId,
+  onClassCardToggle
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
@@ -141,6 +145,8 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
                   classData={classData}
                   selectedStudentId={selectedStudentId}
                   onStudentSelected={onStudentSelected}
+                  isOpen={openClassCardId === classData.id}
+                  onToggle={(isOpen) => onClassCardToggle?.(classData.id, isOpen)}
                 />
               ))}
             </div>
