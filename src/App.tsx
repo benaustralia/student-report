@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2 } from 'lucide-react';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuthContext } from './hooks/useAuthContext';
-import { signInWithGoogle } from './services/firebaseService-ultra-final';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from '@/components/ui/sonner';
 import { RBAApp } from './components/RBAApp';
+import { LoginForm } from './components/LoginForm';
 
 function AppContent() {
   const { user, loading, error } = useAuthContext();
@@ -19,19 +19,9 @@ function AppContent() {
     }
   }, [user]);
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
-    setIsSigningIn(true);
-    try {
-      await signInWithGoogle(credentialResponse.credential);
-    } catch (error) {
-      console.error('🔴 Sign in error:', error);
-      alert('Sign in failed. Please try again.');
-      setIsSigningIn(false);
-    }
-  };
-
-  const handleGoogleError = () => {
-    console.error('🔴 Google Sign-In failed');
+  const handleSignIn = () => {
+    // This will be called when authentication is successful
+    setIsSigningIn(false);
   };
 
 
@@ -63,38 +53,11 @@ function AppContent() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">NSA Student Reports</h2>
-          <Card className="mx-auto max-w-sm border-2 border-gray-300">
-            <CardHeader>
-              <CardTitle className="text-2xl text-black">Welcome back</CardTitle>
-              <CardDescription className="text-gray-600">
-                Login with your Google account
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6">
-                {isSigningIn ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    <span>Signing you in...</span>
-                  </div>
-                ) : (
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    useOneTap={false}
-                    theme="outline"
-                    size="large"
-                    text="signin_with"
-                    shape="rectangular"
-                    logo_alignment="left"
-                  />
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <LoginForm 
+          onSignIn={handleSignIn}
+          isSigningIn={isSigningIn}
+          setIsSigningIn={setIsSigningIn}
+        />
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, writeBatch, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../config/firebase';
 import type { Class, Student, ReportData, Teacher, AdminUser, LegacyReportData, Request } from '../types';
@@ -170,6 +170,24 @@ export const signInWithGoogle = async (credential?: string) => {
 
 export const signOutUser = () => signOut(auth);
 export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthStateChanged(auth, callback);
+
+// Email/Password Authentication Functions
+export const signUpWithEmail = async (email: string, password: string, displayName?: string) => {
+  const result = await createUserWithEmailAndPassword(auth, email, password);
+  if (displayName && result.user) {
+    await updateProfile(result.user, { displayName });
+  }
+  return result.user;
+};
+
+export const signInWithEmail = async (email: string, password: string) => {
+  const result = await signInWithEmailAndPassword(auth, email, password);
+  return result.user;
+};
+
+export const resetPassword = async (email: string) => {
+  await sendPasswordResetEmail(auth, email);
+};
 
 // Ultra-compact admin check with monadic composition + function merging
 export const isUserAdmin = async (email: string): Promise<boolean> => {
