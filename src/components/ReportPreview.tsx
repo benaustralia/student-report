@@ -47,28 +47,85 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   // Convert URL to data URL for images
   const convertUrlToDataUrl = async (url: string): Promise<string> => new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { 
-          reject(new Error('Could not get canvas context'));
-          return; 
+    
+    // For Firebase Storage URLs, try without crossOrigin first, then with it
+    const isFirebaseStorage = url.includes('firebasestorage.googleapis.com');
+    
+    if (isFirebaseStorage) {
+      // Try without crossOrigin first for Firebase Storage URLs
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { 
+            reject(new Error('Could not get canvas context'));
+            return; 
+          }
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
+        } catch (error) { 
+          console.error('Canvas conversion failed:', error);
+          reject(error);
         }
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg', 0.9));
-      } catch (error) { 
-        console.error('Canvas conversion failed:', error);
-        reject(error);
-      }
-    };
-    img.onerror = () => {
-      console.error('Image load failed:', url);
-      reject(new Error(`Failed to load image: ${url}`));
-    };
+      };
+      
+      img.onerror = () => {
+        console.warn('Firebase Storage image failed without crossOrigin, trying with crossOrigin:', url);
+        // Retry with crossOrigin
+        const retryImg = new Image();
+        retryImg.crossOrigin = 'anonymous';
+        retryImg.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { 
+              reject(new Error('Could not get canvas context'));
+              return; 
+            }
+            canvas.width = retryImg.naturalWidth;
+            canvas.height = retryImg.naturalHeight;
+            ctx.drawImage(retryImg, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
+          } catch (error) { 
+            console.error('Canvas conversion failed on retry:', error);
+            reject(error);
+          }
+        };
+        retryImg.onerror = () => {
+          console.error('Image load failed even with crossOrigin:', url);
+          reject(new Error(`Failed to load image: ${url}`));
+        };
+        retryImg.src = url;
+      };
+    } else {
+      // For non-Firebase URLs, use crossOrigin
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { 
+            reject(new Error('Could not get canvas context'));
+            return; 
+          }
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
+        } catch (error) { 
+          console.error('Canvas conversion failed:', error);
+          reject(error);
+        }
+      };
+      
+      img.onerror = () => {
+        console.error('Image load failed:', url);
+        reject(new Error(`Failed to load image: ${url}`));
+      };
+    }
+    
     img.src = url;
   });
 
