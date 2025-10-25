@@ -49,7 +49,7 @@ const CLASS_LOCATION_OPTIONS = [
   'Doncaster Gardens Primary School',
   'Preston',
   'Pines',
-  'Glen Waverley Primary School'
+  'Glen Waverley Primary School',
   'Serpell Primary School'
 ];
 
