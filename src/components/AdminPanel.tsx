@@ -19,6 +19,31 @@ interface AdminPanelProps {
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => {
   const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[], teacherDisplayNames: {} as Record<string, string> });
 
+  // Handle accordion state changes with auto-close functionality for Users and Classes
+  const handleBrowseAccordionChange = (section: 'users' | 'classes', isOpen: boolean) => {
+    setState(prev => {
+      // If opening a section, close the other one
+      if (isOpen) {
+        return {
+          ...prev,
+          openSections: {
+            ...prev.openSections,
+            users: section === 'users' ? true : false,
+            classes: section === 'classes' ? true : false
+          }
+        };
+      }
+      // If closing a section, just update that section
+      return {
+        ...prev,
+        openSections: {
+          ...prev.openSections,
+          [section]: false
+        }
+      };
+    });
+  };
+
   const loadData = async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
@@ -122,16 +147,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
 
   return (
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
+      <StatisticsBar />
       <Tabs defaultValue="browse" className="w-full" onValueChange={onTabChange}>
             <TabsList className="w-full">
               <TabsTrigger value="browse" className="flex-1">Browse</TabsTrigger>
               <TabsTrigger value="build" className="flex-1">Build</TabsTrigger>
             </TabsList>
             <TabsContent value="browse" className="space-y-4">
-              <StatisticsBar />
               
               {(state.data.adminCount > 0 || state.data.teacherCount > 0) && (
-                <Card><Collapsible open={state.openSections.users} onOpenChange={() => setState(prev => ({ ...prev, openSections: { ...prev.openSections, users: !prev.openSections.users } }))}>
+                <Card><Collapsible open={state.openSections.users} onOpenChange={(isOpen) => handleBrowseAccordionChange('users', isOpen)}>
             <CollapsibleTrigger asChild><CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="flex items-center gap-2">
@@ -164,7 +189,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
           </Collapsible></Card>)}
         
         {state.data.classes.length > 0 && (
-          <Card><Collapsible open={state.openSections.classes} onOpenChange={() => setState(prev => ({ ...prev, openSections: { ...prev.openSections, classes: !prev.openSections.classes } }))}>
+          <Card><Collapsible open={state.openSections.classes} onOpenChange={(isOpen) => handleBrowseAccordionChange('classes', isOpen)}>
             <CollapsibleTrigger asChild><CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="flex items-center gap-2">

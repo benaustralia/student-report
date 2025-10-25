@@ -6,7 +6,6 @@ import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
 import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X } from 'lucide-react';
 import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher, getAllRequests, importRequests, updateRequest, deleteRequest, approveRequest, declineRequest } from '@/services/firebaseService-ultra-final';
-import { StatisticsBar } from './StatisticsBar';
 import { BulkStudentImport } from './BulkStudentImport';
 import { toast } from 'sonner';
 import type { AdminUser, Class, Student, Teacher, Request } from '@/types';
@@ -73,9 +72,23 @@ export const DataBuilder = () => {
   const [data, setData] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [], requests: [] });
   const [newItems, setNewItems] = useState<Record<DataType, ItemType[]>>({ users: [], classes: [], students: [], teachers: [], requests: [] });
   const [editing, setEditing] = useState<Set<string>>(new Set());
-  const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ requests: true, users: true, classes: false, students: false, teachers: false });
+  const [openSections, setOpenSections] = useState<Record<DataType, boolean>>({ requests: true, users: false, classes: false, students: false, teachers: false });
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [showBulkImport, setShowBulkImport] = useState<string | null>(null);
+
+  // Handle accordion state changes with auto-close functionality
+  const handleAccordionToggle = (dataType: DataType, isOpen: boolean) => {
+    setOpenSections(prev => {
+      // If opening a section, close all others
+      if (isOpen) {
+        const newSections = { requests: false, users: false, classes: false, students: false, teachers: false };
+        newSections[dataType] = true;
+        return newSections;
+      }
+      // If closing a section, just update that section
+      return { ...prev, [dataType]: false };
+    });
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -568,8 +581,6 @@ export const DataBuilder = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
-      <StatisticsBar />
-      
       {Object.entries(CONFIG).map(([type, config]) => {
         const Icon = config.icon;
         const dataType = type as DataType;
@@ -586,7 +597,7 @@ export const DataBuilder = () => {
               : `${items.length}`
             } 
             isOpen={openSections[dataType]} 
-            onToggle={open => setOpenSections(prev => ({ ...prev, [dataType]: open }))}
+            onToggle={open => handleAccordionToggle(dataType, open)}
           >
             {dataType === 'requests' ? (
               // Special rendering for requests - only show pending requests

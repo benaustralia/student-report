@@ -30,11 +30,26 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [teacherDisplayNames, setTeacherDisplayNames] = useState<Record<string, string>>({});
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [openSections, setOpenSections] = useState({ adminPanel: true, allClasses: true });
+  const [openSections, setOpenSections] = useState({ adminPanel: true, allClasses: false });
   const [activeAdminTab, setActiveAdminTab] = useState('browse');
   
   // Prevent duplicate loading in React strict mode
   const isLoadingRef = React.useRef(false);
+
+  // Handle accordion state changes with auto-close functionality
+  const handleAccordionChange = (section: 'adminPanel' | 'allClasses', isOpen: boolean) => {
+    setOpenSections(prev => {
+      // If opening a section, close the other one
+      if (isOpen) {
+        return {
+          adminPanel: section === 'adminPanel' ? true : false,
+          allClasses: section === 'allClasses' ? true : false
+        };
+      }
+      // If closing a section, just update that section
+      return { ...prev, [section]: false };
+    });
+  };
 
 
   const handleNavigateToStudent = async (studentId: string) => {
@@ -242,7 +257,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     </div>
     {isAdmin && (
       <Card>
-        <Collapsible open={openSections.adminPanel} onOpenChange={() => setOpenSections(prev => ({ ...prev, adminPanel: !prev.adminPanel }))}>
+        <Collapsible open={openSections.adminPanel} onOpenChange={(isOpen) => handleAccordionChange('adminPanel', isOpen)}>
           <CollapsibleTrigger asChild>
             <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between gap-2">
@@ -266,7 +281,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     )}
     {activeAdminTab !== 'build' && (
       <Card>
-      <Collapsible open={openSections.allClasses} onOpenChange={() => setOpenSections(prev => ({ ...prev, allClasses: !prev.allClasses }))}>
+      <Collapsible open={openSections.allClasses} onOpenChange={(isOpen) => handleAccordionChange('allClasses', isOpen)}>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between gap-2">
