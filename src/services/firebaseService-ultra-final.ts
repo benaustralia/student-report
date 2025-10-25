@@ -503,5 +503,56 @@ export const removeDuplicateAdminUsers = async (): Promise<{ removed: number; ke
   return { removed, kept };
 };
 
+export const deduplicateStudents = async (): Promise<{ removed: number; kept: number; details: Array<{ studentName: string; classId: string; removedCount: number }> }> => {
+  const students = await getAllStudents();
+  
+  // Group students by (firstName, lastName, classId) to find duplicates
+  const studentGroups = new Map<string, Student[]>();
+  
+  students.forEach(student => {
+    const key = `${student.firstName}|${student.lastName}|${student.classId}`;
+    if (!studentGroups.has(key)) {
+      studentGroups.set(key, []);
+    }
+    studentGroups.get(key)!.push(student);
+  });
+  
+  let removed = 0;
+  let kept = 0;
+  const details: Array<{ studentName: string; classId: string; removedCount: number }> = [];
+  
+  for (const [, studentGroup] of studentGroups) {
+    if (studentGroup.length > 1) {
+      // Keep the first one, remove the rest
+      const toRemove = studentGroup.slice(1);
+      
+      try {
+        // Delete duplicates in batches
+        const batch = writeBatch(db);
+        toRemove.forEach(student => batch.delete(doc(db, 'students', student.id)));
+        await batch.commit();
+        
+        removed += toRemove.length;
+        kept += 1;
+        
+        // Track details for reporting
+        details.push({
+          studentName: `${studentGroup[0].firstName} ${studentGroup[0].lastName}`,
+          classId: studentGroup[0].classId,
+          removedCount: toRemove.length
+        });
+      } catch (error) {
+        console.error('Error removing duplicate students:', error);
+        // Continue with next group even if this one fails
+        kept += 1;
+      }
+    } else {
+      kept += 1;
+    }
+  }
+  
+  return { removed, kept, details };
+};
+
 export const isUserWhitelisted = async (email: string): Promise<boolean> => 
   (await getDocsByQuery('whitelistedUsers', [['email', '==', email]])).length > 0;

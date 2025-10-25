@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Loader2, Download, Upload, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { importStudents } from '@/services/firebaseService-ultra-final';
+import { Loader2, Upload, CheckCircle, XCircle, AlertCircle, Users } from 'lucide-react';
+import { importStudents, getStudentsForClass } from '@/services/firebaseService-ultra-final';
 import type { Class, Student } from '@/types';
 
 interface BulkStudentImportProps {
@@ -34,26 +34,28 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [existingStudents, setExistingStudents] = useState<Student[]>([]);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
-  const downloadTemplate = () => {
+  // Load existing students when modal opens
+  useEffect(() => {
+    if (isOpen && classData) {
+      loadExistingStudents();
+    }
+  }, [isOpen, classData]);
+
+  const loadExistingStudents = async () => {
     if (!classData) return;
     
-    const template = 'firstName,lastName\nJohn,Smith\nJane,Doe\nBob,Johnson';
-    const blob = new Blob([template], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    
-    // Create class-specific filename: students-template-{classLevel}-{classDay}-{classTime}
-    const sanitizedLevel = classData.classLevel.replace(/[^a-zA-Z0-9]/g, '');
-    const sanitizedDay = classData.classDay.replace(/[^a-zA-Z0-9]/g, '');
-    const sanitizedTime = classData.classTime.replace(/[^a-zA-Z0-9]/g, '');
-    
-    a.download = `students-template-${sanitizedLevel}-${sanitizedDay}-${sanitizedTime}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setLoadingExisting(true);
+    try {
+      const students = await getStudentsForClass(classData.id);
+      setExistingStudents(students);
+    } catch (error) {
+      console.error('Error loading existing students:', error);
+    } finally {
+      setLoadingExisting(false);
+    }
   };
 
   const parseCSV = (data: string): ParsedStudent[] => {
@@ -169,27 +171,39 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
             Import Students for {classData?.classLevel} - {classData?.classDay} at {classData?.classTime}
           </DialogTitle>
           <DialogDescription>
-            Import multiple students at once using CSV format. Download the template below for the correct format.
+            Import multiple students at once using CSV format (firstName,lastName or firstName lastName or firstName	lastName).
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Template Download */}
+          {/* Existing Students */}
           <Card>
             <CardHeader className="pb-3">
               <h3 className="text-base font-semibold flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                CSV Template
+                <Users className="h-4 w-4" />
+                Existing Students in This Class
+                <Badge variant="secondary" className="ml-2">{existingStudents.length}</Badge>
               </h3>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-sm text-muted-foreground mb-3">
-                Download the CSV template with the correct format for this specific class, then paste your student data below.
-              </p>
-              <Button variant="outline" size="sm" onClick={downloadTemplate}>
-                <Download className="h-4 w-4 mr-2" />
-                Download Template
-              </Button>
+              {loadingExisting ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-muted-foreground">Loading students...</span>
+                </div>
+              ) : existingStudents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No students in this class yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto">
+                  {existingStudents.map((student) => (
+                    <div key={student.id} className="flex items-center gap-2 p-2 rounded border">
+                      <div className="font-medium text-sm">
+                        {student.firstName} {student.lastName}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -200,15 +214,12 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
             </CardHeader>
             <CardContent className="pt-0">
               <Textarea
-                placeholder="Paste your CSV data here (firstName,lastName)..."
+                placeholder="Paste your CSV data here...&#10;Format: firstName,lastName or firstName lastName or firstName lastName&#10;Example:&#10;John,Smith&#10;Jane Doe&#10;Bob	Johnson"
                 value={csvData}
                 onChange={(e) => handleCSVChange(e.target.value)}
                 className="min-h-[120px] font-mono text-sm"
                 disabled={isProcessing}
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                Format: firstName,lastName or firstName lastName or firstName	lastName (one student per line)
-              </p>
             </CardContent>
           </Card>
 

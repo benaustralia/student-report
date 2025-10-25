@@ -19,7 +19,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   onChange,
   onRemove,
   disabled = false,
-  maxSize = 5,
+  maxSize = 20,
   acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
   className,
 }) => {
@@ -38,7 +38,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       }
       
       if (file.size > maxSize * 1024 * 1024) {
-        alert(`File size must be less than ${maxSize}MB`);
+        alert(`File size must be less than ${maxSize}MB. Large images will be automatically compressed for optimal quality.`);
         setUploading(false);
         return;
       }

@@ -67,8 +67,8 @@ export const useImageUploadV2 = ({
         // Note: deleteImageFromStorage handles errors internally and doesn't throw
       }
 
-      // Compress the image first
-      const compressedFile = await compressImage(file, 800, 0.8);
+      // Compress the image first - higher quality for 300dpi printing
+      const compressedFile = await compressImage(file, 1200, 0.9);
       
       // Generate storage path
       const storagePath = generateImagePath(userId, file.name);
