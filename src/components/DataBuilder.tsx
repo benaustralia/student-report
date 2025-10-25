@@ -4,8 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { CollapsibleItem } from '@/components/ui/collapsible-item';
-import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X } from 'lucide-react';
-import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher, getAllRequests, importRequests, updateRequest, deleteRequest, approveRequest, declineRequest } from '@/services/firebaseService-ultra-final';
+import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X, Trash2 } from 'lucide-react';
+import { importUsers, importClasses, importStudents, importTeachers, getAllUsers, getAllClasses, getAllStudents, getAllTeachers, updateUser, deleteUser, updateClass, deleteClass, updateStudent, deleteStudent, updateTeacher, deleteTeacher, getAllRequests, importRequests, updateRequest, deleteRequest, approveRequest, declineRequest, deduplicateStudents } from '@/services/firebaseService-ultra-final';
 import { BulkStudentImport } from './BulkStudentImport';
 import { toast } from 'sonner';
 import type { AdminUser, Class, Student, Teacher, Request } from '@/types';
@@ -377,77 +377,124 @@ export const DataBuilder = () => {
     return teacher ? `${teacher.firstName} ${teacher.lastName}` : email;
   };
 
+  const handleDedupeStudents = async () => {
+    try {
+      const result = await deduplicateStudents();
+      
+      if (result.removed === 0) {
+        toast.success('No duplicate students found!');
+      } else {
+        toast.success(`Removed ${result.removed} duplicate students. Kept ${result.kept} unique students.`);
+      }
+      
+      // Refresh data
+      const results = await Promise.all(OPS.getAll.map(fn => fn()));
+      setData({ 
+        users: (results[0] || []) as ItemType[], 
+        classes: (results[1] || []) as ItemType[], 
+        students: (results[2] || []) as ItemType[], 
+        teachers: (results[3] || []) as ItemType[],
+        requests: (results[4] || []) as ItemType[]
+      });
+      
+      // Notify other components that data has changed
+      window.dispatchEvent(new CustomEvent('dataChanged', { 
+        detail: { 
+          type: 'students', 
+          action: 'dedupe',
+          removed: result.removed
+        } 
+      }));
+    } catch (error: unknown) {
+      toast.error(`Failed to deduplicate students: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   const renderGroupedItems = (type: DataType, items: ItemType[], config: { fields: string[] }) => {
     if (type === 'students') {
       // For students, group by teacher first, then by class within each teacher
       const teacherGroups = groupByTeacher(items, item => (data.classes.find(c => c.id === (item as Student).classId) as Class)?.teacherEmail || '', type);
       
-      return Object.entries(teacherGroups).map(([teacher, groupItems]: [string, ItemType[]]) => {
-        // Group students by class within this teacher
-        const classGroups = groupItems.reduce((groups: Record<string, ItemType[]>, item: ItemType) => {
-          const classId = (item as Student).classId || 'No Class';
-          const className = classId === 'No Class' ? 'No Class Assigned' : 
-            (data.classes.find(c => c.id === classId) as Class)?.classDay + ' ' + 
-            (data.classes.find(c => c.id === classId) as Class)?.classTime || 'Unknown Class';
-          (groups[className] = groups[className] || []).push(item);
-          return groups;
-        }, {});
-
-        return (
-          <div key={teacher} className="mb-4">
-            <div className="flex items-center cursor-pointer p-2 bg-muted rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
-              {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
-              <span className="font-medium">{getTeacherName(teacher)}</span>
-              <span className="ml-2 text-sm text-muted-foreground">({groupItems.length})</span>
-            </div>
-            {openGroups[`${type}-${teacher}`] && (
-              <div className="ml-6 space-y-3">
-                {Object.entries(classGroups).map(([className, classItems]: [string, ItemType[]]) => (
-                  <div key={className}>
-                    <div className="flex items-center cursor-pointer p-2 bg-muted/50 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}-${className}`]: !prev[`${type}-${teacher}-${className}`] }))}>
-                      {openGroups[`${type}-${teacher}-${className}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
-                      <span className="font-medium text-sm">{className}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">({classItems.length})</span>
-                    </div>
-                    {openGroups[`${type}-${teacher}-${className}`] && (
-                      <div className="ml-6 space-y-2">
-                        {classItems.map(item => (
-                          <CollapsibleItem
-                            key={item.id}
-                            title={`${(item as Student).firstName} ${(item as Student).lastName}`}
-                            subtitle={(data.classes.find(c => c.id === (item as Student).classId) as Class)?.classLevel || 'No Class'}
-                            isEditing={editing.has(item.id!)}
-                            onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
-                            onSave={() => handleAction('update', type, item, 0)}
-                            onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))}
-                            onDelete={() => handleAction('delete', type, item, 0)}
-                          >
-                            {editing.has(item.id!) && (
-                              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                                {config.fields.map((field: string) => {
-                                  const fieldElement = renderField(type, item, field, 0, false);
-                                  // Don't render label if field is hidden (returns null)
-                                  if (fieldElement === null) return null;
-                                  return (
-                                    <div key={field}>
-                                      <label className="text-sm font-medium">{formatFieldLabel(field)}</label>
-                                      {fieldElement}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </CollapsibleItem>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+      return (
+        <>
+          <div className="mb-4">
+            <Button 
+              onClick={handleDedupeStudents}
+              variant="outline"
+              className="w-full"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              De-Dupe Students
+            </Button>
           </div>
-        );
-      });
+          {Object.entries(teacherGroups).map(([teacher, groupItems]: [string, ItemType[]]) => {
+            // Group students by class within this teacher
+            const classGroups = groupItems.reduce((groups: Record<string, ItemType[]>, item: ItemType) => {
+              const classId = (item as Student).classId || 'No Class';
+              const className = classId === 'No Class' ? 'No Class Assigned' : 
+                (data.classes.find(c => c.id === classId) as Class)?.classDay + ' ' + 
+                (data.classes.find(c => c.id === classId) as Class)?.classTime || 'Unknown Class';
+              (groups[className] = groups[className] || []).push(item);
+              return groups;
+            }, {});
+
+            return (
+              <div key={teacher} className="mb-4">
+                <div className="flex items-center cursor-pointer p-2 bg-muted rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
+                  {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
+                  <span className="font-medium">{getTeacherName(teacher)}</span>
+                  <span className="ml-2 text-sm text-muted-foreground">({groupItems.length})</span>
+                </div>
+                {openGroups[`${type}-${teacher}`] && (
+                  <div className="ml-6 space-y-3">
+                    {Object.entries(classGroups).map(([className, classItems]: [string, ItemType[]]) => (
+                      <div key={className}>
+                        <div className="flex items-center cursor-pointer p-2 bg-muted/50 rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}-${className}`]: !prev[`${type}-${teacher}-${className}`] }))}>
+                          {openGroups[`${type}-${teacher}-${className}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
+                          <span className="font-medium text-sm">{className}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">({classItems.length})</span>
+                        </div>
+                        {openGroups[`${type}-${teacher}-${className}`] && (
+                          <div className="ml-6 space-y-2">
+                            {classItems.map(item => (
+                              <CollapsibleItem
+                                key={item.id}
+                                title={`${(item as Student).firstName} ${(item as Student).lastName}`}
+                                subtitle={(data.classes.find(c => c.id === (item as Student).classId) as Class)?.classLevel || 'No Class'}
+                                isEditing={editing.has(item.id!)}
+                                onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
+                                onSave={() => handleAction('update', type, item, 0)}
+                                onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))}
+                                onDelete={() => handleAction('delete', type, item, 0)}
+                              >
+                                {editing.has(item.id!) && (
+                                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                                    {config.fields.map((field: string) => {
+                                      const fieldElement = renderField(type, item, field, 0, false);
+                                      // Don't render label if field is hidden (returns null)
+                                      if (fieldElement === null) return null;
+                                      return (
+                                        <div key={field}>
+                                          <label className="text-sm font-medium">{formatFieldLabel(field)}</label>
+                                          {fieldElement}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </CollapsibleItem>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </>
+      );
     } else {
       // For classes, use the original grouping by teacher
       return Object.entries(groupByTeacher(items, item => (item as Class).teacherEmail || '', type))
@@ -460,16 +507,19 @@ export const DataBuilder = () => {
             </div>
             {openGroups[`${type}-${teacher}`] && (
               <div className="ml-6 space-y-2">
-                {groupItems.map(item => (
-                  <div key={item.id} className="space-y-2">
-                    <CollapsibleItem
-                      title={`${(item as Class).classDay} ${(item as Class).classTime}`}
-                      subtitle={(item as Class).classLocation}
-                      isEditing={editing.has(item.id!)}
-                      onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
-                      onSave={() => handleAction('update', type, item, 0)}
-                      onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))}
-                      onDelete={() => handleAction('delete', type, item, 0)}
+                {groupItems.map(item => {
+                  const classData = item as Class;
+                  const studentCount = (data.students as Student[]).filter((s: Student) => s.classId === classData.id).length;
+                  return (
+                    <div key={item.id} className="space-y-2">
+                      <CollapsibleItem
+                        title={`${classData.classDay} ${classData.classTime}`}
+                        subtitle={`${classData.classLocation} • ${studentCount} student${studentCount !== 1 ? 's' : ''}`}
+                        isEditing={editing.has(item.id!)}
+                        onEdit={() => setEditing(prev => new Set([...prev, item.id!]))}
+                        onSave={() => handleAction('update', type, item, 0)}
+                        onCancel={() => setEditing(prev => new Set([...prev].filter(id => id !== item.id)))}
+                        onDelete={() => handleAction('delete', type, item, 0)}
                     >
                       {editing.has(item.id!) && (
                         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
@@ -494,7 +544,8 @@ export const DataBuilder = () => {
                       </Button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
