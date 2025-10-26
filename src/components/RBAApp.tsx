@@ -235,10 +235,10 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     {/* BuzzingBee placeholder - reserve exact space */}
     <Skeleton className="h-32 w-full" />
     
-    {/* Header - match exact structure */}
+    {/* Header - SHOW REAL CONTENT (doesn't depend on data loading) */}
     <div className="flex items-center justify-between">
       <div>
-        <Skeleton className="h-10 w-64 mb-2" />
+        <TypographyH1>Report-o-matic</TypographyH1>
         <Skeleton className="h-4 w-48" />
       </div>
       <div className="flex flex-col items-end gap-2">
