@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/favicon.svg" as="image" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NSA Student Report-o-matic</title>
     
@@ -12,18 +13,94 @@
     
     <!-- Google Identity Services - Now handled by @react-oauth/google -->
     
-    <!-- Noto Sans SC Font for Chinese text support -->
+    <!-- Noto Sans SC Font for Chinese text support with optimized loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet"></noscript>
     
     <!-- Preconnect to Firebase for faster auth/data loading -->
     <link rel="preconnect" href="https://student-reports-final.firebaseapp.com">
     <link rel="preconnect" href="https://firestore.googleapis.com">
     <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
+    
+    <!-- Critical CSS for instant rendering -->
+    <style>
+      /* Reset and base styles */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html { -webkit-text-size-adjust: 100%; }
+      body { 
+        margin: 0; 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background: #ffffff;
+      }
+      
+      /* Loading skeleton styles */
+      .app-skeleton {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+      }
+      .skeleton-card {
+        width: 100%;
+        max-width: 400px;
+        padding: 2rem;
+        margin: 1rem;
+        border-radius: 0.5rem;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .skeleton-title {
+        height: 2rem;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 0.25rem;
+        margin-bottom: 1.5rem;
+      }
+      .skeleton-input {
+        height: 2.5rem;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+      }
+      .skeleton-button {
+        height: 2.5rem;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 0.25rem;
+        margin-top: 0.5rem;
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      
+      /* Hide skeleton when app loads */
+      #root:not(:empty) ~ .app-skeleton { display: none; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- Loading skeleton - shown instantly while JS loads -->
+    <div class="app-skeleton">
+      <div class="skeleton-card">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-input"></div>
+        <div class="skeleton-input"></div>
+        <div class="skeleton-button"></div>
+        <div class="skeleton-button"></div>
+      </div>
+    </div>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

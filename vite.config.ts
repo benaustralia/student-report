@@ -38,11 +38,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // React and core libraries
+          // React and core libraries (critical - load first)
           'react-vendor': ['react', 'react-dom'],
           
-          // Firebase (large library)
-          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          // Firebase split into smaller chunks for better caching
+          'firebase-auth': ['firebase/app', 'firebase/auth'],
+          'firebase-data': ['firebase/firestore', 'firebase/storage'],
+          
+          // Google OAuth (defer until needed)
+          'google-oauth': ['@react-oauth/google'],
           
           // ZIP library (only loaded when needed)
           'zip-vendor': ['jszip'],
@@ -66,8 +70,14 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     // Use esbuild for faster builds and avoid Rollup issues
     minify: 'esbuild',
-    // Target modern browsers to avoid Rollup compatibility issues
-    target: 'esnext'
+    // Target modern browsers for smaller bundles
+    target: 'esnext',
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    // Optimize module preload
+    modulePreload: {
+      polyfill: false
+    }
   },
   // Optimize dependencies to avoid Rollup issues
   optimizeDeps: {
