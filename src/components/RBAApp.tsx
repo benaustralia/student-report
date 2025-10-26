@@ -281,7 +281,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   if (error) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card className="border-destructive"><CardContent className="text-destructive py-4">{error}</CardContent></Card></div>;
 
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-    <Suspense fallback={<div className="h-32" />}>
+    <Suspense fallback={null}>
       <BuzzingBee />
     </Suspense>
     
