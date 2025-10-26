@@ -231,13 +231,51 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   };
 
   if (loading) return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6" style={{minHeight: '100vh'}}>
-    <div className="h-32" />
+    {/* BuzzingBee placeholder - reserve exact space */}
+    <div className="h-32 w-full" />
+    
+    {/* Header - match exact structure */}
     <div className="flex items-center justify-between">
-      <div className="h-12 w-64 bg-muted animate-pulse rounded" />
-      <div className="h-10 w-24 bg-muted animate-pulse rounded" />
+      <div>
+        <div className="h-10 w-64 bg-muted animate-pulse rounded mb-2" />
+        <div className="h-4 w-48 bg-muted animate-pulse rounded" />
+      </div>
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 bg-muted animate-pulse rounded" />
+          <div className="h-10 w-24 bg-muted animate-pulse rounded" />
+        </div>
+        <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+        <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+      </div>
     </div>
-    <Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin mr-2" /><span>Loading your data...</span></CardContent></Card>
-    <Card className="min-h-[200px]"><CardContent className="py-6"><div className="space-y-3"><div className="h-4 bg-muted animate-pulse rounded w-3/4" /><div className="h-4 bg-muted animate-pulse rounded w-1/2" /></div></CardContent></Card>
+    
+    {/* Admin Panel placeholder (if admin) - collapsed state */}
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-5 bg-muted animate-pulse rounded" />
+            <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+          </div>
+          <div className="h-4 w-4 bg-muted animate-pulse rounded" />
+        </div>
+      </CardHeader>
+    </Card>
+    
+    {/* All Classes placeholder - collapsed state */}
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-5 bg-muted animate-pulse rounded" />
+            <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+            <div className="h-5 w-8 bg-muted animate-pulse rounded-full" />
+          </div>
+          <div className="h-4 w-4 bg-muted animate-pulse rounded" />
+        </div>
+      </CardHeader>
+    </Card>
   </div>;
   if (error) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card className="border-destructive"><CardContent className="text-destructive py-4">{error}</CardContent></Card></div>;
 
