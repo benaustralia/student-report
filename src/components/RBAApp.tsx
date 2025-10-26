@@ -400,7 +400,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     </Card>
     )}
     <footer className="text-center py-4 border-t">
-      <TypographySmall className="text-muted-foreground">V. 66 - by hand and Cursor.ai with love Wenli and Ben</TypographySmall>
+      <TypographySmall className="text-muted-foreground">V. 67 - by hand and Cursor.ai with love Wenli and Ben</TypographySmall>
     </footer>
   </div>;
 };
