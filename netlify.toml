@@ -1,6 +1,6 @@
 [build]
   publish = "dist"
-  command = "bun install && bun run build"
+  command = "bun install && bun run build && cd netlify/functions && npm install"
   functions = "netlify/functions"
 
 [functions]
@@ -11,11 +11,11 @@
 
 # Production branch settings
 [context.production]
-  command = "bun install && bun run build"
+  command = "bun install && bun run build && cd netlify/functions && npm install"
 
 # Development branch settings  
 [context.development]
-  command = "bun install && bun run build"
+  command = "bun install && bun run build && cd netlify/functions && npm install"
 
 [[redirects]]
   from = "/*"
