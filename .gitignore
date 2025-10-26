@@ -29,6 +29,10 @@ animation
 # Lighthouse reports - catchall for all JSON reports in root
 /*.json
 *--nsastudentreports.netlify.app*.json
+lighthouse-authenticated-*.html
+lighthouse-authenticated-*.json
+# Playwright auth state
+auth-state.json
 # Environment variables (contains sensitive data)
 .env
 .env.local
