@@ -307,7 +307,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     }}
                     onRemove={() => imageUpload.remove()}
                     disabled={imageUpload.uploading}
-                    maxSize={5}
+                    maxSize={20}
                     acceptedTypes={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
                   />
                   {imageUpload.uploading && (
