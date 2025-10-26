@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TypographyH1, TypographyMuted, TypographySmall } from '@/components/ui/typography';
 import { Loader2, Users, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
 import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData, getStudentsForClass } from '@/services/firebaseService-ultra-final';
@@ -232,21 +233,21 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
 
   if (loading) return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6" style={{minHeight: '100vh'}}>
     {/* BuzzingBee placeholder - reserve exact space */}
-    <div className="h-32 w-full" />
+    <Skeleton className="h-32 w-full" />
     
     {/* Header - match exact structure */}
     <div className="flex items-center justify-between">
       <div>
-        <div className="h-10 w-64 bg-muted animate-pulse rounded mb-2" />
-        <div className="h-4 w-48 bg-muted animate-pulse rounded" />
+        <Skeleton className="h-10 w-64 mb-2" />
+        <Skeleton className="h-4 w-48" />
       </div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-muted animate-pulse rounded" />
-          <div className="h-10 w-24 bg-muted animate-pulse rounded" />
+          <Skeleton className="h-10 w-10" />
+          <Skeleton className="h-10 w-24" />
         </div>
-        <div className="h-3 w-40 bg-muted animate-pulse rounded" />
-        <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-4 w-20" />
       </div>
     </div>
     
@@ -255,10 +256,10 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-5 w-5 bg-muted animate-pulse rounded" />
-            <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-6 w-32" />
           </div>
-          <div className="h-4 w-4 bg-muted animate-pulse rounded" />
+          <Skeleton className="h-4 w-4" />
         </div>
       </CardHeader>
     </Card>
@@ -268,11 +269,11 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-5 w-5 bg-muted animate-pulse rounded" />
-            <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-            <div className="h-5 w-8 bg-muted animate-pulse rounded-full" />
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-8 rounded-full" />
           </div>
-          <div className="h-4 w-4 bg-muted animate-pulse rounded" />
+          <Skeleton className="h-4 w-4" />
         </div>
       </CardHeader>
     </Card>
