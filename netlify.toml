@@ -17,7 +17,5 @@
 [context.development]
   command = "cd netlify/functions && npm install && cd ../.. && bun install && bun run build"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Redirects are now handled by public/_redirects file
+# This provides better control over static asset serving

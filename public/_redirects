@@ -1,0 +1,6 @@
+# Serve static assets with correct MIME types
+/assets/* 200
+
+# SPA fallback - only redirect if file doesn't exist
+/*    /index.html   200
+
