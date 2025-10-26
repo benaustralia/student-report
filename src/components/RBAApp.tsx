@@ -11,12 +11,12 @@ import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
 import { ThemeToggle } from './theme-toggle';
 import { useAuthContext } from '@/hooks/useAuthContext';
+import { ClassCard } from './ClassCard';
+import { TeacherCard } from './TeacherCard';
 
-// Lazy load non-critical components (below fold, behind interactions, or after data load)
+// Lazy load ONLY non-critical components (below fold, behind interactions)
 const AdminPanel = React.lazy(() => import('./AdminPanel').then(module => ({ default: module.AdminPanel })));
 const BuzzingBee = React.lazy(() => import('./BuzzingBee').then(module => ({ default: module.BuzzingBee })));
-const ClassCard = React.lazy(() => import('./ClassCard').then(module => ({ default: module.ClassCard })));
-const TeacherCard = React.lazy(() => import('./TeacherCard').then(module => ({ default: module.TeacherCard })));
 
 interface RBAAppProps { user: User; }
 
@@ -365,36 +365,34 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
                 </p>
               </div>
             ) : (
-              <Suspense fallback={<div className="p-4"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>}>
-                <div className="space-y-4">
-                  {isAdmin ? Object.values(classes.reduce((acc, classData) => {
-                    const teacherKey = `${classData.teacherEmail}`;
-                    if (!acc[teacherKey]) acc[teacherKey] = { teacherName: teacherDisplayNames[classData.teacherEmail] || 'Unknown Teacher', teacherEmail: classData.teacherEmail, classes: [] };
-                    acc[teacherKey].classes.push(classData);
-                    return acc;
-                  }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
-                    <TeacherCard 
-                      key={teacherData.teacherEmail} 
-                      teacherName={teacherData.teacherName} 
-                      teacherEmail={teacherData.teacherEmail} 
-                      classes={teacherData.classes} 
-                      selectedStudentId={selectedStudentId} 
-                      onStudentSelected={handleNavigateToStudent}
-                      openClassCardId={openClassCardId}
-                      onClassCardToggle={handleClassCardToggle}
-                    />
-                  )) : classes.map((classData) => (
-                    <ClassCard 
-                      key={classData.id} 
-                      classData={classData} 
-                      selectedStudentId={selectedStudentId} 
-                      onStudentSelected={handleNavigateToStudent}
-                      isOpen={openClassCardId === classData.id}
-                      onToggle={(isOpen) => handleClassCardToggle(classData.id, isOpen)}
-                    />
-                  ))}
-                </div>
-              </Suspense>
+            <div className="space-y-4">
+              {isAdmin ? Object.values(classes.reduce((acc, classData) => {
+                const teacherKey = `${classData.teacherEmail}`;
+                if (!acc[teacherKey]) acc[teacherKey] = { teacherName: teacherDisplayNames[classData.teacherEmail] || 'Unknown Teacher', teacherEmail: classData.teacherEmail, classes: [] };
+                acc[teacherKey].classes.push(classData);
+                return acc;
+              }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
+                <TeacherCard
+                  key={teacherData.teacherEmail}
+                  teacherName={teacherData.teacherName}
+                  teacherEmail={teacherData.teacherEmail}
+                  classes={teacherData.classes}
+                  selectedStudentId={selectedStudentId}
+                  onStudentSelected={handleNavigateToStudent}
+                  openClassCardId={openClassCardId}
+                  onClassCardToggle={handleClassCardToggle}
+                />
+              )) : classes.map((classData) => (
+                <ClassCard
+                  key={classData.id}
+                  classData={classData}
+                  selectedStudentId={selectedStudentId}
+                  onStudentSelected={handleNavigateToStudent}
+                  isOpen={openClassCardId === classData.id}
+                  onToggle={(isOpen) => handleClassCardToggle(classData.id, isOpen)}
+                />
+              ))}
+            </div>
             )}
           </CardContent>
         </CollapsibleContent>
