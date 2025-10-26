@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/favicon.svg" as="image" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NSA Student Report-o-matic</title>
     
@@ -24,6 +25,10 @@
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
     <link rel="dns-prefetch" href="https://www.gstatic.com">
+    
+    <!-- Preload critical assets for faster LCP -->
+    <link rel="modulepreload" href="/src/main.tsx">
+    <link rel="preload" href="/src/index.css" as="style">
     
     <!-- Critical CSS - minimal to prevent CLS -->
     <style>
