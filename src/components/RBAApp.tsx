@@ -251,8 +251,8 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       </div>
     </div>
     
-    {/* Admin Panel placeholder (if admin) - collapsed state with fixed height */}
-    <Card className="min-h-[74px]">
+    {/* Admin Panel placeholder - OPEN state (matches initial openSections.adminPanel: true) */}
+    <Card>
       <CardHeader className="py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -262,9 +262,23 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
           <Skeleton className="h-4 w-4" />
         </div>
       </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Admin Panel tabs skeleton */}
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+        {/* Admin Panel content skeleton */}
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      </CardContent>
     </Card>
     
-    {/* All Classes placeholder - collapsed state with fixed height */}
+    {/* All Classes placeholder - collapsed state (matches initial openSections.allClasses: false) */}
     <Card className="min-h-[74px]">
       <CardHeader className="py-6">
         <div className="flex items-center justify-between">
