@@ -2,9 +2,29 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import viteCompression from 'vite-plugin-compression'
+import { execSync } from 'child_process'
+
+// Get Git commit hash and branch name
+const getGitInfo = () => {
+  try {
+    const commitHash = execSync('git rev-parse --short HEAD').toString().trim()
+    const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
+    return { commitHash, branch }
+  } catch {
+    return { commitHash: 'unknown', branch: 'unknown' }
+  }
+}
+
+const { commitHash, branch } = getGitInfo()
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    // Inject version info as constants that can be used in the app
+    __APP_VERSION__: JSON.stringify(commitHash),
+    __GIT_BRANCH__: JSON.stringify(branch),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     // Brotli compression for better compression ratios
