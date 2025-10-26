@@ -232,8 +232,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   };
 
   if (loading) return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6" style={{minHeight: '100vh'}}>
-    {/* BuzzingBee placeholder - reserve exact space */}
-    <Skeleton className="h-32 w-full" />
+    {/* BuzzingBee is position:fixed - no space needed */}
     
     {/* Header - SHOW REAL CONTENT (doesn't depend on data loading) */}
     <div className="flex items-center justify-between">
