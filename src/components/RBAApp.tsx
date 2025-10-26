@@ -230,7 +230,15 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     }
   };
 
-  if (loading) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin mr-2" /><span>Loading your data...</span></CardContent></Card></div>;
+  if (loading) return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6" style={{minHeight: '100vh'}}>
+    <div className="h-32" />
+    <div className="flex items-center justify-between">
+      <div className="h-12 w-64 bg-muted animate-pulse rounded" />
+      <div className="h-10 w-24 bg-muted animate-pulse rounded" />
+    </div>
+    <Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin mr-2" /><span>Loading your data...</span></CardContent></Card>
+    <Card className="min-h-[200px]"><CardContent className="py-6"><div className="space-y-3"><div className="h-4 bg-muted animate-pulse rounded w-3/4" /><div className="h-4 bg-muted animate-pulse rounded w-1/2" /></div></CardContent></Card>
+  </div>;
   if (error) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card className="border-destructive"><CardContent className="text-destructive py-4">{error}</CardContent></Card></div>;
 
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
