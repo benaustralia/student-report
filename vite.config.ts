@@ -1,10 +1,25 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
+import viteCompression from 'vite-plugin-compression'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Brotli compression for better compression ratios
+    viteCompression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024, // Only compress files larger than 1KB
+    }),
+    // Gzip compression as fallback
+    viteCompression({
+      algorithm: 'gzip',
+      ext: '.gz',
+      threshold: 1024,
+    }),
+  ],
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
@@ -29,8 +44,7 @@ export default defineConfig({
           // Firebase (large library)
           'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
           
-          // PDF and ZIP libraries (only loaded when needed)
-          'pdf-vendor': ['jspdf', 'svg2pdf.js'],
+          // ZIP library (only loaded when needed)
           'zip-vendor': ['jszip'],
           
           // UI libraries
@@ -42,7 +56,6 @@ export default defineConfig({
             '@radix-ui/react-select',
             '@radix-ui/react-slot'
           ],
-          
           
           // Other utilities
           'utils-vendor': ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge', 'vaul']

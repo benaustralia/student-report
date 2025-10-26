@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,9 +11,11 @@ import { toast } from 'sonner';
 import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService-ultra-final';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { ImageUpload } from '@/components/ui/image-upload';
-import { ReportPreview } from '@/components/ReportPreview';
-import { FeedbackViewer } from '@/components/FeedbackViewer';
 import type { Student, Class, ReportData } from '@/types';
+
+// Lazy load heavy components
+const ReportPreview = lazy(() => import('@/components/ReportPreview').then(m => ({ default: m.ReportPreview })));
+const FeedbackViewer = lazy(() => import('@/components/FeedbackViewer').then(m => ({ default: m.FeedbackViewer })));
 
 interface StudentCardProps { 
   student: Student; 
@@ -404,23 +406,27 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                     )}
                   </div>
                   <div className="flex justify-end gap-2">
-                    <FeedbackViewer 
-                      teacherEmail={classData.teacherEmail}
-                      trigger={
-                        <Button size="sm" variant="outline" className="w-full sm:w-auto">
-                          📌 Corkboard
-                        </Button>
-                      }
-                    />
+                    <Suspense fallback={<Button size="sm" variant="outline" className="w-full sm:w-auto" disabled><Loader2 className="h-4 w-4 animate-spin" /></Button>}>
+                      <FeedbackViewer 
+                        teacherEmail={classData.teacherEmail}
+                        trigger={
+                          <Button size="sm" variant="outline" className="w-full sm:w-auto">
+                            📌 Corkboard
+                          </Button>
+                        }
+                      />
+                    </Suspense>
                   </div>
-                  <ReportPreview
-                    student={student}
-                    classData={classData}
-                    reportData={state.reports.length > 0 ? state.reports[0] : undefined}
-                    reportText={state.reportText}
-                    artworkUrl={imageUpload.uploading ? null : imageUpload.currentImageUrl}
-                    isImageUploading={imageUpload.uploading}
-                  />
+                  <Suspense fallback={<div className="flex items-center justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
+                    <ReportPreview
+                      student={student}
+                      classData={classData}
+                      reportData={state.reports.length > 0 ? state.reports[0] : undefined}
+                      reportText={state.reportText}
+                      artworkUrl={imageUpload.uploading ? null : imageUpload.currentImageUrl}
+                      isImageUploading={imageUpload.uploading}
+                    />
+                  </Suspense>
                 </div>
               </div>
             )}
