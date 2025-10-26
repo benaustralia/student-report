@@ -31,7 +31,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [teacherDisplayNames, setTeacherDisplayNames] = useState<Record<string, string>>({});
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [openSections, setOpenSections] = useState({ adminPanel: true, allClasses: false });
+  const [openSections, setOpenSections] = useState({ adminPanel: false, allClasses: false });
   const [activeAdminTab, setActiveAdminTab] = useState('browse');
   const [openClassCardId, setOpenClassCardId] = useState<string | null>(null);
   
@@ -250,31 +250,18 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       </div>
     </div>
     
-    {/* Admin Panel placeholder - OPEN state (matches initial openSections.adminPanel: true) */}
-    <Card>
+    {/* Admin Panel placeholder - COLLAPSED state (matches initial openSections.adminPanel: false) */}
+    <Card className="min-h-[74px]">
       <CardHeader className="py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-5" />
             <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-12 rounded-full" />
           </div>
           <Skeleton className="h-4 w-4" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Admin Panel tabs skeleton */}
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-24" />
-          <Skeleton className="h-10 w-24" />
-          <Skeleton className="h-10 w-24" />
-        </div>
-        {/* Admin Panel content skeleton */}
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      </CardContent>
     </Card>
     
     {/* All Classes placeholder - collapsed state (matches initial openSections.allClasses: false) */}
