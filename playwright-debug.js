@@ -1,16 +1,16 @@
 /**
  * Open authenticated app in Chromium for debugging
- * Run with: node playwright-debug.js
+ * Run with: bun run debug:auth
  * 
  * Prerequisites:
- * npm install -D playwright
+ * bun install
  * 
  * Set environment variables:
  * export TEST_EMAIL="your-email@example.com"
  * export TEST_PASSWORD="your-password"
  */
 
-const { chromium } = require('playwright');
+import { chromium } from 'playwright';
 
 const TEST_URL = process.env.TEST_URL || 'https://development--nsastudentreports.netlify.app';
 const TEST_EMAIL = process.env.TEST_EMAIL;

@@ -1,19 +1,19 @@
 /**
  * Lighthouse test with authentication
- * Run with: node lighthouse-auth.js
+ * Run with: bun run lighthouse:auth
  * 
  * Prerequisites:
- * npm install -D playwright lighthouse chrome-launcher
+ * bun install
  * 
  * Set environment variables:
  * export TEST_EMAIL="your-email@example.com"
  * export TEST_PASSWORD="your-password"
  */
 
-const { chromium } = require('playwright');
-const lighthouse = require('lighthouse');
-const { launch } = require('chrome-launcher');
-const fs = require('fs');
+import { chromium } from 'playwright';
+import lighthouse from 'lighthouse';
+import { launch } from 'chrome-launcher';
+import fs from 'fs';
 
 const TEST_URL = process.env.TEST_URL || 'https://development--nsastudentreports.netlify.app';
 const TEST_EMAIL = process.env.TEST_EMAIL;
