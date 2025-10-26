@@ -66,21 +66,47 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
       const line = lines[i].trim();
       if (!line) continue;
       
-      // Split by comma, tab, or spaces (single or multiple)
-      const parts = line.split(/[,\t]+|\s+/).map(part => part.trim());
+      let firstName = '';
+      let lastName = '';
       
-      if (parts.length < 2) {
-        students.push({
-          firstName: '',
-          lastName: '',
-          isValid: false,
-          error: 'Missing firstName or lastName'
-        });
-        continue;
+      // Check if line contains comma or tab (CSV format)
+      if (line.includes(',') || line.includes('\t')) {
+        // CSV format: "firstName,lastName" or "firstName	lastName"
+        const parts = line.split(/[,\t]/).map(part => part.trim());
+        if (parts.length >= 2) {
+          firstName = parts[0];
+          // Join remaining parts as lastName (handles "De Los Reyes")
+          lastName = parts.slice(1).join(' ');
+        }
+      } else {
+        // Space-separated format: "firstName lastName" or "firstName middle lastName"
+        // Handle nicknames in parentheses: "Jackie (Chen Wu) Li"
+        const parts = line.split(/\s+/);
+        
+        if (parts.length >= 2) {
+          // Check if there are parentheses (nickname)
+          const hasParentheses = line.includes('(') && line.includes(')');
+          
+          if (hasParentheses) {
+            // Extract everything up to and including the closing parenthesis as firstName
+            const match = line.match(/^(.+\))\s+(.+)$/);
+            if (match) {
+              firstName = match[1].trim();
+              lastName = match[2].trim();
+            } else {
+              // Fallback: first part is firstName, rest is lastName
+              firstName = parts[0];
+              lastName = parts.slice(1).join(' ');
+            }
+          } else {
+            // No parentheses: first word is firstName, rest is lastName
+            firstName = parts[0];
+            lastName = parts.slice(1).join(' ');
+          }
+        }
       }
       
-      const [firstName, lastName] = parts;
-      
+      // Validate
       if (!firstName || !lastName) {
         students.push({
           firstName: firstName || '',
@@ -171,7 +197,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
             Import Students for {classData?.classLevel} - {classData?.classDay} at {classData?.classTime}
           </DialogTitle>
           <DialogDescription>
-            Import multiple students at once using CSV format (firstName,lastName or firstName lastName or firstName	lastName).
+            Import multiple students at once. Supports multi-word last names (De Los Reyes) and nicknames in parentheses (Jackie (Chen Wu) Li).
           </DialogDescription>
         </DialogHeader>
         
@@ -214,7 +240,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
             </CardHeader>
             <CardContent className="pt-0">
               <Textarea
-                placeholder="Paste your CSV data here...&#10;Format: firstName,lastName or firstName lastName or firstName lastName&#10;Example:&#10;John,Smith&#10;Jane Doe&#10;Bob	Johnson"
+                placeholder="Paste your CSV data here...&#10;Supports: firstName,lastName OR firstName lastName&#10;Multi-word last names: Ezra,De Los Reyes OR Ezra De Los Reyes&#10;Nicknames: Jackie (Chen Wu),Li OR Jackie (Chen Wu) Li&#10;Example:&#10;John,Smith&#10;Jane Doe&#10;Ezra De Los Reyes&#10;Jackie (Chen Wu) Li"
                 value={csvData}
                 onChange={(e) => handleCSVChange(e.target.value)}
                 className="min-h-[120px] font-mono text-sm"
