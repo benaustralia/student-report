@@ -251,9 +251,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       </div>
     </div>
     
-    {/* Admin Panel placeholder (if admin) - collapsed state */}
-    <Card>
-      <CardHeader>
+    {/* Admin Panel placeholder (if admin) - collapsed state with fixed height */}
+    <Card className="min-h-[74px]">
+      <CardHeader className="py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-5" />
@@ -264,9 +264,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       </CardHeader>
     </Card>
     
-    {/* All Classes placeholder - collapsed state */}
-    <Card>
-      <CardHeader>
+    {/* All Classes placeholder - collapsed state with fixed height */}
+    <Card className="min-h-[74px]">
+      <CardHeader className="py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-5" />
