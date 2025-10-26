@@ -29,71 +29,45 @@
     <link rel="modulepreload" href="/src/main.tsx">
     <link rel="preload" href="/src/index.css" as="style">
     
-    <!-- Critical CSS for loading skeleton only (no Tailwind conflicts) -->
+    <!-- Critical CSS - minimal to prevent CLS -->
     <style>
-      /* Loading skeleton - minimal styles that don't conflict with Tailwind */
+      /* Prevent layout shift by using opacity fade instead of display toggle */
+      body { margin: 0; background: #ffffff; }
+      #root { min-height: 100vh; }
       .app-skeleton {
-        position: fixed;
-        inset: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #ffffff;
-        z-index: 9999;
+        opacity: 1;
+        transition: opacity 0.2s ease-out;
+        pointer-events: none;
       }
-      .skeleton-card {
-        width: 100%;
-        max-width: 400px;
-        padding: 2rem;
-        margin: 1rem;
-        border-radius: 0.5rem;
-        background: #ffffff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      /* Fade out skeleton when React loads (no layout shift) */
+      #root:not(:empty) ~ .app-skeleton {
+        opacity: 0;
       }
-      .skeleton-title {
-        height: 2rem;
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
-        border-radius: 0.25rem;
-        margin-bottom: 1.5rem;
-      }
-      .skeleton-input {
-        height: 2.5rem;
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
-        border-radius: 0.25rem;
-        margin-bottom: 1rem;
-      }
-      .skeleton-button {
-        height: 2.5rem;
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
-        border-radius: 0.25rem;
-        margin-top: 0.5rem;
-      }
-      @keyframes shimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-      }
-      /* Hide skeleton when React loads */
-      #root:not(:empty) ~ .app-skeleton { display: none !important; }
     </style>
   </head>
   <body>
     <div id="root"></div>
     
-    <!-- Loading skeleton - shown instantly while JS loads -->
+    <!-- Minimal loading indicator - fades out without layout shift -->
     <div class="app-skeleton">
-      <div class="skeleton-card">
-        <div class="skeleton-title"></div>
-        <div class="skeleton-input"></div>
-        <div class="skeleton-input"></div>
-        <div class="skeleton-button"></div>
-        <div class="skeleton-button"></div>
-      </div>
+      <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" stroke="#666">
+        <g fill="none" fill-rule="evenodd">
+          <g transform="translate(2 2)" stroke-width="3">
+            <circle stroke-opacity=".2" cx="18" cy="18" r="18"/>
+            <path d="M36 18c0-9.94-8.06-18-18-18">
+              <animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="1s" repeatCount="indefinite"/>
+            </path>
+          </g>
+        </g>
+      </svg>
     </div>
     
     <script type="module" src="/src/main.tsx"></script>
