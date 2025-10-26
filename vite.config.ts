@@ -37,74 +37,45 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // React core - critical, load first
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-            return 'react-vendor';
-          }
+        manualChunks: {
+          // React core - MUST stay together, don't split
+          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
           
-          // Firebase - split by feature for better tree-shaking
-          if (id.includes('firebase/app') || id.includes('firebase/auth')) {
-            return 'firebase-auth';
-          }
-          if (id.includes('firebase/firestore')) {
-            return 'firebase-firestore';
-          }
-          if (id.includes('firebase/storage')) {
-            return 'firebase-storage';
-          }
+          // Firebase - split by feature
+          'firebase-auth': ['firebase/app', 'firebase/auth'],
+          'firebase-firestore': ['firebase/firestore'],
+          'firebase-storage': ['firebase/storage'],
           
-          // Google OAuth - defer until login
-          if (id.includes('@react-oauth/google')) {
-            return 'google-oauth';
-          }
+          // Google OAuth - lazy loaded
+          'google-oauth': ['@react-oauth/google'],
           
-          // ZIP - only for bulk operations
-          if (id.includes('jszip')) {
-            return 'zip-vendor';
-          }
+          // ZIP library
+          'zip-vendor': ['jszip'],
           
-          // GSAP - only for animations
-          if (id.includes('gsap')) {
-            return 'gsap-vendor';
-          }
+          // GSAP animations
+          'gsap-vendor': ['gsap', '@gsap/react'],
           
-          // OpenAI - only for AI features
-          if (id.includes('openai')) {
-            return 'openai-vendor';
-          }
+          // Radix UI - group related components
+          'radix-dialogs': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-alert-dialog'
+          ],
+          'radix-forms': [
+            '@radix-ui/react-select',
+            '@radix-ui/react-label',
+            '@radix-ui/react-dropdown-menu'
+          ],
+          'radix-layout': [
+            '@radix-ui/react-collapsible',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-scroll-area'
+          ],
           
-          // Radix UI - split by component for aggressive tree-shaking
-          if (id.includes('@radix-ui/react-dialog') || id.includes('@radix-ui/react-alert-dialog')) {
-            return 'radix-dialog';
-          }
-          if (id.includes('@radix-ui/react-select') || id.includes('@radix-ui/react-dropdown-menu')) {
-            return 'radix-select';
-          }
-          if (id.includes('@radix-ui/react-collapsible') || id.includes('@radix-ui/react-accordion')) {
-            return 'radix-collapsible';
-          }
-          if (id.includes('@radix-ui/react-tabs')) {
-            return 'radix-tabs';
-          }
-          if (id.includes('@radix-ui')) {
-            return 'radix-core';
-          }
+          // Icons
+          'icons': ['lucide-react'],
           
-          // Lucide icons - separate chunk
-          if (id.includes('lucide-react')) {
-            return 'icons';
-          }
-          
-          // Utilities - keep small utilities together
-          if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority')) {
-            return 'utils';
-          }
-          
-          // All other node_modules
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+          // Utilities
+          'utils': ['clsx', 'tailwind-merge', 'class-variance-authority', 'vaul']
         }
       }
     },
