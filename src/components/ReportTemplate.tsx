@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
 import nsalogoPng from '@/assets/NSALogo.png?url';
+// WebP version available at: @/assets/NSALogo.webp (27KB vs 108KB PNG)
 
 interface ReportTemplateProps { studentName: string; classLevel: string; classLocation: string; comments: string; teacher: string; date: string; artwork?: string; }
 
