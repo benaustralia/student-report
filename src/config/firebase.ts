@@ -40,8 +40,24 @@ try {
 
 // Initialize Firebase services
 export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+
+// Lazy load Firestore to reduce initial bundle size
+let _db: ReturnType<typeof getFirestore> | null = null;
+export const getDb = () => {
+  if (!_db) {
+    _db = getFirestore(app);
+  }
+  return _db;
+};
+
+// Lazy load Storage to reduce initial bundle size
+let _storage: ReturnType<typeof getStorage> | null = null;
+export const getStorageInstance = () => {
+  if (!_storage) {
+    _storage = getStorage(app);
+  }
+  return _storage;
+};
 
 // Enable Firebase performance optimizations
 if (typeof window !== 'undefined') {

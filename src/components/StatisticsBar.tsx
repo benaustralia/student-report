@@ -3,7 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { Users, BookOpen, FileText } from 'lucide-react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+import { getDb } from '@/config/firebase';
+
+// Lazy-loaded Firestore instance
+const db = getDb();
 
 interface StatisticsBarProps {
   className?: string;

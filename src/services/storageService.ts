@@ -4,7 +4,10 @@ import {
   getDownloadURL, 
   deleteObject 
 } from 'firebase/storage';
-import { storage } from '../config/firebase';
+import { getStorageInstance } from '../config/firebase';
+
+// Lazy-loaded Storage instance
+const storage = getStorageInstance();
 
 /**
  * Simple Firebase Storage service for images

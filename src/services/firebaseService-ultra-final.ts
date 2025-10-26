@@ -1,6 +1,9 @@
 import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, writeBatch, setDoc } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../config/firebase';
+import { auth, getDb, googleProvider } from '../config/firebase';
+
+// Lazy-loaded Firestore instance
+const db = getDb();
 import type { Class, Student, ReportData, Teacher, AdminUser, LegacyReportData, Request } from '../types';
 
 export interface UserData { uid: string; email: string; displayName: string; isWhitelisted: boolean; }
