@@ -20,9 +20,14 @@
     <noscript><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet"></noscript>
     
     <!-- Preconnect to Firebase for faster auth/data loading -->
-    <link rel="preconnect" href="https://student-reports-final.firebaseapp.com">
-    <link rel="preconnect" href="https://firestore.googleapis.com">
-    <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
+    <link rel="preconnect" href="https://student-reports-final.firebaseapp.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.gstatic.com">
+    
+    <!-- Preload critical assets for faster LCP -->
+    <link rel="modulepreload" href="/src/main.tsx">
+    <link rel="preload" href="/src/index.css" as="style">
     
     <!-- Critical CSS for loading skeleton only (no Tailwind conflicts) -->
     <style>

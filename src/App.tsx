@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuthContext } from './hooks/useAuthContext';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from '@/components/ui/sonner';
 import { RBAApp } from './components/RBAApp';
 import { LoginForm } from './components/LoginForm';
+
+// Lazy load Google OAuth - only load when user needs to sign in
+const GoogleAuthWrapper = lazy(() => import('./components/GoogleAuthWrapper').then(m => ({ default: m.GoogleAuthWrapper })));
 
 function AppContent() {
   const { user, loading, error } = useAuthContext();
@@ -53,11 +55,22 @@ function AppContent() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <LoginForm 
-          onSignIn={handleSignIn}
-          isSigningIn={isSigningIn}
-          setIsSigningIn={setIsSigningIn}
-        />
+        <Suspense fallback={
+          <Card>
+            <CardContent className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mr-2" />
+              <span>Loading sign-in...</span>
+            </CardContent>
+          </Card>
+        }>
+          <GoogleAuthWrapper>
+            <LoginForm 
+              onSignIn={handleSignIn}
+              isSigningIn={isSigningIn}
+              setIsSigningIn={setIsSigningIn}
+            />
+          </GoogleAuthWrapper>
+        </Suspense>
       </div>
     );
   }
@@ -68,11 +81,9 @@ function AppContent() {
 
 export default function TeacherReports() {
   return (
-    <GoogleOAuthProvider clientId="1089251772494-s8a9lafg8ju91vvaq426bkvj5mon7vm9.apps.googleusercontent.com">
-      <AuthProvider>
-        <AppContent />
-        <Toaster />
-      </AuthProvider>
-    </GoogleOAuthProvider>
+    <AuthProvider>
+      <AppContent />
+      <Toaster />
+    </AuthProvider>
   );
 }

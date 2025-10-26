@@ -8,14 +8,14 @@ import { Loader2, Users, LogOut, ChevronDown, ChevronRight, GraduationCap, Datab
 import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData, getStudentsForClass } from '@/services/firebaseService-ultra-final';
 import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
-import { ClassCard } from './ClassCard';
-import { TeacherCard } from './TeacherCard';
 import { ThemeToggle } from './theme-toggle';
 import { useAuthContext } from '@/hooks/useAuthContext';
-import { BuzzingBee } from './BuzzingBee';
+import { ClassCard } from './ClassCard';
+import { TeacherCard } from './TeacherCard';
 
-// Lazy load AdminPanel for better performance
+// Lazy load ONLY non-critical components (below fold, behind interactions)
 const AdminPanel = React.lazy(() => import('./AdminPanel').then(module => ({ default: module.AdminPanel })));
+const BuzzingBee = React.lazy(() => import('./BuzzingBee').then(module => ({ default: module.BuzzingBee })));
 
 interface RBAAppProps { user: User; }
 
@@ -234,7 +234,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   if (error) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card className="border-destructive"><CardContent className="text-destructive py-4">{error}</CardContent></Card></div>;
 
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-    <BuzzingBee />
+    <Suspense fallback={<div className="h-32" />}>
+      <BuzzingBee />
+    </Suspense>
     
     <div className="flex items-center justify-between">
       <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{isAdmin ? '' : 'Teacher View - Your Classes'}</TypographyMuted></div>

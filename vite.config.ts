@@ -37,32 +37,74 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // React and core libraries (critical - load first)
-          'react-vendor': ['react', 'react-dom'],
+        manualChunks(id) {
+          // React core - critical, load first
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-vendor';
+          }
           
-          // Firebase split into smaller chunks for better caching
-          'firebase-auth': ['firebase/app', 'firebase/auth'],
-          'firebase-data': ['firebase/firestore', 'firebase/storage'],
+          // Firebase - split by feature for better tree-shaking
+          if (id.includes('firebase/app') || id.includes('firebase/auth')) {
+            return 'firebase-auth';
+          }
+          if (id.includes('firebase/firestore')) {
+            return 'firebase-firestore';
+          }
+          if (id.includes('firebase/storage')) {
+            return 'firebase-storage';
+          }
           
-          // Google OAuth (defer until needed)
-          'google-oauth': ['@react-oauth/google'],
+          // Google OAuth - defer until login
+          if (id.includes('@react-oauth/google')) {
+            return 'google-oauth';
+          }
           
-          // ZIP library (only loaded when needed)
-          'zip-vendor': ['jszip'],
+          // ZIP - only for bulk operations
+          if (id.includes('jszip')) {
+            return 'zip-vendor';
+          }
           
-          // UI libraries
-          'ui-vendor': [
-            '@radix-ui/react-collapsible',
-            '@radix-ui/react-dialog', 
-            '@radix-ui/react-label',
-            '@radix-ui/react-primitive',
-            '@radix-ui/react-select',
-            '@radix-ui/react-slot'
-          ],
+          // GSAP - only for animations
+          if (id.includes('gsap')) {
+            return 'gsap-vendor';
+          }
           
-          // Other utilities
-          'utils-vendor': ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge', 'vaul']
+          // OpenAI - only for AI features
+          if (id.includes('openai')) {
+            return 'openai-vendor';
+          }
+          
+          // Radix UI - split by component for aggressive tree-shaking
+          if (id.includes('@radix-ui/react-dialog') || id.includes('@radix-ui/react-alert-dialog')) {
+            return 'radix-dialog';
+          }
+          if (id.includes('@radix-ui/react-select') || id.includes('@radix-ui/react-dropdown-menu')) {
+            return 'radix-select';
+          }
+          if (id.includes('@radix-ui/react-collapsible') || id.includes('@radix-ui/react-accordion')) {
+            return 'radix-collapsible';
+          }
+          if (id.includes('@radix-ui/react-tabs')) {
+            return 'radix-tabs';
+          }
+          if (id.includes('@radix-ui')) {
+            return 'radix-core';
+          }
+          
+          // Lucide icons - separate chunk
+          if (id.includes('lucide-react')) {
+            return 'icons';
+          }
+          
+          // Utilities - keep small utilities together
+          if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority')) {
+            return 'utils';
+          }
+          
+          // All other node_modules
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         }
       }
     },
