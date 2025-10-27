@@ -46,7 +46,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   // Download is always enabled
   const canDownload = true;
 
-  // Convert URL to data URL for images
+  // Convert URL to data URL for images (currently only used for logo)
   const convertUrlToDataUrl = async (url: string): Promise<string> => {
     // For Firebase Storage URLs, try to refresh the URL if it might be expired
     const isFirebaseStorage = url.includes('firebasestorage.googleapis.com');
@@ -261,21 +261,16 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
 
       // Add artwork if present - this is REQUIRED
       if (artworkUrl) {
-        const artworkDataUrl = await convertUrlToDataUrl(artworkUrl);
-        
-        // Only add image element if dataUrl is valid
-        if (artworkDataUrl && artworkDataUrl.trim() !== '') {
-          const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-          artworkElement.setAttribute('href', artworkDataUrl);
-          artworkElement.setAttribute('x', '97.64');
-          artworkElement.setAttribute('y', '308.45');
-          artworkElement.setAttribute('width', '400');
-          artworkElement.setAttribute('height', '250');
-          artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          svgClone.appendChild(artworkElement);
-        } else {
-          throw new Error('Artwork image is required but could not be processed');
-        }
+        // Use the URL directly instead of converting to data URL to avoid CORS issues
+        // For server-side PDF generation, the Netlify function will fetch the image
+        const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+        artworkElement.setAttribute('href', artworkUrl);
+        artworkElement.setAttribute('x', '97.64');
+        artworkElement.setAttribute('y', '308.45');
+        artworkElement.setAttribute('width', '400');
+        artworkElement.setAttribute('height', '250');
+        artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svgClone.appendChild(artworkElement);
       }
 
       // Add school logo
@@ -572,49 +567,23 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               textElements.forEach(element => svgClone.appendChild(element));
             }
             
-            // Helper function to convert URL to data URL
-  const convertUrlToDataUrl = async (url: string): Promise<string> => new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous'; // Now that CORS is configured, this should work
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { reject(new Error('Could not get canvas context')); return; }
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg', 0.9));
-      } catch (error) {
-        console.error('Canvas conversion failed:', error);
-        reject(error);
-      }
-    };
-    img.onerror = () => {
-      console.error('Image load failed:', url);
-      reject(new Error(`Failed to load image: ${url}`));
-    };
-    img.src = url;
-  });
-
-            // Add artwork image if available
+            // Add artwork image if available - use URL directly to avoid CORS
             if (artworkUrl) {
               try {
-                const dataUrl = await convertUrlToDataUrl(artworkUrl);
+                // Refresh the URL to ensure it's not expired
+                const freshUrl = await refreshDownloadURL(artworkUrl);
                 
-                // Only add image element if dataUrl is valid (not empty from expired token)
-                if (dataUrl && dataUrl.trim() !== '') {
-                  const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-                  imageElement.setAttribute('href', dataUrl);
-                  imageElement.setAttribute('x', '97.64');
-                  imageElement.setAttribute('y', '308.45');
-                  imageElement.setAttribute('width', '400');
-                  imageElement.setAttribute('height', '250');
-                  imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-                  svgClone.appendChild(imageElement);
-                }
+                const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+                imageElement.setAttribute('href', freshUrl);
+                imageElement.setAttribute('x', '97.64');
+                imageElement.setAttribute('y', '308.45');
+                imageElement.setAttribute('width', '400');
+                imageElement.setAttribute('height', '250');
+                imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                svgClone.appendChild(imageElement);
               } catch (error) { 
-                console.error('Failed to load artwork image:', error); 
+                console.error('Failed to refresh and load artwork image:', error); 
+                throw new Error('Artwork image is required. Please re-upload the image.');
               }
             }
             
