@@ -63,3 +63,28 @@ export const generateImagePath = (studentId: string, filename: string): string =
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
   return `student-reports/${studentId}/profile_${sanitizedFilename}`;
 };
+
+/**
+ * Get a fresh download URL from a Firebase Storage URL
+ * Useful when the old download token has expired
+ */
+export const refreshDownloadURL = async (url: string): Promise<string> => {
+  try {
+    // Extract the path from the URL
+    const urlObj = new URL(url);
+    const path = decodeURIComponent(urlObj.pathname.split('/o/')[1]?.split('?')[0] || '');
+    
+    if (!path) {
+      throw new Error('Invalid storage URL');
+    }
+    
+    // Create reference and get fresh download URL
+    const storageRef = ref(storage, path);
+    const freshURL = await getDownloadURL(storageRef);
+    
+    return freshURL;
+  } catch (error) {
+    console.error('Error refreshing download URL:', error);
+    throw new Error(`Failed to refresh download URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};

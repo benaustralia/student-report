@@ -13,6 +13,7 @@ import reportTemplateSvg from '@/assets/report-template.svg?url';
 import nsalogoPng from '@/assets/NSALogo.png?url';
 // WebP version available at: @/assets/NSALogo.webp (27KB vs 108KB PNG)
 import { getTeacherByEmail } from '@/services/firebaseService-ultra-final';
+import { refreshDownloadURL } from '@/services/storageService';
 import type { Student, Class, ReportData, Teacher } from '@/types';
 // PDF generation is now handled server-side via Netlify function
 
@@ -46,15 +47,25 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   const canDownload = true;
 
   // Convert URL to data URL for images
-  const convertUrlToDataUrl = async (url: string): Promise<string> => new Promise((resolve, reject) => {
-    const img = new Image();
-    
-    // For Firebase Storage URLs, try without crossOrigin first, then with it
+  const convertUrlToDataUrl = async (url: string): Promise<string> => {
+    // For Firebase Storage URLs, try to refresh the URL if it might be expired
     const isFirebaseStorage = url.includes('firebasestorage.googleapis.com');
     
     if (isFirebaseStorage) {
-      // Try without crossOrigin first for Firebase Storage URLs
-      img.onload = () => {
+      try {
+        // Try to get a fresh download URL in case the current one has expired
+        url = await refreshDownloadURL(url);
+      } catch (error) {
+        console.warn('Could not refresh download URL, trying original URL:', error);
+      }
+    }
+    
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      
+      if (isFirebaseStorage) {
+        // Try without crossOrigin first for Firebase Storage URLs
+        img.onload = () => {
         try {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
@@ -71,9 +82,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
             resolve(dataUrl);
           } catch (error) {
-            // If canvas is tainted due to CORS, resolve with empty string instead
-            console.warn('Canvas tainted (CORS issue), returning empty string');
-            resolve('');
+            // If canvas is tainted due to CORS, reject the promise so report can't generate
+            console.error('Canvas tainted (CORS issue), artwork is required for report generation');
+            reject(new Error('Failed to process artwork image due to security restrictions. Please re-upload the image.'));
           }
         } catch (error) { 
           console.error('Canvas conversion failed:', error);
@@ -103,9 +114,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
               resolve(dataUrl);
             } catch (error) {
-              // If canvas is tainted due to CORS, resolve with empty string instead
-              console.warn('Canvas tainted on retry (CORS issue), returning empty string');
-              resolve('');
+              // If canvas is tainted due to CORS, reject the promise so report can't generate
+              console.error('Canvas tainted on retry (CORS issue), artwork is required for report generation');
+              reject(new Error('Failed to process artwork image due to security restrictions. Please re-upload the image.'));
             }
           } catch (error) { 
             console.error('Canvas conversion failed on retry:', error);
@@ -113,14 +124,17 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
           }
         };
         retryImg.onerror = () => {
-          console.warn('Image load failed even with crossOrigin (likely expired token):', url);
-          // Fail gracefully - return empty string so the report can still generate without the image
-          resolve('');
+          console.error('Image load failed even with crossOrigin (likely expired token):', url);
+          // Reject so report generation fails - artwork is required
+          reject(new Error('Artwork image could not be loaded. Please re-upload the image.'));
         };
         retryImg.src = url;
       };
+      
+      img.src = url;
     } else {
       // For non-Firebase URLs, use crossOrigin
+      const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
         try {
@@ -144,10 +158,11 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         console.error('Image load failed:', url);
         reject(new Error(`Failed to load image: ${url}`));
       };
-    }
-    
-    img.src = url;
-  });
+      
+      img.src = url;
+      }
+    });
+  };
 
   // Generate PNG from SVG for preview
   const generatePngPreview = async () => {
@@ -244,24 +259,22 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         });
       }
 
-      // Add artwork if present
+      // Add artwork if present - this is REQUIRED
       if (artworkUrl) {
-        try {
-          const artworkDataUrl = await convertUrlToDataUrl(artworkUrl);
-          
-          // Only add image element if dataUrl is valid (not empty from expired token)
-          if (artworkDataUrl && artworkDataUrl.trim() !== '') {
-            const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-              artworkElement.setAttribute('href', artworkDataUrl);
-            artworkElement.setAttribute('x', '97.64');
-            artworkElement.setAttribute('y', '308.45');
-            artworkElement.setAttribute('width', '400');
-            artworkElement.setAttribute('height', '250');
-            artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            svgClone.appendChild(artworkElement);
-          }
-        } catch (error) {
-          console.error('Failed to load artwork image:', error);
+        const artworkDataUrl = await convertUrlToDataUrl(artworkUrl);
+        
+        // Only add image element if dataUrl is valid
+        if (artworkDataUrl && artworkDataUrl.trim() !== '') {
+          const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+          artworkElement.setAttribute('href', artworkDataUrl);
+          artworkElement.setAttribute('x', '97.64');
+          artworkElement.setAttribute('y', '308.45');
+          artworkElement.setAttribute('width', '400');
+          artworkElement.setAttribute('height', '250');
+          artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svgClone.appendChild(artworkElement);
+        } else {
+          throw new Error('Artwork image is required but could not be processed');
         }
       }
 
