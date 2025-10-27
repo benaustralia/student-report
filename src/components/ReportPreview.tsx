@@ -262,18 +262,14 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
       // Add artwork if present - this is REQUIRED
       if (artworkUrl) {
         try {
-          console.log('DEBUG: Starting artwork load, original URL:', artworkUrl);
-          
           // Refresh the URL to ensure it's valid
           const freshUrl = await refreshDownloadURL(artworkUrl);
-          console.log('DEBUG: Refreshed URL:', freshUrl);
           
           // Load image and convert to data URL to embed in SVG
           const artworkImg = new Image();
           const artworkDataUrl = await new Promise<string>((resolve, reject) => {
             artworkImg.crossOrigin = 'anonymous';
             artworkImg.onload = () => {
-              console.log('DEBUG: Image loaded successfully, dimensions:', artworkImg.naturalWidth, 'x', artworkImg.naturalHeight);
               try {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
@@ -285,22 +281,15 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 canvas.height = artworkImg.naturalHeight;
                 ctx.drawImage(artworkImg, 0, 0);
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                console.log('DEBUG: Successfully converted to data URL, length:', dataUrl.length);
                 resolve(dataUrl);
               } catch (error) {
-                console.error('DEBUG: Canvas conversion error:', error);
                 reject(error);
               }
             };
-            artworkImg.onerror = (err) => {
-              console.error('DEBUG: Image load error:', err);
-              reject(new Error('Failed to load artwork image'));
-            };
-            console.log('DEBUG: Setting image src to:', freshUrl);
+            artworkImg.onerror = () => reject(new Error('Failed to load artwork image'));
             artworkImg.src = freshUrl;
           });
           
-          console.log('DEBUG: Artwork data URL obtained, adding to SVG');
           // Add to SVG
           const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
           artworkElement.setAttribute('href', artworkDataUrl);
@@ -310,7 +299,6 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
           artworkElement.setAttribute('height', '250');
           artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
           svgClone.appendChild(artworkElement);
-          console.log('DEBUG: Artwork element added to SVG');
         } catch (error) {
           console.error('Failed to load artwork for PNG preview:', error);
           throw new Error('Artwork is required. Please wait for the image to finish uploading.');
