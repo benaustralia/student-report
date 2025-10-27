@@ -14,12 +14,8 @@ service firebase.storage {
     }
     
     // Student reports images - allow authenticated users to read student artwork
-    match /student-reports/{studentId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Student reports images with nested students path
-    match /student-reports/students/{studentId}/{allPaths=**} {
+    // Matches both student-reports/{studentId}/ and student-reports/students/{studentId}/
+    match /student-reports/{allSegments=**} {
       allow read, write: if request.auth != null;
     }
   }
