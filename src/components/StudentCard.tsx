@@ -162,15 +162,15 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
           messages: [
         {
           role: 'system',
-          content: 'You are a bilingual educator creating student progress reports. Generate a bilingual report with BOTH English and Chinese sections. Format: [English text] [Chinese text]. English section should be conversational and warm. Chinese section should be formal and academic. Focus on student progress, creativity, engagement, and achievements. Use teacher notes as foundation. If notes are Chinese dot points, transform into proper sentences. Keep student names in English in both languages. Each language section must be complete and meaningful. Generate natural, flowing text without section headers. CRITICAL: Your response must be EXACTLY 400 characters or less. Count characters as you write. If your first attempt exceeds 400 characters, revise and shorten it. If still too long, revise again. Keep revising until it fits within 400 characters. This is for a printed certificate with limited space.'
+          content: 'You are a bilingual educator creating student progress reports. Generate a bilingual report with BOTH English and Chinese sections. Format: [English text] [Chinese text]. English section should be conversational and warm. Chinese section should be formal and academic. Focus on student progress, creativity, engagement, and achievements. Use teacher notes as foundation. If notes are Chinese dot points, transform into proper sentences. Keep student names in English in both languages. Each language section must be complete and meaningful. Generate natural, flowing text without section headers. CRITICAL: Your response MUST be EXACTLY 430 characters or less (no exceptions). This is a hard limit for a printed certificate. Count characters as you write. Target: ~200 English chars + ~200 Chinese chars = ~400 total. Write concisely. Shorten immediately if over limit.'
         },
             {
               role: 'user',
               content: `Student: ${student.firstName} ${student.lastName}\nClass: ${classData.classLevel}\nBullets: ${state.reportText}`
             }
           ],
-          max_tokens: 800,
-          temperature: 0.6
+          max_tokens: 120,
+          temperature: 0.2
         })
       });
 
@@ -181,14 +181,11 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       const data = await response.json();
       let generatedText = data.choices[0]?.message?.content?.trim();
       
-      // DEBUG: Log raw AI output
       if (generatedText) {
         // Clean up any unwanted formatting
         generatedText = generatedText
           .replace(/\[.*?\]/g, '')
           .trim();
-        
-        // AI handles character limit - no truncation needed
         
         setState(prev => ({ ...prev, reportText: generatedText, hasUnsavedChanges: true }));
       } else {
