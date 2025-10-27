@@ -262,14 +262,11 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
       // Add artwork if present - this is REQUIRED
       if (artworkUrl) {
         try {
-          // For PNG preview, we need to convert to data URL to avoid canvas tainting
-          // Try to refresh the URL first to ensure it's valid
+          // Refresh the URL to ensure it's valid, then use it directly
           const freshUrl = await refreshDownloadURL(artworkUrl);
           
-          const artworkDataUrl = await convertUrlToDataUrl(freshUrl);
-          
           const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-          artworkElement.setAttribute('href', artworkDataUrl);
+          artworkElement.setAttribute('href', freshUrl);
           artworkElement.setAttribute('x', '97.64');
           artworkElement.setAttribute('y', '308.45');
           artworkElement.setAttribute('width', '400');
