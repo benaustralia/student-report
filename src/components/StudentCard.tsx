@@ -327,25 +327,21 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
               ? 'text-yellow-600' 
               : 'text-muted-foreground'
         }`}>
-          {state.reportText.length}/430 characters
+          {state.reportText.length}/430 characters {state.reportText.length > 430 && '(over limit)'}
         </TypographySmall>
                   </div>
                   <Textarea
                     id="report"
                     value={state.reportText}
-        onChange={(e) => {
-          const value = e.target.value;
-          // Limit to 430 characters
-          if (value.length <= 430) {
-            setState(prev => ({ 
-              ...prev, 
-              reportText: value
-            }));
-          }
-        }}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setState(prev => ({ 
+                        ...prev, 
+                        reportText: value
+                      }));
+                    }}
                     placeholder="Write your report here or enter notes/bullet points for AI generation..."
                     className="min-h-[150px]"
-                    maxLength={430}
                   />
                 </div>
                 <div className="pt-4 space-y-2">
