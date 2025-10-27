@@ -95,8 +95,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
           }
         };
         retryImg.onerror = () => {
-          console.error('Image load failed even with crossOrigin:', url);
-          reject(new Error(`Failed to load image: ${url}`));
+          console.warn('Image load failed even with crossOrigin (likely expired token):', url);
+          // Fail gracefully - return empty string so the report can still generate without the image
+          resolve('');
         };
         retryImg.src = url;
       };
@@ -229,14 +230,18 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
       if (artworkUrl) {
         try {
           const artworkDataUrl = await convertUrlToDataUrl(artworkUrl);
-          const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-          artworkElement.setAttribute('href', artworkDataUrl);
-          artworkElement.setAttribute('x', '97.64');
-          artworkElement.setAttribute('y', '308.45');
-          artworkElement.setAttribute('width', '400');
-          artworkElement.setAttribute('height', '250');
-          artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          svgClone.appendChild(artworkElement);
+          
+          // Only add image element if dataUrl is valid (not empty from expired token)
+          if (artworkDataUrl && artworkDataUrl.trim() !== '') {
+            const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+              artworkElement.setAttribute('href', artworkDataUrl);
+            artworkElement.setAttribute('x', '97.64');
+            artworkElement.setAttribute('y', '308.45');
+            artworkElement.setAttribute('width', '400');
+            artworkElement.setAttribute('height', '250');
+            artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            svgClone.appendChild(artworkElement);
+          }
         } catch (error) {
           console.error('Failed to load artwork image:', error);
         }
@@ -566,14 +571,17 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               try {
                 const dataUrl = await convertUrlToDataUrl(artworkUrl);
                 
-                const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-                imageElement.setAttribute('href', dataUrl);
-                imageElement.setAttribute('x', '97.64');
-                imageElement.setAttribute('y', '308.45');
-                imageElement.setAttribute('width', '400');
-                imageElement.setAttribute('height', '250');
-                imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-                svgClone.appendChild(imageElement);
+                // Only add image element if dataUrl is valid (not empty from expired token)
+                if (dataUrl && dataUrl.trim() !== '') {
+                  const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+                  imageElement.setAttribute('href', dataUrl);
+                  imageElement.setAttribute('x', '97.64');
+                  imageElement.setAttribute('y', '308.45');
+                  imageElement.setAttribute('width', '400');
+                  imageElement.setAttribute('height', '250');
+                  imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                  svgClone.appendChild(imageElement);
+                }
               } catch (error) { 
                 console.error('Failed to load artwork image:', error); 
               }
