@@ -261,16 +261,25 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
 
       // Add artwork if present - this is REQUIRED
       if (artworkUrl) {
-        // Use the URL directly instead of converting to data URL to avoid CORS issues
-        // For server-side PDF generation, the Netlify function will fetch the image
-        const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-        artworkElement.setAttribute('href', artworkUrl);
-        artworkElement.setAttribute('x', '97.64');
-        artworkElement.setAttribute('y', '308.45');
-        artworkElement.setAttribute('width', '400');
-        artworkElement.setAttribute('height', '250');
-        artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        svgClone.appendChild(artworkElement);
+        try {
+          // For PNG preview, we need to convert to data URL to avoid canvas tainting
+          // Try to refresh the URL first to ensure it's valid
+          const freshUrl = await refreshDownloadURL(artworkUrl);
+          
+          const artworkDataUrl = await convertUrlToDataUrl(freshUrl);
+          
+          const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+          artworkElement.setAttribute('href', artworkDataUrl);
+          artworkElement.setAttribute('x', '97.64');
+          artworkElement.setAttribute('y', '308.45');
+          artworkElement.setAttribute('width', '400');
+          artworkElement.setAttribute('height', '250');
+          artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svgClone.appendChild(artworkElement);
+        } catch (error) {
+          console.error('Failed to load artwork for PNG preview:', error);
+          throw new Error('Artwork is required. Please wait for the image to finish uploading.');
+        }
       }
 
       // Add school logo
@@ -567,10 +576,10 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               textElements.forEach(element => svgClone.appendChild(element));
             }
             
-            // Add artwork image if available - use URL directly to avoid CORS
+            // Add artwork image if available - use URL for PDF (server handles it)
             if (artworkUrl) {
               try {
-                // Refresh the URL to ensure it's not expired
+                // Refresh the URL to ensure it's not expired for PDF generation
                 const freshUrl = await refreshDownloadURL(artworkUrl);
                 
                 const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
@@ -583,7 +592,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 svgClone.appendChild(imageElement);
               } catch (error) { 
                 console.error('Failed to refresh and load artwork image:', error); 
-                throw new Error('Artwork image is required. Please re-upload the image.');
+                throw new Error('Artwork image is required for PDF. Please re-upload the image.');
               }
             }
             
