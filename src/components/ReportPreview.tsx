@@ -65,7 +65,16 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
           canvas.width = img.naturalWidth;
           canvas.height = img.naturalHeight;
           ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
+          
+          // Try to export canvas - may fail due to CORS/tainting
+          try {
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            resolve(dataUrl);
+          } catch (error) {
+            // If canvas is tainted due to CORS, resolve with empty string instead
+            console.warn('Canvas tainted (CORS issue), returning empty string');
+            resolve('');
+          }
         } catch (error) { 
           console.error('Canvas conversion failed:', error);
           reject(error);
@@ -88,7 +97,16 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             canvas.width = retryImg.naturalWidth;
             canvas.height = retryImg.naturalHeight;
             ctx.drawImage(retryImg, 0, 0);
-            resolve(canvas.toDataURL('image/jpeg', 0.9));
+            
+            // Try to export canvas - may fail due to CORS/tainting
+            try {
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+              resolve(dataUrl);
+            } catch (error) {
+              // If canvas is tainted due to CORS, resolve with empty string instead
+              console.warn('Canvas tainted on retry (CORS issue), returning empty string');
+              resolve('');
+            }
           } catch (error) { 
             console.error('Canvas conversion failed on retry:', error);
             reject(error);
