@@ -267,9 +267,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         const freshUrl = await refreshDownloadURL(artworkUrl);
         
         // Load image and convert to data URL to embed in SVG
-        // Use the same robust loading pattern as convertUrlToDataUrl
-        const isFirebaseStorage = freshUrl.includes('firebasestorage.googleapis.com');
-        
+        // Always use crossOrigin='anonymous' to avoid CORS tainting
         const artworkDataUrl = await new Promise<string>((resolve, reject) => {
           // Always use crossOrigin='anonymous' to avoid tainted canvas
           // Set it BEFORE setting src, otherwise it's ignored
