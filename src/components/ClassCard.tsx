@@ -9,7 +9,7 @@ import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentC
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
 import { ClassStudentManagementModal } from './ClassStudentManagementModal';
-import { generateClassZIP, type ClassReport } from '@/services/zipService';
+import { generateClassZIP, type ClassReport, type ZIPGenerationResult } from '@/services/zipService';
 
 interface ClassCardProps {
   classData: Class;
@@ -209,13 +209,17 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
         id: toastId,
         description: 'Generating PDFs and creating ZIP file'
       });
+
+      const result: ZIPGenerationResult = await generateClassZIP(classReports, classData.classLevel, teacherName);
+
+      // Update toast to show success with skipped count if any
+      const description = result.skippedCount > 0 
+        ? `${result.skippedCount} incomplete report${result.skippedCount === 1 ? '' : 's'} skipped`
+        : 'ZIP file ready';
       
-      const completedCount = await generateClassZIP(classReports, classData.classLevel, teacherName);
-      
-      // Update toast to show success
-      toast.success(`Downloaded ${completedCount} completed reports`, {
+      toast.success(`Downloaded ${result.successCount} completed report${result.successCount === 1 ? '' : 's'}`, {
         id: toastId,
-        description: 'ZIP file ready'
+        description
       });
     } catch (error) {
       console.error('Error downloading class ZIP:', error);

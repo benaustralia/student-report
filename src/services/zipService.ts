@@ -144,8 +144,14 @@ export const downloadClassAsZIP = async (reports: ReportData[], className: strin
   }
 };
 
+// Return type for ZIP generation
+export interface ZIPGenerationResult {
+  successCount: number;
+  skippedCount: number;
+}
+
 // Legacy function for existing ClassZIPButton
-export const generateClassZIP = async (reports: ClassReport[], className: string, teacherName: string): Promise<number> => {
+export const generateClassZIP = async (reports: ClassReport[], className: string, teacherName: string): Promise<ZIPGenerationResult> => {
   try {
     const JSZip = await getJSZip();
     const zip = new JSZip();
@@ -168,6 +174,22 @@ export const generateClassZIP = async (reports: ClassReport[], className: string
           console.warn(`Skipping report for ${report.studentName} - no text and no image`);
           errorCount++;
           continue;
+        }
+        
+        // Validation: Check if artwork file exists in storage (if artwork is provided)
+        if (hasImage && report.artwork) {
+          try {
+            await refreshDownloadURL(report.artwork);
+          } catch (refreshError) {
+            // If file doesn't exist, skip this incomplete report
+            if (refreshError instanceof Error && refreshError.message.includes('object-not-found')) {
+              console.warn(`Skipping incomplete report for ${report.studentName} - artwork file does not exist`);
+              errorCount++;
+              continue;
+            }
+            // For other errors, throw to be caught by outer catch
+            throw refreshError;
+          }
         }
         
         // Generate PDF blob using the existing PDF service
@@ -207,7 +229,10 @@ export const generateClassZIP = async (reports: ClassReport[], className: string
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    return successCount;
+    return {
+      successCount,
+      skippedCount: errorCount
+    };
   } catch (error) {
     console.error('Error creating ZIP file:', error);
     throw error;
@@ -365,60 +390,58 @@ const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> => {
     }
     
     // Add artwork if present - convert to data URL (same as ReportPreview)
-    if (reportData.artwork) {
-      try {
-        const freshUrl = await refreshDownloadURL(reportData.artwork);
+    // Note: Artwork existence is validated before calling this function
+    // If artwork loading fails here, we throw to skip the incomplete report
+    if (reportData.artwork && reportData.artwork.trim()) {
+      // Get fresh URL (already validated to exist, but refresh token)
+      const freshUrl = await refreshDownloadURL(reportData.artwork);
+      
+      // Convert to data URL
+      const artworkDataUrl = await new Promise<string>((resolve, reject) => {
+        const artworkImg = new Image();
+        artworkImg.crossOrigin = 'anonymous';
         
-        // Convert to data URL
-        const artworkDataUrl = await new Promise<string>((resolve, reject) => {
-          const artworkImg = new Image();
-          artworkImg.crossOrigin = 'anonymous';
-          
-          artworkImg.onload = () => {
-            try {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              if (!ctx) { 
-                reject(new Error('Could not get canvas context'));
-                return; 
-              }
-              canvas.width = artworkImg.naturalWidth;
-              canvas.height = artworkImg.naturalHeight;
-              ctx.drawImage(artworkImg, 0, 0);
-              
-              try {
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                resolve(dataUrl);
-              } catch (error) {
-                console.warn('Canvas tainted, using Firebase URL directly:', error);
-                resolve(freshUrl);
-              }
-            } catch (error) { 
-              console.error('Canvas conversion failed:', error);
-              reject(error);
+        artworkImg.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { 
+              reject(new Error('Could not get canvas context'));
+              return; 
             }
-          };
-          
-          artworkImg.onerror = (error) => {
-            console.error('Image failed to load with crossOrigin:', freshUrl, error);
-            reject(new Error(`Artwork image could not be loaded: ${freshUrl.substring(0, 100)}...`));
-          };
-          
-          artworkImg.src = freshUrl;
-        });
+            canvas.width = artworkImg.naturalWidth;
+            canvas.height = artworkImg.naturalHeight;
+            ctx.drawImage(artworkImg, 0, 0);
+            
+            try {
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+              resolve(dataUrl);
+            } catch (error) {
+              console.warn('Canvas tainted, using Firebase URL directly:', error);
+              resolve(freshUrl);
+            }
+          } catch (error) { 
+            console.error('Canvas conversion failed:', error);
+            reject(error);
+          }
+        };
         
-        const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-        imageElement.setAttribute('href', artworkDataUrl);
-        imageElement.setAttribute('x', '97.64');
-        imageElement.setAttribute('y', '308.45');
-        imageElement.setAttribute('width', '400');
-        imageElement.setAttribute('height', '250');
-        imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        svgClone.appendChild(imageElement);
-      } catch (error) { 
-        console.error('Failed to load artwork image for PDF:', error); 
-        // Continue without artwork - don't fail entire ZIP
-      }
+        artworkImg.onerror = (error) => {
+          console.error('Image failed to load with crossOrigin:', freshUrl, error);
+          reject(new Error(`Artwork image could not be loaded: ${freshUrl.substring(0, 100)}...`));
+        };
+        
+        artworkImg.src = freshUrl;
+      });
+      
+      const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+      imageElement.setAttribute('href', artworkDataUrl);
+      imageElement.setAttribute('x', '97.64');
+      imageElement.setAttribute('y', '308.45');
+      imageElement.setAttribute('width', '400');
+      imageElement.setAttribute('height', '250');
+      imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      svgClone.appendChild(imageElement);
     }
     
     // Set SVG attributes
