@@ -271,105 +271,47 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         const isFirebaseStorage = freshUrl.includes('firebasestorage.googleapis.com');
         
         const artworkDataUrl = await new Promise<string>((resolve, reject) => {
+          // Always use crossOrigin='anonymous' to avoid tainted canvas
+          // Set it BEFORE setting src, otherwise it's ignored
           const artworkImg = new Image();
+          artworkImg.crossOrigin = 'anonymous';
           
-          if (isFirebaseStorage) {
-            // Try without crossOrigin first for Firebase Storage URLs
-            artworkImg.onload = () => {
-              try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                if (!ctx) { 
-                  reject(new Error('Could not get canvas context'));
-                  return; 
-                }
-                canvas.width = artworkImg.naturalWidth;
-                canvas.height = artworkImg.naturalHeight;
-                ctx.drawImage(artworkImg, 0, 0);
-                
-                // Try to export canvas - may fail due to CORS/tainting
-                try {
-                  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                  resolve(dataUrl);
-                } catch (error) {
-                  // If canvas is tainted due to CORS, reject the promise so report can't generate
-                  console.error('Canvas tainted (CORS issue), artwork is required for preview');
-                  reject(new Error('Failed to process artwork image due to security restrictions. Please re-upload the image.'));
-                }
-              } catch (error) { 
-                console.error('Canvas conversion failed:', error);
-                reject(error);
+          artworkImg.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              if (!ctx) { 
+                reject(new Error('Could not get canvas context'));
+                return; 
               }
-            };
-            
-            artworkImg.onerror = () => {
-              console.warn('Firebase Storage image failed without crossOrigin, trying with crossOrigin:', freshUrl);
-              // Retry with crossOrigin
-              const retryImg = new Image();
-              retryImg.crossOrigin = 'anonymous';
-              retryImg.onload = () => {
-                try {
-                  const canvas = document.createElement('canvas');
-                  const ctx = canvas.getContext('2d');
-                  if (!ctx) { 
-                    reject(new Error('Could not get canvas context'));
-                    return; 
-                  }
-                  canvas.width = retryImg.naturalWidth;
-                  canvas.height = retryImg.naturalHeight;
-                  ctx.drawImage(retryImg, 0, 0);
-                  
-                  // Try to export canvas - may fail due to CORS/tainting
-                  try {
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                    resolve(dataUrl);
-                  } catch (error) {
-                    // If canvas is tainted due to CORS, reject the promise so report can't generate
-                    console.error('Canvas tainted on retry (CORS issue), artwork is required for preview');
-                    reject(new Error('Failed to process artwork image due to security restrictions. Please re-upload the image.'));
-                  }
-                } catch (error) { 
-                  console.error('Canvas conversion failed on retry:', error);
-                  reject(error);
-                }
-              };
-              retryImg.onerror = () => {
-                console.error('Image load failed even with crossOrigin (likely expired token):', freshUrl);
-                // Reject so preview generation fails - artwork is required
-                reject(new Error('Artwork image could not be loaded. Please re-upload the image.'));
-              };
-              retryImg.src = freshUrl;
-            };
-            
-            artworkImg.src = freshUrl;
-          } else {
-            // For non-Firebase URLs, use crossOrigin
-            artworkImg.crossOrigin = 'anonymous';
-            artworkImg.onload = () => {
+              canvas.width = artworkImg.naturalWidth;
+              canvas.height = artworkImg.naturalHeight;
+              ctx.drawImage(artworkImg, 0, 0);
+              
+              // Try to export canvas - should work if crossOrigin was set correctly
               try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                if (!ctx) { 
-                  reject(new Error('Could not get canvas context'));
-                  return; 
-                }
-                canvas.width = artworkImg.naturalWidth;
-                canvas.height = artworkImg.naturalHeight;
-                ctx.drawImage(artworkImg, 0, 0);
-                resolve(canvas.toDataURL('image/jpeg', 0.9));
-              } catch (error) { 
-                console.error('Canvas conversion failed:', error);
-                reject(error);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                resolve(dataUrl);
+              } catch (error) {
+                // If canvas is tainted, we can't convert to data URL
+                // Fallback: use the Firebase URL directly in SVG (same as PDF generation)
+                // The browser should be able to load it when converting SVG to PNG
+                console.warn('Canvas tainted despite crossOrigin, will use Firebase URL directly in SVG:', error);
+                resolve(freshUrl); // Return URL instead of data URL
               }
-            };
-            
-            artworkImg.onerror = () => {
-              console.error('Image load failed:', freshUrl);
-              reject(new Error(`Failed to load artwork image: ${freshUrl}`));
-            };
-            
-            artworkImg.src = freshUrl;
-          }
+            } catch (error) { 
+              console.error('Canvas conversion failed:', error);
+              reject(error);
+            }
+          };
+          
+          artworkImg.onerror = (error) => {
+            console.error('Image failed to load with crossOrigin:', freshUrl, error);
+            reject(new Error(`Artwork image could not be loaded. Please check CORS configuration or re-upload the image. URL: ${freshUrl.substring(0, 100)}...`));
+          };
+          
+          // Set src AFTER crossOrigin to ensure it takes effect
+          artworkImg.src = freshUrl;
         });
         
         // Add to SVG
@@ -381,6 +323,18 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         artworkElement.setAttribute('height', '250');
         artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         svgClone.appendChild(artworkElement);
+        
+        // Verify the data URL or URL is valid
+        if (!artworkDataUrl) {
+          console.error('Invalid artwork URL/data URL');
+          throw new Error('Failed to create valid URL for artwork');
+        }
+        // Log whether we're using data URL or direct URL
+        if (artworkDataUrl.startsWith('data:image')) {
+          console.log('Artwork data URL created successfully, length:', artworkDataUrl.length);
+        } else {
+          console.log('Using Firebase URL directly in SVG (fallback due to CORS):', artworkDataUrl.substring(0, 100));
+        }
       }
 
       // Add school logo
@@ -417,16 +371,77 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
       
       const img = new Image();
       const svgData = new XMLSerializer().serializeToString(svgClone);
+      
+      // Verify artwork is in SVG if it should be
+      const artworkElements = svgClone.querySelectorAll('image');
+      if (artworkUrl) {
+        console.log('Number of image elements in SVG:', artworkElements.length);
+        if (artworkElements.length === 0) {
+          console.error('No image elements found in SVG despite artworkUrl being provided');
+          throw new Error('Failed to add artwork to SVG');
+        }
+        // Check if artwork (data URL or URL) is in the serialized SVG
+        const hasArtwork = svgData.includes('data:image') || svgData.includes('firebasestorage');
+        if (!hasArtwork) {
+          console.error('SVG does not contain artwork after serialization');
+          const imageIdx = svgData.indexOf('<image');
+          if (imageIdx >= 0) {
+            console.error('SVG snippet:', svgData.substring(imageIdx, imageIdx + 200));
+          }
+          throw new Error('Artwork not found in serialized SVG');
+        }
+        console.log('SVG contains artwork, length:', svgData.length);
+      }
+      
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
       const svgUrl = URL.createObjectURL(svgBlob);
       
+      // Wait a bit to ensure all embedded images in SVG are loaded
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const pngDataUrl = canvas.toDataURL('image/png');
-        setPngDataUrl(pngDataUrl);
-        setPreviewError(null); // Clear any errors on success
+        // Give a small delay to ensure embedded images (data URLs) are fully decoded
+        setTimeout(() => {
+          try {
+            // Verify the image has loaded properly by checking dimensions
+            if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+              console.error('SVG image loaded but has zero dimensions');
+              setPreviewError('SVG failed to render properly. The embedded images may not have loaded.');
+              URL.revokeObjectURL(svgUrl);
+              const tempDiv = document.querySelector('div[style*="-9999px"]');
+              if (tempDiv) document.body.removeChild(tempDiv);
+              setGeneratingPng(false);
+              return;
+            }
+            
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const pngDataUrl = canvas.toDataURL('image/png');
+            setPngDataUrl(pngDataUrl);
+            setPreviewError(null); // Clear any errors on success
+            URL.revokeObjectURL(svgUrl);
+            document.body.removeChild(tempDiv);
+            setGeneratingPng(false);
+          } catch (error) {
+            console.error('Error drawing SVG to canvas:', error);
+            setPreviewError(`Failed to convert SVG to PNG: ${error instanceof Error ? error.message : String(error)}`);
+            URL.revokeObjectURL(svgUrl);
+            document.body.removeChild(tempDiv);
+            setGeneratingPng(false);
+          }
+        }, 100); // Small delay to ensure data URLs are decoded
+      };
+      
+      img.onerror = (error) => {
+        console.error('Failed to load SVG as image:', error);
+        console.error('SVG URL:', svgUrl);
+        console.error('SVG data length:', svgData.length);
+        // Log a snippet of SVG to debug
+        console.error('SVG snippet (first 500 chars):', svgData.substring(0, 500));
+        if (artworkUrl) {
+          console.error('Artwork URL that should be in SVG:', artworkUrl);
+        }
+        setPreviewError('Failed to load SVG for preview. The SVG may contain invalid image references.');
         URL.revokeObjectURL(svgUrl);
-        document.body.removeChild(tempDiv);
+        const tempDiv = document.querySelector('div[style*="-9999px"]');
+        if (tempDiv) document.body.removeChild(tempDiv);
         setGeneratingPng(false);
       };
       
