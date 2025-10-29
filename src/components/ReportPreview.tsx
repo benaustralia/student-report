@@ -697,14 +697,53 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               textElements.forEach(element => svgClone.appendChild(element));
             }
             
-            // Add artwork image if available - use URL for PDF (server handles it)
+            // Add artwork image if available - use data URL (same as preview) so server doesn't need to fetch
             if (artworkUrl) {
               try {
-                // Refresh the URL to ensure it's not expired for PDF generation
+                // Refresh the URL to ensure it's valid
                 const freshUrl = await refreshDownloadURL(artworkUrl);
                 
+                // Convert to data URL (same approach as preview)
+                const artworkDataUrl = await new Promise<string>((resolve, reject) => {
+                  const artworkImg = new Image();
+                  artworkImg.crossOrigin = 'anonymous'; // Always use crossOrigin to avoid tainted canvas
+                  
+                  artworkImg.onload = () => {
+                    try {
+                      const canvas = document.createElement('canvas');
+                      const ctx = canvas.getContext('2d');
+                      if (!ctx) { 
+                        reject(new Error('Could not get canvas context'));
+                        return; 
+                      }
+                      canvas.width = artworkImg.naturalWidth;
+                      canvas.height = artworkImg.naturalHeight;
+                      ctx.drawImage(artworkImg, 0, 0);
+                      
+                      try {
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                        resolve(dataUrl);
+                      } catch (error) {
+                        // If canvas is tainted, fallback to URL (server might be able to fetch it)
+                        console.warn('Canvas tainted, using Firebase URL directly:', error);
+                        resolve(freshUrl);
+                      }
+                    } catch (error) { 
+                      console.error('Canvas conversion failed:', error);
+                      reject(error);
+                    }
+                  };
+                  
+                  artworkImg.onerror = (error) => {
+                    console.error('Image failed to load with crossOrigin:', freshUrl, error);
+                    reject(new Error(`Artwork image could not be loaded: ${freshUrl.substring(0, 100)}...`));
+                  };
+                  
+                  artworkImg.src = freshUrl;
+                });
+                
                 const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-                imageElement.setAttribute('href', freshUrl);
+                imageElement.setAttribute('href', artworkDataUrl);
                 imageElement.setAttribute('x', '97.64');
                 imageElement.setAttribute('y', '308.45');
                 imageElement.setAttribute('width', '400');
@@ -712,7 +751,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
                 svgClone.appendChild(imageElement);
               } catch (error) { 
-                console.error('Failed to refresh and load artwork image:', error); 
+                console.error('Failed to load artwork image for PDF:', error); 
                 throw new Error('Artwork image is required for PDF. Please re-upload the image.');
               }
             }
