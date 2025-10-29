@@ -39,6 +39,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   const [fetchedTeacherEmail, setFetchedTeacherEmail] = useState<string | null>(null);
   const [pngDataUrl, setPngDataUrl] = useState<string | null>(null);
   const [generatingPng, setGeneratingPng] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Loading...';
@@ -169,6 +170,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     if (!teacher) return;
     
     setGeneratingPng(true);
+    setPreviewError(null); // Clear any previous errors
     try {
       // Create a temporary ReportTemplate component to get the SVG
       const tempDiv = document.createElement('div');
@@ -259,15 +261,89 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         });
       }
 
-      // Add artwork if present - this is REQUIRED
+      // Add artwork if present - REQUIRED when provided
       if (artworkUrl) {
-        try {
-          // Refresh the URL to ensure it's valid
-          const freshUrl = await refreshDownloadURL(artworkUrl);
-          
-          // Load image and convert to data URL to embed in SVG
+        // Always refresh the URL to ensure it's valid and not expired
+        const freshUrl = await refreshDownloadURL(artworkUrl);
+        
+        // Load image and convert to data URL to embed in SVG
+        // Use the same robust loading pattern as convertUrlToDataUrl
+        const isFirebaseStorage = freshUrl.includes('firebasestorage.googleapis.com');
+        
+        const artworkDataUrl = await new Promise<string>((resolve, reject) => {
           const artworkImg = new Image();
-          const artworkDataUrl = await new Promise<string>((resolve, reject) => {
+          
+          if (isFirebaseStorage) {
+            // Try without crossOrigin first for Firebase Storage URLs
+            artworkImg.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { 
+                  reject(new Error('Could not get canvas context'));
+                  return; 
+                }
+                canvas.width = artworkImg.naturalWidth;
+                canvas.height = artworkImg.naturalHeight;
+                ctx.drawImage(artworkImg, 0, 0);
+                
+                // Try to export canvas - may fail due to CORS/tainting
+                try {
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                  resolve(dataUrl);
+                } catch (error) {
+                  // If canvas is tainted due to CORS, reject the promise so report can't generate
+                  console.error('Canvas tainted (CORS issue), artwork is required for preview');
+                  reject(new Error('Failed to process artwork image due to security restrictions. Please re-upload the image.'));
+                }
+              } catch (error) { 
+                console.error('Canvas conversion failed:', error);
+                reject(error);
+              }
+            };
+            
+            artworkImg.onerror = () => {
+              console.warn('Firebase Storage image failed without crossOrigin, trying with crossOrigin:', freshUrl);
+              // Retry with crossOrigin
+              const retryImg = new Image();
+              retryImg.crossOrigin = 'anonymous';
+              retryImg.onload = () => {
+                try {
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+                  if (!ctx) { 
+                    reject(new Error('Could not get canvas context'));
+                    return; 
+                  }
+                  canvas.width = retryImg.naturalWidth;
+                  canvas.height = retryImg.naturalHeight;
+                  ctx.drawImage(retryImg, 0, 0);
+                  
+                  // Try to export canvas - may fail due to CORS/tainting
+                  try {
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    resolve(dataUrl);
+                  } catch (error) {
+                    // If canvas is tainted due to CORS, reject the promise so report can't generate
+                    console.error('Canvas tainted on retry (CORS issue), artwork is required for preview');
+                    reject(new Error('Failed to process artwork image due to security restrictions. Please re-upload the image.'));
+                  }
+                } catch (error) { 
+                  console.error('Canvas conversion failed on retry:', error);
+                  reject(error);
+                }
+              };
+              retryImg.onerror = () => {
+                console.error('Image load failed even with crossOrigin (likely expired token):', freshUrl);
+                // Reject so preview generation fails - artwork is required
+                reject(new Error('Artwork image could not be loaded. Please re-upload the image.'));
+              };
+              retryImg.src = freshUrl;
+            };
+            
+            artworkImg.src = freshUrl;
+          } else {
+            // For non-Firebase URLs, use crossOrigin
             artworkImg.crossOrigin = 'anonymous';
             artworkImg.onload = () => {
               try {
@@ -280,29 +356,31 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 canvas.width = artworkImg.naturalWidth;
                 canvas.height = artworkImg.naturalHeight;
                 ctx.drawImage(artworkImg, 0, 0);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                resolve(dataUrl);
-              } catch (error) {
+                resolve(canvas.toDataURL('image/jpeg', 0.9));
+              } catch (error) { 
+                console.error('Canvas conversion failed:', error);
                 reject(error);
               }
             };
-            artworkImg.onerror = () => reject(new Error('Failed to load artwork image'));
+            
+            artworkImg.onerror = () => {
+              console.error('Image load failed:', freshUrl);
+              reject(new Error(`Failed to load artwork image: ${freshUrl}`));
+            };
+            
             artworkImg.src = freshUrl;
-          });
-          
-          // Add to SVG
-          const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-          artworkElement.setAttribute('href', artworkDataUrl);
-          artworkElement.setAttribute('x', '97.64');
-          artworkElement.setAttribute('y', '308.45');
-          artworkElement.setAttribute('width', '400');
-          artworkElement.setAttribute('height', '250');
-          artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          svgClone.appendChild(artworkElement);
-        } catch (error) {
-          console.error('Failed to load artwork for PNG preview:', error);
-          throw new Error('Artwork is required. Please wait for the image to finish uploading.');
-        }
+          }
+        });
+        
+        // Add to SVG
+        const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+        artworkElement.setAttribute('href', artworkDataUrl);
+        artworkElement.setAttribute('x', '97.64');
+        artworkElement.setAttribute('y', '308.45');
+        artworkElement.setAttribute('width', '400');
+        artworkElement.setAttribute('height', '250');
+        artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svgClone.appendChild(artworkElement);
       }
 
       // Add school logo
@@ -346,6 +424,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const pngDataUrl = canvas.toDataURL('image/png');
         setPngDataUrl(pngDataUrl);
+        setPreviewError(null); // Clear any errors on success
         URL.revokeObjectURL(svgUrl);
         document.body.removeChild(tempDiv);
         setGeneratingPng(false);
@@ -356,6 +435,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     } catch (error) {
       console.error('Error generating PNG preview:', error);
       setGeneratingPng(false);
+      setPreviewError(error instanceof Error ? error.message : 'Failed to generate preview');
       const tempDiv = document.querySelector('div[style*="-9999px"]');
       if (tempDiv) document.body.removeChild(tempDiv);
     }
@@ -400,10 +480,10 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
 
   // Generate PNG preview when teacher data is available
   useEffect(() => {
-    if (teacher && !pngDataUrl) {
+    if (teacher && !pngDataUrl && !previewError) {
       generatePngPreview();
     }
-  }, [teacher, pngDataUrl]);
+  }, [teacher]); // Only regenerate when teacher changes
 
       return (
         <div className="flex flex-col sm:flex-row gap-2">
@@ -448,6 +528,11 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                     className="w-full h-auto"
                     style={{ maxHeight: 'none', objectFit: 'contain' }}
                   />
+                ) : previewError ? (
+                  <div className="flex flex-col items-center justify-center py-8 px-4">
+                    <span className="text-red-600 font-semibold mb-2">Preview Error</span>
+                    <span className="text-sm text-center">{previewError}</span>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center py-8">
                     <span>Preview not available</span>
