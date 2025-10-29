@@ -50,6 +50,7 @@ export interface ClassReport {
   comments: string;
   teacher: string;
   date: string;
+  artwork?: string;
 }
 
 export const downloadClassAsZIP = async (reports: ReportData[], className: string, students: Student[], teacher: Teacher): Promise<number> => {
