@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, Users, Download, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
 import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses } from '@/services/firebaseService-ultra-final';
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
@@ -157,6 +158,10 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
 
   const handleDownloadClass = async () => {
     setIsDownloading(true);
+    const toastId = toast.loading('Preparing ZIP download...', {
+      description: 'Gathering reports'
+    });
+    
     try {
       const reports = await getReportsForClass(classData.id);
       
@@ -192,14 +197,33 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
             }
             // Fallback: try to convert
             return new Date(timestamp as string | number).toLocaleDateString('en-GB');
-          })()
+          })(),
+          artwork: report.artworkUrl || ''
         };
       });
       
       const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher';
-      await generateClassZIP(classReports, classData.classLevel, teacherName);
+      
+      // Update toast to show downloading
+      toast.loading('Downloading reports...', {
+        id: toastId,
+        description: 'Generating PDFs and creating ZIP file'
+      });
+      
+      const completedCount = await generateClassZIP(classReports, classData.classLevel, teacherName);
+      
+      // Update toast to show success
+      toast.success(`Downloaded ${completedCount} completed reports`, {
+        id: toastId,
+        description: 'ZIP file ready'
+      });
     } catch (error) {
       console.error('Error downloading class ZIP:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to download ZIP';
+      toast.error('Failed to download ZIP', {
+        id: toastId,
+        description: errorMessage
+      });
     } finally {
       setIsDownloading(false);
     }
