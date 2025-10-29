@@ -173,7 +173,26 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           classLocation: classData.classLocation,
           comments: report.reportText,
           teacher: teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher',
-          date: report.createdAt.toLocaleDateString()
+          date: (() => {
+            // Handle Firestore timestamps properly
+            const timestamp = report.createdAt;
+            if (timestamp && typeof timestamp === 'object') {
+              // Firestore timestamp with seconds property
+              if ('seconds' in timestamp) {
+                return new Date((timestamp as { seconds: number }).seconds * 1000).toLocaleDateString('en-GB');
+              }
+              // Firestore Timestamp object with toDate method
+              if ('toDate' in timestamp && typeof (timestamp as { toDate: () => Date }).toDate === 'function') {
+                return (timestamp as { toDate: () => Date }).toDate().toLocaleDateString('en-GB');
+              }
+            }
+            // If it's already a Date object
+            if (timestamp instanceof Date) {
+              return timestamp.toLocaleDateString('en-GB');
+            }
+            // Fallback: try to convert
+            return new Date(timestamp as string | number).toLocaleDateString('en-GB');
+          })()
         };
       });
       

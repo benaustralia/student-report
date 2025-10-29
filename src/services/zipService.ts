@@ -12,6 +12,18 @@ const toDate = (dateValue: unknown): Date => {
     return dateValue;
   }
   
+  // Handle Firestore timestamp objects
+  if (dateValue && typeof dateValue === 'object') {
+    // Firestore timestamp with seconds property
+    if ('seconds' in dateValue) {
+      return new Date((dateValue as { seconds: number }).seconds * 1000);
+    }
+    // Firestore Timestamp object with toDate method
+    if ('toDate' in dateValue && typeof (dateValue as { toDate: () => Date }).toDate === 'function') {
+      return (dateValue as { toDate: () => Date }).toDate();
+    }
+  }
+  
   // Handle null, undefined, or empty values
   if (!dateValue) {
     return new Date(); // Return current date as fallback
