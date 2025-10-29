@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye, Loader2, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
 import nsalogoPng from '@/assets/NSALogo.png?url';
 // WebP version available at: @/assets/NSALogo.webp (27KB vs 108KB PNG)
@@ -171,6 +172,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     
     setGeneratingPng(true);
     setPreviewError(null); // Clear any previous errors
+    toast.info('Generating report preview...', { duration: 2000 });
     try {
       // Create a temporary ReportTemplate component to get the SVG
       const tempDiv = document.createElement('div');
@@ -417,6 +419,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             URL.revokeObjectURL(svgUrl);
             document.body.removeChild(tempDiv);
             setGeneratingPng(false);
+            toast.success('Preview ready', { duration: 2000 });
           } catch (error) {
             console.error('Error drawing SVG to canvas:', error);
             setPreviewError(`Failed to convert SVG to PNG: ${error instanceof Error ? error.message : String(error)}`);
@@ -436,7 +439,12 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         if (artworkUrl) {
           console.error('Artwork URL that should be in SVG:', artworkUrl);
         }
-        setPreviewError('Failed to load SVG for preview. The SVG may contain invalid image references.');
+        const errorMsg = 'Failed to load SVG for preview. The SVG may contain invalid image references.';
+        setPreviewError(errorMsg);
+        toast.error('Failed to generate preview', {
+          description: errorMsg,
+          duration: 4000
+        });
         URL.revokeObjectURL(svgUrl);
         const tempDiv = document.querySelector('div[style*="-9999px"]');
         if (tempDiv) document.body.removeChild(tempDiv);
@@ -448,7 +456,12 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     } catch (error) {
       console.error('Error generating PNG preview:', error);
       setGeneratingPng(false);
-      setPreviewError(error instanceof Error ? error.message : 'Failed to generate preview');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate preview';
+      setPreviewError(errorMessage);
+      toast.error('Failed to generate preview', {
+        description: errorMessage,
+        duration: 4000
+      });
       const tempDiv = document.querySelector('div[style*="-9999px"]');
       if (tempDiv) document.body.removeChild(tempDiv);
     }
@@ -560,6 +573,10 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         disabled={isImageUploading || !canDownload}
         className="w-full sm:w-auto"
         onClick={async () => {
+          const toastId = toast.loading('Generating PDF report...', {
+            description: 'This may take a few seconds'
+          });
+          
           try {
             // Create SVG content
             const response = await fetch(reportTemplateSvg);
@@ -865,9 +882,19 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
+            // Update toast to success
+            toast.success('PDF report downloaded!', {
+              id: toastId,
+              description: `${fileName}`
+            });
+            
           } catch (error) {
             console.error('Error generating PDF:', error);
-            alert(`Error generating PDF: ${error instanceof Error ? error.message : String(error)}`);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF';
+            toast.error('Failed to generate PDF', {
+              id: toastId,
+              description: errorMessage
+            });
           }
         }}
       >
