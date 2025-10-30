@@ -17,16 +17,22 @@ const getFunctionUrl = (): string => {
 };
 
 const wrapText = (text: string, maxWidth: number): string[] => {
+  if (DEBUG) console.log('[pdf] wrapText:start', { textLength: text.length, maxWidth, preview: text.substring(0, 50) });
   const lines: string[] = [];
   let currentLine = '';
-  for (const word of text.split(/\s+/)) {
+  const words = text.split(/\s+/);
+  if (DEBUG) console.log('[pdf] wrapText:words', { wordCount: words.length, firstWords: words.slice(0, 5) });
+  for (const word of words) {
     const testLine = currentLine ? `${currentLine} ${word}` : word;
-    if (testLine.length * 7 > maxWidth && currentLine) {
+    const estimatedWidth = testLine.length * 7;
+    if (estimatedWidth > maxWidth && currentLine) {
+      if (DEBUG) console.log('[pdf] wrapText:wrap', { estimatedWidth, maxWidth, currentLineLength: currentLine.length });
       lines.push(currentLine);
       currentLine = word;
     } else currentLine = testLine;
   }
   if (currentLine) lines.push(currentLine);
+  if (DEBUG) console.log('[pdf] wrapText:result', { lineCount: lines.length, lineLengths: lines.map(l => l.length) });
   return lines.length > 0 ? lines : [''];
 };
 

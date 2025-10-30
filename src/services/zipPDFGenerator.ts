@@ -62,19 +62,31 @@ const createSVGElement = (doc: Document, tag: string, attrs: Record<string, stri
 };
 
 const wrapText = (text: string, maxWidth: number): string[] => {
+  if (DEBUG) console.log('[zip-gen] wrapText:start', { textLength: text.length, maxWidth, preview: text.substring(0, 50) });
+  
   // Use the exact same simple approach that works perfectly for individual PDFs
   // This handles both English and Chinese text correctly
   const lines: string[] = [];
   let currentLine = '';
   
   // Split by whitespace to handle both English words and Chinese character blocks
-  for (const word of text.split(/\s+/)) {
+  const words = text.split(/\s+/);
+  if (DEBUG) console.log('[zip-gen] wrapText:words', { wordCount: words.length, firstWords: words.slice(0, 5) });
+  
+  for (const word of words) {
     if (!word) continue;
     
     const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const estimatedWidth = testLine.length * 7;
     // Use the same 7px-per-character estimate that works for individual PDFs
     // This works for both English and Chinese characters in the Noto Sans SC font
-    if (testLine.length * 7 > maxWidth && currentLine) {
+    if (estimatedWidth > maxWidth && currentLine) {
+      if (DEBUG) console.log('[zip-gen] wrapText:wrap', { 
+        estimatedWidth, 
+        maxWidth, 
+        currentLineLength: currentLine.length,
+        currentLinePreview: currentLine.substring(0, 30)
+      });
       lines.push(currentLine);
       currentLine = word;
     } else {
@@ -83,6 +95,10 @@ const wrapText = (text: string, maxWidth: number): string[] => {
   }
   
   if (currentLine) lines.push(currentLine);
+  if (DEBUG) console.log('[zip-gen] wrapText:result', { 
+    lineCount: lines.length, 
+    lines: lines.map(l => ({ length: l.length, preview: l.substring(0, 40) }))
+  });
   return lines.length > 0 ? lines : [''];
 };
 
@@ -153,10 +169,27 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
     addText(svgDoc, svgClone, x, y, t);
   });
   if (reportData.comments?.trim()) {
-    wrapText(reportData.comments.trim(), 350).forEach((line, i) => {
-      addText(svgDoc, svgClone, 179.27, 590.33 + i * 16, line.trim(), '11px');
+    const commentLines = wrapText(reportData.comments.trim(), 350);
+    if (DEBUG) console.log('[zip-gen] adding-comments', { 
+      student: reportData.studentName,
+      totalLines: commentLines.length,
+      lineDetails: commentLines.map((l, i) => ({ 
+        lineNum: i, 
+        length: l.length, 
+        preview: l.substring(0, 40),
+        y: 590.33 + i * 16
+      }))
     });
-    if (DEBUG) console.log('[zip-gen] text-lines', { count: wrapText(reportData.comments.trim(), 350).length });
+    commentLines.forEach((line, i) => {
+      const trimmedLine = line.trim();
+      if (DEBUG && i < 3) console.log('[zip-gen] addText-comment', { 
+        line: i, 
+        text: trimmedLine.substring(0, 30),
+        x: 179.27,
+        y: 590.33 + i * 16
+      });
+      addText(svgDoc, svgClone, 179.27, 590.33 + i * 16, trimmedLine, '11px');
+    });
   }
   if (reportData.artwork?.trim()) {
     try {
