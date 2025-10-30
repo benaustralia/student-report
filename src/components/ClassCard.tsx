@@ -218,15 +218,32 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           })
         );
         reports
-          .filter(r => isReportReadyForPDF(r) && !r.pdfUrl)
+          .filter(r => {
+            const ready = isReportReadyForPDF(r);
+            const hasPdfUrl = !!r.pdfUrl;
+            if (DEBUG && !ready) {
+              console.log('[class] maybePrepare:skip-not-ready', {
+                reportId: r.id,
+                hasText: !!r.reportText?.trim(),
+                hasImage: !!r.artworkUrl?.trim()
+              });
+            }
+            return ready && !hasPdfUrl;
+          })
           .forEach(r => {
             const student = students.find(s => s.id === r.studentId);
-            if (student) {
+            if (student && effectiveTeacher) {
               if (DEBUG) console.log('[class] maybePrepare:trigger-bg', {
                 reportId: r.id,
                 student: `${student.firstName} ${student.lastName}`
               });
               generatePDFInBackground(r, student, classData, effectiveTeacher);
+            } else {
+              if (DEBUG) console.warn('[class] maybePrepare:skip-bg-trigger', {
+                reportId: r.id,
+                studentFound: !!student,
+                teacherFound: !!effectiveTeacher
+              });
             }
           });
       } catch (err) {
