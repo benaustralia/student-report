@@ -68,11 +68,16 @@ export const generateImagePath = (studentId: string, filename: string): string =
  * Get a fresh download URL from a Firebase Storage URL
  * Useful when the old download token has expired
  */
-export const refreshDownloadURL = async (url: string): Promise<string> => {
+export const refreshDownloadURL = async (urlOrPath: string): Promise<string> => {
   try {
-    // Extract the path from the URL
-    const urlObj = new URL(url);
-    const path = decodeURIComponent(urlObj.pathname.split('/o/')[1]?.split('?')[0] || '');
+    // Accept either a full download URL or a storage path
+    let path = '';
+    if (/^https?:\/\//i.test(urlOrPath)) {
+      const urlObj = new URL(urlOrPath);
+      path = decodeURIComponent(urlObj.pathname.split('/o/')[1]?.split('?')[0] || '');
+    } else {
+      path = urlOrPath.replace(/^\/+/, '');
+    }
     
     if (!path) {
       throw new Error('Invalid storage URL');
