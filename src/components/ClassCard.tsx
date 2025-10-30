@@ -166,6 +166,12 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           getReportsForClass(classData.id),
           getTeacherByEmail(classData.teacherEmail)
         ]);
+        const total = reports.length;
+        const prepared = reports.filter(r => Boolean(r.pdfUrl)).length;
+        const toPrepare = reports.filter(r => isReportReadyForPDF(r) && !r.pdfUrl).length;
+        toast.info(`${prepared}/${total} Reports Prepared`, {
+          description: toPrepare > 0 ? `${toPrepare} preparing now` : 'All set'
+        });
         reports
           .filter(r => isReportReadyForPDF(r) && !r.pdfUrl)
           .forEach(r => {
