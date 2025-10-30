@@ -151,7 +151,7 @@ const safePathSegment = (value: string): string =>
   value
     .replace(/[\n\r\t]/g, ' ')
     .replace(/\//g, '-')
-    .replace(/\s+/g, ' ')
+    .replace(/\s+/g, '-')
     .trim();
 
 const uploadPDFToStorage = async (
@@ -165,7 +165,7 @@ const uploadPDFToStorage = async (
     `${student.firstName}${student.lastName ? ' ' + student.lastName : ''}`
   );
   const classDay = safePathSegment(classData.classDay || 'Unknown');
-  const basePath = `student-reports/student/${studentName}-${classDay}`;
+  const basePath = `student-reports/students/${studentName}-${classDay}`;
   const storageRef = ref(getStorageInstance(), `${basePath}/report.pdf`);
   await uploadBytes(storageRef, file);
   return getDownloadURL(storageRef);
