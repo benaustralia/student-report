@@ -169,6 +169,15 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           getReportsForClass(classData.id),
           getTeacherByEmail(classData.teacherEmail)
         ]);
+        const effectiveTeacher = teacher || {
+          id: 'unknown',
+          email: classData.teacherEmail,
+          firstName: classData.teacherFirstName || (classData.teacherEmail?.split('@')[0] || 'Unknown'),
+          lastName: classData.teacherLastName || 'Teacher',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        if (!teacher && DEBUG) console.log('[class] maybePrepare:teacher-fallback', { email: classData.teacherEmail });
         const checkPdfExists = async (pdfUrl?: string) => {
           if (!pdfUrl) return false;
           try {
@@ -198,12 +207,12 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           .filter(r => isReportReadyForPDF(r) && !r.pdfUrl)
           .forEach(r => {
             const student = students.find(s => s.id === r.studentId);
-            if (student && teacher) {
+            if (student) {
               if (DEBUG) console.log('[class] maybePrepare:trigger-bg', {
                 reportId: r.id,
                 student: `${student.firstName} ${student.lastName}`
               });
-              generatePDFInBackground(r, student, classData, teacher);
+              generatePDFInBackground(r, student, classData, effectiveTeacher);
             }
           });
       } catch (err) {
