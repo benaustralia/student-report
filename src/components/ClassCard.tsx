@@ -10,6 +10,7 @@ import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
 import { ClassStudentManagementModal } from './ClassStudentManagementModal';
 import { generateClassZIP, type ClassReport, type ZIPGenerationResult } from '@/services/zipService';
+import { isReportReadyForPDF, generatePDFInBackground } from '@/services/pdfGenerationService';
 
 interface ClassCardProps {
   classData: Class;
@@ -164,16 +165,27 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     
     try {
       const reports = await getReportsForClass(classData.id);
-      // Show count of pre-prepared PDFs (reports with pdfUrl)
-      const totalReports = reports.length;
-      const preparedCount = reports.filter(r => Boolean(r.pdfUrl)).length;
-      toast.info(`${preparedCount}/${totalReports} Reports Prepared`, {
-        description: 'Using stored PDFs where available'
-      });
-      
       // Get student and teacher data for reports
       const students = await getStudentsForClass(classData.id);
       const teacher = await getTeacherByEmail(classData.teacherEmail);
+
+      // Show counts: prepared PDFs and ready (image+text)
+      const totalReports = reports.length;
+      const preparedCount = reports.filter(r => Boolean(r.pdfUrl)).length;
+      const readyCount = reports.filter(r => isReportReadyForPDF(r)).length;
+      toast.info(`${preparedCount}/${totalReports} Reports Prepared`, {
+        description: `${readyCount} ready to prepare`
+      });
+
+      // Fire-and-forget background generation for ready but unprepared reports
+      reports
+        .filter(r => isReportReadyForPDF(r) && !r.pdfUrl)
+        .forEach((r) => {
+          const student = students.find(s => s.id === r.studentId);
+          if (student && teacher) {
+            generatePDFInBackground(r, student, classData, teacher);
+          }
+        });
       
       // Convert to ClassReport format for existing ZIP function
       const classReports: ClassReport[] = reports.map(report => {
