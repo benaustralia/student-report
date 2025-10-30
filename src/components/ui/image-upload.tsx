@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,33 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   className,
 }) => {
   const [uploading, setUploading] = useState(false);
+  const [displaySrc, setDisplaySrc] = useState<string | null>(value || null);
+
+  // Resolve Firebase Storage URLs to tokened download URLs for display
+  useEffect(() => {
+    let cancelled = false;
+    const resolve = async () => {
+      if (!value) {
+        if (!cancelled) setDisplaySrc(null);
+        return;
+      }
+      try {
+        const isHttp = /^https?:\/\//i.test(value);
+        const hasToken = value.includes('token=') || value.includes('alt=media');
+        if (isHttp && hasToken) {
+          if (!cancelled) setDisplaySrc(value);
+          return;
+        }
+        const { refreshDownloadURL } = await import('@/services/storageService');
+        const fresh = await refreshDownloadURL(value);
+        if (!cancelled) setDisplaySrc(fresh);
+      } catch {
+        if (!cancelled) setDisplaySrc(value);
+      }
+    };
+    resolve();
+    return () => { cancelled = true; };
+  }, [value]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -87,10 +114,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Uploading...</p>
           </div>
-        ) : value ? (
+        ) : displaySrc ? (
           <div className="space-y-2">
             <img
-              src={value}
+              src={displaySrc}
               alt="Preview of uploaded image"
               className="mx-auto h-20 w-20 object-cover rounded"
             />
