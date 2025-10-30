@@ -134,19 +134,16 @@ const safePathSegment = (value: string): string =>
 
 const uploadPDFToStorage = async (
   pdfBlob: Blob,
-  reportId: string,
-  student?: Student,
-  classData?: Class
+  _reportId: string,
+  student: Student,
+  classData: Class
 ): Promise<string> => {
   const file = new File([pdfBlob], 'report.pdf', { type: 'application/pdf' });
-  const basePath = (() => {
-    if (student && classData) {
-      const studentName = safePathSegment(`${student.firstName}${student.lastName ? ' ' + student.lastName : ''}`);
-      const classDay = safePathSegment(classData.classDay || 'Unknown');
-      return `student-reports/student/${studentName}-${classDay}`;
-    }
-    return `pdfs/${reportId}`;
-  })();
+  const studentName = safePathSegment(
+    `${student.firstName}${student.lastName ? ' ' + student.lastName : ''}`
+  );
+  const classDay = safePathSegment(classData.classDay || 'Unknown');
+  const basePath = `student-reports/student/${studentName}-${classDay}`;
   const storageRef = ref(getStorageInstance(), `${basePath}/report.pdf`);
   await uploadBytes(storageRef, file);
   return getDownloadURL(storageRef);
