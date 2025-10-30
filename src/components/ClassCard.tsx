@@ -313,19 +313,37 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                 // Firestore timestamp with seconds property
                 if ('seconds' in timestamp) {
                   dateObj = new Date((timestamp as { seconds: number }).seconds * 1000);
+                  if (DEBUG) console.log('[class] date:from-seconds', { 
+                    student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+                    seconds: (timestamp as { seconds: number }).seconds,
+                    dateObj: dateObj?.toISOString()
+                  });
                 }
                 // Firestore Timestamp object with toDate method
                 else if ('toDate' in timestamp && typeof (timestamp as { toDate: () => Date }).toDate === 'function') {
                   dateObj = (timestamp as { toDate: () => Date }).toDate();
+                  if (DEBUG) console.log('[class] date:from-toDate', { 
+                    student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+                    dateObj: dateObj?.toISOString()
+                  });
                 }
               }
               // If it's already a Date object
               else if (timestamp && typeof timestamp === 'object' && 'getTime' in timestamp && typeof (timestamp as any).getTime === 'function') {
                 dateObj = timestamp as Date;
+                if (DEBUG) console.log('[class] date:from-date-obj', { 
+                  student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+                  dateObj: dateObj?.toISOString()
+                });
               }
               // Fallback: try to convert
               else if (timestamp) {
                 dateObj = new Date(timestamp as string | number);
+                if (DEBUG) console.log('[class] date:from-conversion', { 
+                  student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+                  timestamp,
+                  dateObj: dateObj?.toISOString()
+                });
               }
               
               // Validate the date and format it
@@ -333,15 +351,41 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                 const formatted = dateObj.toLocaleDateString('en-GB');
                 // Double-check the formatted string isn't "Invalid Date"
                 if (formatted && formatted !== 'Invalid Date' && formatted !== 'NaN/NaN/NaN') {
+                  if (DEBUG) console.log('[class] date:formatted-success', { 
+                    student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+                    formatted
+                  });
                   return formatted;
+                } else {
+                  if (DEBUG) console.warn('[class] date:formatted-invalid', { 
+                    student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+                    formatted,
+                    dateObj: dateObj?.toISOString()
+                  });
                 }
+              } else {
+                if (DEBUG) console.warn('[class] date:invalid-date-obj', { 
+                  student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+                  dateObj,
+                  isNaN: dateObj ? isNaN(dateObj.getTime()) : 'null'
+                });
               }
             } catch (error) {
-              DEBUG && console.warn('[class] date-format-error', { timestamp, error });
+              DEBUG && console.warn('[class] date-format-error', { 
+                student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+                timestamp, 
+                error 
+              });
             }
             
             // Fallback to current date if all else fails
-            return new Date().toLocaleDateString('en-GB');
+            const fallback = new Date().toLocaleDateString('en-GB');
+            if (DEBUG) console.warn('[class] date:using-fallback', { 
+              student: student ? `${student.firstName} ${student.lastName}` : 'unknown',
+              fallback,
+              originalTimestamp: timestamp
+            });
+            return fallback;
           })(),
           artwork: report.artworkUrl || '',
           pdfUrl: report.pdfUrl
