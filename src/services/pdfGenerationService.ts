@@ -3,6 +3,8 @@ import { refreshDownloadURL } from './storageService';
 import { getStorageInstance } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
+const DEBUG = true; // flip to false to silence logs
+
 export const isReportReadyForPDF = (report: ReportData): boolean =>
   !!(report.artworkUrl?.trim() && report.reportText?.trim());
 
@@ -42,12 +44,16 @@ const tryAlternateArtworkPath = async (url: string): Promise<string> => {
 };
 
 const convertArtworkToDataUrl = async (artworkUrl: string): Promise<string> => {
+  if (DEBUG) console.log('[pdf] convertArtworkToDataUrl:start', { artworkUrl });
   let freshUrl: string;
   try {
     freshUrl = await refreshDownloadURL(artworkUrl);
+    if (DEBUG) console.log('[pdf] convertArtworkToDataUrl:refreshed', { freshUrl });
   } catch (e: any) {
     if (e?.message?.includes('object-not-found')) {
+      if (DEBUG) console.warn('[pdf] convertArtworkToDataUrl:missing-original, try alternate');
       freshUrl = await tryAlternateArtworkPath(artworkUrl);
+      if (DEBUG) console.log('[pdf] convertArtworkToDataUrl:alternate-refreshed', { freshUrl });
     } else {
       throw new Error(`Failed to refresh download URL: ${e?.message || 'unknown error'}`);
     }
@@ -64,15 +70,22 @@ const convertArtworkToDataUrl = async (artworkUrl: string): Promise<string> => {
         canvas.height = img.naturalHeight;
         ctx.drawImage(img, 0, 0);
         try {
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          if (DEBUG) console.log('[pdf] convertArtworkToDataUrl:canvas-dataurl');
+          resolve(dataUrl);
         } catch {
+          if (DEBUG) console.warn('[pdf] convertArtworkToDataUrl:canvas-fallback-url');
           resolve(freshUrl);
         }
       } catch (error) {
+        if (DEBUG) console.error('[pdf] convertArtworkToDataUrl:img-onload-error', error);
         reject(error);
       }
     };
-    img.onerror = () => reject(new Error(`Artwork image could not be loaded: ${freshUrl.substring(0, 100)}...`));
+    img.onerror = () => {
+      if (DEBUG) console.error('[pdf] convertArtworkToDataUrl:img-onerror', freshUrl);
+      reject(new Error(`Artwork image could not be loaded: ${freshUrl.substring(0, 100)}...`));
+    };
     img.src = freshUrl;
   });
 };
@@ -86,6 +99,7 @@ const generateSVGFromReport = async (
   const reportTemplateSvg = (await import('@/assets/report-template.svg?raw')).default;
   const svgDoc = new DOMParser().parseFromString(reportTemplateSvg, 'image/svg+xml');
   const svgClone = svgDoc.documentElement.cloneNode(true) as SVGElement;
+  if (DEBUG) console.log('[pdf] generateSVGFromReport:start', { reportId: report.id });
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = `${teacher.firstName} ${teacher.lastName}`;
@@ -110,6 +124,7 @@ const generateSVGFromReport = async (
       Object.entries({ href: await convertArtworkToDataUrl(report.artworkUrl), x: '97.64', y: '308.45', width: '400', height: '250', preserveAspectRatio: 'xMidYMid meet' }).forEach(([k, v]) => imageElement.setAttribute(k, v));
       svgClone.appendChild(imageElement);
     } catch (error) {
+      if (DEBUG) console.error('[pdf] generateSVGFromReport:artwork-fail', error);
       throw new Error(`Failed to load artwork: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -123,6 +138,7 @@ const generatePDFBlob = async (svgString: string): Promise<Blob> => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ svg: svgString, textData: {} })
   });
+  if (DEBUG) console.log('[pdf] generatePDFBlob:netlify:status', response.status);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -143,7 +159,11 @@ const generatePDFBlob = async (svgString: string): Promise<Blob> => {
   }
 
   const pdfBlob = await response.blob();
-  if (pdfBlob.size === 0) throw new Error('PDF generation failed: Generated PDF is empty');
+  if (pdfBlob.size === 0) {
+    if (DEBUG) console.error('[pdf] generatePDFBlob:empty');
+    throw new Error('PDF generation failed: Generated PDF is empty');
+  }
+  if (DEBUG) console.log('[pdf] generatePDFBlob:ok', { size: pdfBlob.size });
   return pdfBlob;
 };
 
@@ -167,8 +187,11 @@ const uploadPDFToStorage = async (
   const classDay = safePathSegment(classData.classDay || 'Unknown');
   const basePath = `student-reports/students/${studentName}-${classDay}`;
   const storageRef = ref(getStorageInstance(), `${basePath}/report.pdf`);
+  if (DEBUG) console.log('[pdf] uploadPDFToStorage:path', { basePath, reportId: _reportId });
   await uploadBytes(storageRef, file);
-  return getDownloadURL(storageRef);
+  const url = await getDownloadURL(storageRef);
+  if (DEBUG) console.log('[pdf] uploadPDFToStorage:url', url);
+  return url;
 };
 
 export const deletePDFFromStorage = async (pdfUrl: string): Promise<void> => {
@@ -189,12 +212,15 @@ export const generateAndStorePDF = async (
   teacher: Teacher
 ): Promise<string> => {
   if (!isReportReadyForPDF(report)) throw new Error('Report does not meet PDF generation criteria: must have both image and text');
-  return uploadPDFToStorage(
+  if (DEBUG) console.log('[pdf] generateAndStorePDF:start', { reportId: report.id });
+  const url = await uploadPDFToStorage(
     await generatePDFBlob(await generateSVGFromReport(report, student, classData, teacher)),
     report.id,
     student,
     classData
   );
+  if (DEBUG) console.log('[pdf] generateAndStorePDF:done', { reportId: report.id, url });
+  return url;
 };
 
 const updateReportPDFUrl = async (reportId: string, pdfUrl: string | undefined): Promise<void> => {
@@ -212,6 +238,7 @@ export const generatePDFInBackground = async (
       try {
         await deletePDFFromStorage(report.pdfUrl);
         await updateReportPDFUrl(report.id, undefined);
+        if (DEBUG) console.log('[pdf] bg:cleanup-old-pdf', { reportId: report.id });
       } catch (error) {
         console.error(`Failed to clean up old PDF for report ${report.id}:`, error);
       }
@@ -222,6 +249,7 @@ export const generatePDFInBackground = async (
   if (report.pdfUrl) {
     try {
       await deletePDFFromStorage(report.pdfUrl);
+      if (DEBUG) console.log('[pdf] bg:delete-existing', { reportId: report.id });
     } catch (error) {
       console.warn(`Failed to delete old PDF for report ${report.id}, continuing:`, error);
     }

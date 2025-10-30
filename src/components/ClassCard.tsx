@@ -21,6 +21,7 @@ interface ClassCardProps {
 }
 
 export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, selectedStudentId, onStudentSelected, isOpen: externalIsOpen, onToggle }) => {
+  const DEBUG = true;
   const [students, setStudents] = useState<Student[]>([]);
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     
     setLoading(true);
     try {
+      if (DEBUG) console.log('[class] loadStudents', { classId: classData.id });
       const studentsData = await getStudentsForClass(classData.id);
       setStudents(studentsData);
       setStudentCount(studentsData.length);
@@ -162,6 +164,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     const maybePrepare = async () => {
       if (!isOpen || !hasLoadedStudents) return;
       try {
+        if (DEBUG) console.log('[class] maybePrepare:start', { classId: classData.id });
         const [reports, teacher] = await Promise.all([
           getReportsForClass(classData.id),
           getTeacherByEmail(classData.teacherEmail)
@@ -179,6 +182,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
         const total = reports.length;
         const prepared = existence.filter(Boolean).length;
         const toPrepare = reports.filter((r, i) => !existence[i] && isReportReadyForPDF(r)).length;
+        if (DEBUG) console.log('[class] maybePrepare:counts', { total, prepared, toPrepare });
         toast.info(`${prepared}/${total} Reports Prepared`, {
           description: toPrepare > 0 ? `${toPrepare} preparing now` : 'All set'
         });
@@ -186,6 +190,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           reports.map(async (r, i) => {
             if (r.pdfUrl && !existence[i]) {
               try { await updateReport(r.id, { pdfUrl: undefined }); } catch {}
+              if (DEBUG) console.log('[class] maybePrepare:cleared-stale', { reportId: r.id });
             }
           })
         );
@@ -194,6 +199,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           .forEach(r => {
             const student = students.find(s => s.id === r.studentId);
             if (student && teacher) {
+              if (DEBUG) console.log('[class] maybePrepare:trigger-bg', { reportId: r.id });
               generatePDFInBackground(r, student, classData, teacher);
             }
           });
@@ -230,6 +236,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
       const totalReports = reports.length;
       const preparedCount = existence.filter(Boolean).length;
       const readyCount = reports.filter((r, i) => isReportReadyForPDF(r) && !existence[i]).length;
+      if (DEBUG) console.log('[class] download:counts', { totalReports, preparedCount, readyCount });
       toast.info(`${preparedCount}/${totalReports} Reports Prepared`, {
         description: `${readyCount} ready to prepare`
       });
