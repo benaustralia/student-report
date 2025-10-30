@@ -157,6 +157,30 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     return () => window.removeEventListener('expandClassForStudent', handleExpandClass as unknown as EventListener);
   }, [classData.id, students.length, loadStudents]);
 
+  // When class is open and students are loaded, prepare missing PDFs in background
+  useEffect(() => {
+    const maybePrepare = async () => {
+      if (!isOpen || !hasLoadedStudents) return;
+      try {
+        const [reports, teacher] = await Promise.all([
+          getReportsForClass(classData.id),
+          getTeacherByEmail(classData.teacherEmail)
+        ]);
+        reports
+          .filter(r => isReportReadyForPDF(r) && !r.pdfUrl)
+          .forEach(r => {
+            const student = students.find(s => s.id === r.studentId);
+            if (student && teacher) {
+              generatePDFInBackground(r, student, classData, teacher);
+            }
+          });
+      } catch (err) {
+        console.error('Background PDF preparation failed:', err);
+      }
+    };
+    maybePrepare();
+  }, [isOpen, hasLoadedStudents, classData, students]);
+
   const handleDownloadClass = async () => {
     setIsDownloading(true);
     const toastId = toast.loading('Preparing ZIP download...', {
