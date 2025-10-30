@@ -1,5 +1,7 @@
 import { refreshDownloadURL } from './storageService';
 
+const DEBUG = true;
+
 export interface ClassReport {
   studentName: string;
   classLevel: string;
@@ -27,6 +29,7 @@ const getFunctionUrl = (): string => {
 
 const convertArtworkToDataUrl = async (url: string): Promise<string> => {
   const freshUrl = await refreshDownloadURL(url);
+  if (DEBUG) console.log('[zip-gen] artwork:refreshed', { url: freshUrl });
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -93,6 +96,7 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
   const svgDoc = new DOMParser().parseFromString(templateSvg, 'image/svg+xml');
   const svgClone = svgDoc.querySelector('svg')?.cloneNode(true) as SVGSVGElement;
   if (!svgClone) throw new Error('Could not parse SVG template');
+  if (DEBUG) console.log('[zip-gen] start', { student: reportData.studentName });
   svgClone.querySelectorAll('text.st1, text.st2').forEach(t => {
     if (t.textContent && /^[123456]$/.test(t.textContent.trim())) t.remove();
   });
@@ -109,6 +113,7 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
     wrapText(reportData.comments.trim(), 350).forEach((line, i) => {
       addText(svgDoc, svgClone, 179.27, 590.33 + i * 16, line.trim(), '11px');
     });
+    if (DEBUG) console.log('[zip-gen] text-lines', { count: wrapText(reportData.comments.trim(), 350).length });
   }
   if (reportData.artwork?.trim()) {
     try {
@@ -148,7 +153,9 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
   const styleEl = createSVGElement(svgDoc, 'style');
   styleEl.textContent = `text { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; color: black !important; font-family: 'Noto Sans SC', Arial, sans-serif !important; font-weight: normal !important; font-size: 11px !important; } .st1, .st2 { fill: transparent !important; fill-opacity: 0 !important; opacity: 0 !important; } .st5 { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; }`;
   svgClone.appendChild(styleEl);
-  const response = await fetch(getFunctionUrl(), {
+  const fnUrl = getFunctionUrl();
+  if (DEBUG) console.log('[zip-gen] fetch-fn', { fnUrl });
+  const response = await fetch(fnUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -156,6 +163,7 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
       textData: {}
     })
   });
+  if (DEBUG) console.log('[zip-gen] fn-status', { status: response.status });
   if (!response.ok) {
     const errorText = (await response.text()).substring(0, 200);
     throw new Error(`PDF generation failed: ${response.status} - ${errorText}`);

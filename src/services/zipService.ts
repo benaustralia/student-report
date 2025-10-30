@@ -3,6 +3,8 @@ import { refreshDownloadURL } from './storageService';
 import { isReportReadyForPDF } from './pdfGenerationService';
 import { generatePDFBlob, type ClassReport } from './zipPDFGenerator';
 
+const DEBUG = true;
+
 const getJSZip = async () => (await import('jszip')).default;
 
 const toDate = (v: unknown): Date => {
@@ -26,13 +28,24 @@ export { type ClassReport };
 
 const downloadPDFFromStorage = async (pdfUrl: string): Promise<Blob | null> => {
   try {
+    if (DEBUG) console.log('[zip] downloadPDFFromStorage:fetch', { pdfUrl });
     const refreshed = await refreshDownloadURL(pdfUrl);
     const res = await fetch(refreshed, { method: 'GET' });
-    if (!res.ok) throw new Error('Failed to fetch PDF');
+    if (!res.ok) {
+      if (DEBUG) console.warn('[zip] downloadPDFFromStorage:http', { status: res.status, url: refreshed });
+      throw new Error('Failed to fetch PDF');
+    }
     const blob = await res.blob();
-    if (!blob || blob.size === 0) throw new Error('Empty PDF');
+    if (!blob || blob.size === 0) {
+      if (DEBUG) console.warn('[zip] downloadPDFFromStorage:empty', { url: refreshed });
+      throw new Error('Empty PDF');
+    }
     const type = blob.type || res.headers.get('Content-Type') || '';
-    if (!type.includes('pdf') && type !== '') throw new Error('Not a PDF');
+    if (!type.includes('pdf') && type !== '') {
+      if (DEBUG) console.warn('[zip] downloadPDFFromStorage:not-pdf', { type });
+      throw new Error('Not a PDF');
+    }
+    if (DEBUG) console.log('[zip] downloadPDFFromStorage:ok', { size: blob.size });
     return blob;
   } catch {
     return null;
@@ -64,7 +77,10 @@ export const downloadClassAsZIP = async (
   for (const report of reports) {
     try {
       const student = students.find(s => s.id === report.studentId);
-      if (!student || !isReportReadyForPDF(report)) continue;
+      if (!student || !isReportReadyForPDF(report)) {
+        if (DEBUG) console.warn('[zip] skip: not ready', { reportId: report.id });
+        continue;
+      }
       const pdfBlob = await generatePDFBlob({
         studentName: `${student.firstName} ${student.lastName}`,
         classLevel: className,
@@ -78,6 +94,7 @@ export const downloadClassAsZIP = async (
         const dateStr = toDate(report.createdAt).toISOString().split('T')[0];
         folder.file(`${student.firstName}_${student.lastName}_${dateStr}.pdf`, pdfBlob);
         successCount++;
+        if (DEBUG) console.log('[zip] on-demand:add', { student: student.id, size: pdfBlob.size });
       }
     } catch (error) {
       console.error(`Error processing report for ${report.studentId}:`, error);
@@ -104,6 +121,7 @@ export const generateClassZIP = async (
       const hasText = report.comments?.trim();
       const hasImage = report.artwork?.trim();
       if (!hasText || !hasImage) {
+        if (DEBUG) console.warn('[zip] skip: incomplete', { student: report.studentName, hasText: !!hasText, hasImage: !!hasImage });
         skippedCount++;
         continue;
       }
@@ -119,7 +137,7 @@ export const generateClassZIP = async (
         }
       }
       if (!report.pdfUrl) {
-        console.warn('[zip] skip: no pdfUrl', { student: report.studentName, date: report.date });
+        if (DEBUG) console.warn('[zip] skip: no pdfUrl', { student: report.studentName, date: report.date });
         skippedCount++;
         continue;
       }
@@ -127,8 +145,9 @@ export const generateClassZIP = async (
       if (pdfBlob?.size) {
         folder.file(`${report.studentName.replace(/\s+/g, '_')}_${report.date.replace(/\//g, '-')}.pdf`, pdfBlob);
         successCount++;
+        if (DEBUG) console.log('[zip] prepared:add', { student: report.studentName, size: pdfBlob.size });
       } else {
-        console.warn('[zip] skip: failed download or empty pdf', { student: report.studentName, pdfUrl: report.pdfUrl });
+        if (DEBUG) console.warn('[zip] skip: failed download or empty pdf', { student: report.studentName, pdfUrl: report.pdfUrl });
         skippedCount++;
       }
     } catch (error) {
@@ -138,5 +157,6 @@ export const generateClassZIP = async (
   }
   if (successCount === 0) throw new Error('No valid reports to download');
   downloadZIP(await zip.generateAsync({ type: 'blob' }), `${teacherName}_${className}_reports.zip`);
+  if (DEBUG) console.log('[zip] done', { successCount, skippedCount });
   return { successCount, skippedCount };
 };
