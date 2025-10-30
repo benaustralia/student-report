@@ -287,24 +287,44 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           comments: report.reportText,
           teacher: teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown Teacher',
           date: (() => {
-            // Handle Firestore timestamps properly
+            // Handle Firestore timestamps properly with validation
             const timestamp = report.createdAt;
-            if (timestamp && typeof timestamp === 'object') {
-              // Firestore timestamp with seconds property
-              if ('seconds' in timestamp) {
-                return new Date((timestamp as { seconds: number }).seconds * 1000).toLocaleDateString('en-GB');
+            let dateObj: Date | null = null;
+            
+            try {
+              if (timestamp && typeof timestamp === 'object') {
+                // Firestore timestamp with seconds property
+                if ('seconds' in timestamp) {
+                  dateObj = new Date((timestamp as { seconds: number }).seconds * 1000);
+                }
+                // Firestore Timestamp object with toDate method
+                else if ('toDate' in timestamp && typeof (timestamp as { toDate: () => Date }).toDate === 'function') {
+                  dateObj = (timestamp as { toDate: () => Date }).toDate();
+                }
               }
-              // Firestore Timestamp object with toDate method
-              if ('toDate' in timestamp && typeof (timestamp as { toDate: () => Date }).toDate === 'function') {
-                return (timestamp as { toDate: () => Date }).toDate().toLocaleDateString('en-GB');
+              // If it's already a Date object
+              else if (timestamp instanceof Date) {
+                dateObj = timestamp;
               }
+              // Fallback: try to convert
+              else if (timestamp) {
+                dateObj = new Date(timestamp as string | number);
+              }
+              
+              // Validate the date and format it
+              if (dateObj && !isNaN(dateObj.getTime())) {
+                const formatted = dateObj.toLocaleDateString('en-GB');
+                // Double-check the formatted string isn't "Invalid Date"
+                if (formatted && formatted !== 'Invalid Date' && formatted !== 'NaN/NaN/NaN') {
+                  return formatted;
+                }
+              }
+            } catch (error) {
+              DEBUG && console.warn('[class] date-format-error', { timestamp, error });
             }
-            // If it's already a Date object
-            if (timestamp instanceof Date) {
-              return timestamp.toLocaleDateString('en-GB');
-            }
-            // Fallback: try to convert
-            return new Date(timestamp as string | number).toLocaleDateString('en-GB');
+            
+            // Fallback to current date if all else fails
+            return new Date().toLocaleDateString('en-GB');
           })(),
           artwork: report.artworkUrl || '',
           pdfUrl: report.pdfUrl

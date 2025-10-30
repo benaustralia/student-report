@@ -136,18 +136,38 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
   });
   // Validate and format date - ensure it's not "Invalid Date"
   const formattedDate = (() => {
-    if (!reportData.date || reportData.date === 'Invalid Date') {
+    if (!reportData.date) {
+      if (DEBUG) console.warn('[zip-gen] date:missing', { student: reportData.studentName });
       return new Date().toLocaleDateString('en-GB');
     }
-    // If it's already a formatted string, use it
-    if (typeof reportData.date === 'string' && /\d{1,2}\/\d{1,2}\/\d{4}/.test(reportData.date)) {
-      return reportData.date;
+    
+    // Check for invalid date strings
+    const dateStr = String(reportData.date);
+    if (dateStr === 'Invalid Date' || dateStr === 'NaN/NaN/NaN' || dateStr.includes('Invalid')) {
+      if (DEBUG) console.warn('[zip-gen] date:invalid-string', { student: reportData.studentName, date: dateStr });
+      return new Date().toLocaleDateString('en-GB');
     }
+    
+    // If it's already a properly formatted string (DD/MM/YYYY), use it
+    if (/\d{1,2}\/\d{1,2}\/\d{4}/.test(dateStr)) {
+      return dateStr;
+    }
+    
     // Try to parse and reformat
-    const parsed = new Date(reportData.date);
-    if (!isNaN(parsed.getTime())) {
-      return parsed.toLocaleDateString('en-GB');
+    try {
+      const parsed = new Date(reportData.date);
+      if (!isNaN(parsed.getTime())) {
+        const formatted = parsed.toLocaleDateString('en-GB');
+        // Double-check the formatted result
+        if (formatted && formatted !== 'Invalid Date' && formatted !== 'NaN/NaN/NaN') {
+          return formatted;
+        }
+      }
+    } catch (error) {
+      if (DEBUG) console.warn('[zip-gen] date:parse-error', { student: reportData.studentName, date: reportData.date, error });
     }
+    
+    if (DEBUG) console.warn('[zip-gen] date:fallback', { student: reportData.studentName, original: reportData.date });
     return new Date().toLocaleDateString('en-GB');
   })();
   
