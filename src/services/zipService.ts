@@ -81,13 +81,25 @@ export const downloadClassAsZIP = async (
         if (DEBUG) console.warn('[zip] skip: not ready', { reportId: report.id });
         continue;
       }
+      // Safely format date with fallback
+      const safeDate = (() => {
+        try {
+          const date = toDate(report.createdAt);
+          const formatted = date.toLocaleDateString('en-GB');
+          if (formatted === 'Invalid Date') return new Date().toLocaleDateString('en-GB');
+          return formatted;
+        } catch {
+          return new Date().toLocaleDateString('en-GB');
+        }
+      })();
+      
       const pdfBlob = await generatePDFBlob({
         studentName: `${student.firstName} ${student.lastName}`,
         classLevel: className,
         classLocation: 'Unknown Location',
         comments: report.reportText || '',
         teacher: `${teacher.firstName} ${teacher.lastName}`,
-        date: toDate(report.createdAt).toLocaleDateString('en-GB'),
+        date: safeDate,
         artwork: report.artworkUrl || ''
       });
       if (pdfBlob?.size) {

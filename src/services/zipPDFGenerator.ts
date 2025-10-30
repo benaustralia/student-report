@@ -65,19 +65,53 @@ const wrapText = (text: string, maxWidth: number): string[] => {
   const ctx = document.createElement('canvas').getContext('2d');
   if (!ctx) return [text];
   ctx.font = '11px "Noto Sans SC", Arial, sans-serif';
+  
+  // Wait for font to load if possible
+  if (document.fonts && document.fonts.check) {
+    // Check if font is loaded, but don't block if not
+    document.fonts.ready.catch(() => {});
+  }
+  
   if (ctx.measureText(text).width <= maxWidth) return [text];
+  
   const lines: string[] = [];
   let currentLine = '';
-  for (const token of text.split(/(\s+|[。！？，、；：]|[.!?])/)) {
+  
+  // Split by spaces first for English, then handle Chinese character-by-character
+  const tokens = text.split(/(\s+|[。！？，、；：]|[.!?])/);
+  
+  for (const token of tokens) {
     if (!token) continue;
-    const testLine = currentLine + token;
-    if (ctx.measureText(testLine).width > maxWidth && currentLine) {
-      lines.push(currentLine.trim());
-      currentLine = token;
-    } else currentLine = testLine;
+    
+    // For Chinese characters (no spaces), break character-by-character if needed
+    const isChinese = /[\u4e00-\u9fff]/.test(token);
+    if (isChinese && !token.match(/^\s+$/)) {
+      // Handle Chinese character-by-character
+      for (let i = 0; i < token.length; i++) {
+        const char = token[i];
+        const testLine = currentLine + char;
+        const width = ctx.measureText(testLine).width;
+        if (width > maxWidth && currentLine) {
+          lines.push(currentLine.trim());
+          currentLine = char;
+        } else {
+          currentLine = testLine;
+        }
+      }
+    } else {
+      // Handle English/space-separated text
+      const testLine = currentLine + token;
+      if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+        lines.push(currentLine.trim());
+        currentLine = token;
+      } else {
+        currentLine = testLine;
+      }
+    }
   }
-  if (currentLine) lines.push(currentLine.trim());
-  return lines;
+  
+  if (currentLine.trim()) lines.push(currentLine.trim());
+  return lines.length > 0 ? lines : [text];
 };
 
 const addText = (doc: Document, svg: SVGSVGElement, x: number, y: number, text: string, size = '13px') => {
@@ -100,12 +134,29 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
   svgClone.querySelectorAll('text.st1, text.st2').forEach(t => {
     if (t.textContent && /^[123456]$/.test(t.textContent.trim())) t.remove();
   });
+  // Validate and format date - ensure it's not "Invalid Date"
+  const formattedDate = (() => {
+    if (!reportData.date || reportData.date === 'Invalid Date') {
+      return new Date().toLocaleDateString('en-GB');
+    }
+    // If it's already a formatted string, use it
+    if (typeof reportData.date === 'string' && /\d{1,2}\/\d{1,2}\/\d{4}/.test(reportData.date)) {
+      return reportData.date;
+    }
+    // Try to parse and reformat
+    const parsed = new Date(reportData.date);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toLocaleDateString('en-GB');
+    }
+    return new Date().toLocaleDateString('en-GB');
+  })();
+  
   ([
     [206.17, 222.41, reportData.studentName],
     [206.17, 250.43, reportData.classLevel],
     [206.44, 278.45, reportData.classLocation],
     [327.71, 727.44, reportData.teacher],
-    [327.71, 745.52, reportData.date]
+    [327.71, 745.52, formattedDate]
   ] as [number, number, string][]).forEach(([x, y, t]) => {
     addText(svgDoc, svgClone, x, y, t);
   });
@@ -136,7 +187,7 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
     '3': reportData.classLocation,
     '4': wrapText(reportData.comments?.trim() || '', 350).join('\n'),
     '5': reportData.teacher,
-    '6': reportData.date
+    '6': formattedDate
   };
   svgClone.querySelectorAll('text tspan').forEach(t => {
     if (t.textContent && textMap[t.textContent as keyof typeof textMap]) {
