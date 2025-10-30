@@ -31,60 +31,32 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
 
   const loadStudentCounts = React.useCallback(async () => {
     try {
-      const classIds = classes.map(classData => classData.id);
-      const studentCounts = await getStudentCountsForClasses(classIds);
-      const total = Object.values(studentCounts).reduce((sum, count) => sum + count, 0);
-      setTotalStudents(total);
+      const studentCounts = await getStudentCountsForClasses(classes.map(c => c.id));
+      setTotalStudents(Object.values(studentCounts).reduce((sum, count) => sum + count, 0));
     } catch (error) {
       console.error('Error loading student counts:', error);
       setTotalStudents(0);
     }
   }, [classes]);
 
-  // Load student counts for all classes to calculate total - optimized with single query
-  useEffect(() => {
-    if (classes.length > 0) {
-      loadStudentCounts();
-    }
-  }, [loadStudentCounts]);
+  useEffect(() => { if (classes.length > 0) loadStudentCounts(); }, [loadStudentCounts]);
 
-  // Listen for data changes from DataBuilder to refresh student counts
   useEffect(() => {
     const handleDataChange = (event: CustomEvent) => {
-      // Only refresh when students are added/updated/deleted
-      if (event.detail?.type === 'students') {
-        loadStudentCounts();
-      }
+      if (event.detail?.type === 'students') loadStudentCounts();
     };
-
     window.addEventListener('dataChanged', handleDataChange as unknown as EventListener);
     return () => window.removeEventListener('dataChanged', handleDataChange as unknown as EventListener);
   }, [loadStudentCounts]);
 
-  // Listen for teacher expansion events
   useEffect(() => {
-    const handleExpandTeacher = (event: CustomEvent) => {
-      const { teacherEmail: targetTeacherEmail } = event.detail;
-      
-      if (targetTeacherEmail === teacherEmail) {
-        setIsOpen(true);
-      }
-    };
-
+    const handleExpandTeacher = (e: CustomEvent) => { if (e.detail.teacherEmail === teacherEmail) setIsOpen(true); };
     window.addEventListener('expandTeacherForStudent', handleExpandTeacher as unknown as EventListener);
     return () => window.removeEventListener('expandTeacherForStudent', handleExpandTeacher as unknown as EventListener);
   }, [teacherEmail]);
 
-  // Listen for class expansion events to expand teacher if needed
   useEffect(() => {
-    const handleExpandClass = (event: CustomEvent) => {
-      const { classId } = event.detail;
-      // Check if this teacher has the class that needs to be expanded
-      if (classes.some(classData => classData.id === classId)) {
-        setIsOpen(true);
-      }
-    };
-
+    const handleExpandClass = (e: CustomEvent) => { if (classes.some(c => c.id === e.detail.classId)) setIsOpen(true); };
     window.addEventListener('expandClassForStudent', handleExpandClass as EventListener);
     return () => window.removeEventListener('expandClassForStudent', handleExpandClass as EventListener);
   }, [classes]);

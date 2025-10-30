@@ -7,38 +7,27 @@ import { Toaster } from '@/components/ui/sonner';
 import { RBAApp } from './components/RBAApp';
 import { LoginForm } from './components/LoginForm';
 
-// Lazy load Google OAuth - only load when user needs to sign in
 const GoogleAuthWrapper = lazy(() => import('./components/GoogleAuthWrapper').then(m => ({ default: m.GoogleAuthWrapper })));
+
+const LoadingCard = ({ children }: { children: React.ReactNode }) => (
+  <div className="max-w-4xl mx-auto p-4 sm:p-6">
+    <Card>
+      <CardContent className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" />
+        <span>{children}</span>
+      </CardContent>
+    </Card>
+  </div>
+);
 
 function AppContent() {
   const { user, loading, error } = useAuthContext();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // Reset signing in state when user changes
-  useEffect(() => {
-    if (!user) {
-      setIsSigningIn(false);
-    }
-  }, [user]);
-
-  const handleSignIn = () => {
-    // This will be called when authentication is successful
-    setIsSigningIn(false);
-  };
+  useEffect(() => { if (!user) setIsSigningIn(false); }, [user]);
 
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin mr-2" />
-            <span>Loading...</span>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (loading) return <LoadingCard>Loading...</LoadingCard>;
 
   if (error) {
     return (
@@ -55,28 +44,16 @@ function AppContent() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <Suspense fallback={
-          <Card>
-            <CardContent className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mr-2" />
-              <span>Loading sign-in...</span>
-            </CardContent>
-          </Card>
-        }>
+        <Suspense fallback={<LoadingCard>Loading sign-in...</LoadingCard>}>
           <GoogleAuthWrapper>
-            <LoginForm 
-              onSignIn={handleSignIn}
-              isSigningIn={isSigningIn}
-              setIsSigningIn={setIsSigningIn}
-            />
+            <LoginForm onSignIn={() => setIsSigningIn(false)} isSigningIn={isSigningIn} setIsSigningIn={setIsSigningIn} />
           </GoogleAuthWrapper>
         </Suspense>
       </div>
     );
   }
 
-        // Render RBAApp directly
-        return <RBAApp user={user} />;
+  return <RBAApp user={user} />;
 }
 
 export default function TeacherReports() {

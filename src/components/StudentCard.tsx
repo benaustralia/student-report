@@ -26,20 +26,12 @@ interface StudentCardProps {
 }
 
 export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData, isSelected, onStudentSelected }) => {
-  const [state, setState] = useState({ 
-    isOpen: false, 
-    loading: false, 
-    reports: [] as ReportData[], 
-    reportText: '', 
-    hasUnsavedChanges: false, 
-    generatingAI: false, 
-    hasSeenAIWarning: false
-  });
+  const [state, setState] = useState({ isOpen: false, loading: false, reports: [] as ReportData[], reportText: '', hasUnsavedChanges: false, generatingAI: false, hasSeenAIWarning: false });
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
   const initializeWithUrlRef = useRef<(url: string | null) => void>(() => {});
 
-  const saveReport = useCallback(async (imageUrl?: string | null, isAutoSave: boolean = false) => {
+  const saveReport = useCallback(async (imageUrl?: string | null, isAutoSave = false) => {
     if (!state.reportText.trim() && !imageUrl) return;
     try {
       const reportData = {
@@ -52,37 +44,19 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       };
       const reportId = await createOrUpdateReport(reportData);
       
-      // Update the last saved text and clear unsaved changes flag
       lastSavedTextRef.current = state.reportText.trim();
       setState(prev => ({ ...prev, hasUnsavedChanges: false }));
-      
-      // Show Sonner toast for successful save
-      if (isAutoSave) {
-        toast.success('Report auto-saved', { duration: 2000 });
-      } else {
-        toast.success('Report saved successfully', { duration: 3000 });
-      }
-      
-      // Notify other components that reports data has changed
+      toast.success(isAutoSave ? 'Report auto-saved' : 'Report saved successfully', { duration: isAutoSave ? 2000 : 3000 });
       window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'reports' } }));
       
-      // Trigger background PDF generation (fire-and-forget)
-      // Fetch the saved report and get teacher data, then generate PDF
       try {
         const savedReports = await getReportsForStudent(student.id);
         const savedReport = savedReports.find(r => r.id === reportId) || savedReports[0];
         if (savedReport) {
           const teacher = await getTeacherByEmail(classData.teacherEmail);
-          if (teacher) {
-            // Generate PDF in background (non-blocking)
-            generatePDFInBackground(savedReport, student, classData, teacher).catch(error => {
-              console.error('Background PDF generation failed:', error);
-              // Silent failure - user doesn't need to know about background generation
-            });
-          }
+          if (teacher) generatePDFInBackground(savedReport, student, classData, teacher).catch(console.error);
         }
       } catch (pdfError) {
-        // Silent failure for background PDF generation
         console.error('Failed to trigger PDF generation:', pdfError);
       }
     } catch (error) {
@@ -93,19 +67,13 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
 
   const imageUpload = useImageUploadV2({
     userId: `students/${student.id}`,
-    onError: (error) => console.error('Image upload error:', error),
+    onError: console.error,
     onRemove: () => saveReport(null),
   });
 
-  // Store the latest initializeWithUrl function in a ref
   initializeWithUrlRef.current = imageUpload.initializeWithUrl;
 
-  // Auto-expand when this student is selected
-  useEffect(() => {
-    if (isSelected) {
-      setState(prev => ({ ...prev, isOpen: true }));
-    }
-  }, [isSelected]);
+  useEffect(() => { if (isSelected) setState(prev => ({ ...prev, isOpen: true })); }, [isSelected]);
 
   const loadReports = useCallback(async () => {
     if (hasLoadedRef.current) return;
@@ -148,30 +116,19 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   }, [loadReports]);
 
   const handleToggle = () => {
-    if (!state.isOpen) {
-      loadReports();
-    }
+    if (!state.isOpen) loadReports();
     setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
   };
 
   const handleAIGenerate = () => {
-    if (!state.reportText.trim()) {
-      alert('Please enter some notes or ideas first to generate a report.');
-      return;
-    }
-
-    // If user has already seen the warning, proceed directly
-    if (state.hasSeenAIWarning) {
-      generateAIReport();
-    }
-    // Otherwise, the AlertDialog will handle showing the warning
+    if (!state.reportText.trim()) return alert('Please enter some notes or ideas first to generate a report.');
+    if (state.hasSeenAIWarning) generateAIReport();
   };
 
   const generateAIReport = async () => {
     setState(prev => ({ ...prev, generatingAI: true, hasSeenAIWarning: true }));
     
     try {
-      // Using OpenAI API (you can replace with any AI service)
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -181,10 +138,10 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         body: JSON.stringify({
           model: 'gpt-3.5-turbo',
           messages: [
-        {
-          role: 'system',
-          content: 'You are a bilingual educator in Australia creating student progress reports. Generate a bilingual report with BOTH English and Chinese sections. Format: [English text] [Chinese text]. Both sections should be casual, warm-hearted, and friendly - like talking to parents. The Chinese section should match the conversational, warm tone of English (like chatting with friends, not a formal academic report). Avoid overly formal or academic language. Focus on student progress, creativity, engagement, and achievements with genuine warmth. Use teacher notes as foundation. If notes are Chinese dot points, transform into proper sentences. Keep student names in English in both languages. Each language section must be complete and meaningful. Generate natural, flowing text without section headers. CRITICAL: Your response MUST be EXACTLY 430 characters or less (no exceptions). This is a hard limit for a printed certificate. Count characters as you write. Target: ~200 English chars + ~200 Chinese chars = ~400 total. Write concisely. Shorten immediately if over limit.'
-        },
+            {
+              role: 'system',
+              content: 'You are a bilingual educator in Australia creating student progress reports. Generate a bilingual report with BOTH English and Chinese sections. Format: [English text] [Chinese text]. Both sections should be casual, warm-hearted, and friendly - like talking to parents. The Chinese section should match the conversational, warm tone of English (like chatting with friends, not a formal academic report). Avoid overly formal or academic language. Focus on student progress, creativity, engagement, and achievements with genuine warmth. Use teacher notes as foundation. If notes are Chinese dot points, transform into proper sentences. Keep student names in English in both languages. Each language section must be complete and meaningful. Generate natural, flowing text without section headers. CRITICAL: Your response MUST be EXACTLY 430 characters or less (no exceptions). This is a hard limit for a printed certificate. Count characters as you write. Target: ~200 English chars + ~200 Chinese chars = ~400 total. Write concisely. Shorten immediately if over limit.'
+            },
             {
               role: 'user',
               content: `Student: ${student.firstName} ${student.lastName}\nClass: ${classData.classLevel}\nBullets: ${state.reportText}`
@@ -195,19 +152,12 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate AI report');
-      }
+      if (!response.ok) throw new Error('Failed to generate AI report');
 
       const data = await response.json();
-      let generatedText = data.choices[0]?.message?.content?.trim();
+      const generatedText = data.choices[0]?.message?.content?.trim().replace(/\[.*?\]/g, '').trim();
       
       if (generatedText) {
-        // Clean up any unwanted formatting
-        generatedText = generatedText
-          .replace(/\[.*?\]/g, '')
-          .trim();
-        
         setState(prev => ({ ...prev, reportText: generatedText, hasUnsavedChanges: true }));
       } else {
         alert('Failed to generate report text. Please try again.');
@@ -221,24 +171,14 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   };
 
 
-  // Auto-save effect with unsaved changes tracking
   useEffect(() => {
     if (!state.reportText.trim()) {
-      // Only update state if hasUnsavedChanges is currently true
-      if (state.hasUnsavedChanges) {
-        setState(prev => ({ ...prev, hasUnsavedChanges: false }));
-      }
+      if (state.hasUnsavedChanges) setState(prev => ({ ...prev, hasUnsavedChanges: false }));
       return;
     }
     
-    // Check if there are unsaved changes
     const hasChanges = state.reportText.trim() !== lastSavedTextRef.current;
-    
-    // Only update state if the hasUnsavedChanges value actually changed
-    if (hasChanges !== state.hasUnsavedChanges) {
-      setState(prev => ({ ...prev, hasUnsavedChanges: hasChanges }));
-    }
-    
+    if (hasChanges !== state.hasUnsavedChanges) setState(prev => ({ ...prev, hasUnsavedChanges: hasChanges }));
     if (!hasChanges) return;
     
     const timeoutId = setTimeout(() => {
@@ -247,21 +187,15 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     return () => clearTimeout(timeoutId);
   }, [state.reportText, state.hasUnsavedChanges, imageUpload.uploading, imageUpload.currentImageUrl, saveReport]);
 
-  // beforeunload event handler to warn about unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (state.hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-        return 'You have unsaved changes. Are you sure you want to leave?';
-      }
+      if (!state.hasUnsavedChanges) return;
+      e.preventDefault();
+      e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+      return e.returnValue;
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [state.hasUnsavedChanges]);
 
   return (

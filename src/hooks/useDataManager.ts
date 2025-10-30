@@ -5,20 +5,20 @@ import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, getAllReque
 type DataType = 'requests' | 'users' | 'classes' | 'students' | 'teachers';
 type ItemType = AdminUser | Class | Student | Teacher | Request;
 
-export const useDataManager = () => {
-  const [data, setData] = useState<Record<DataType, ItemType[]>>({
-    users: [], classes: [], students: [], teachers: [], requests: []
-  });
+const DATA_TYPES = ['users', 'classes', 'students', 'teachers', 'requests'] as const;
+const EMPTY_DATA = { users: [], classes: [], students: [], teachers: [], requests: [] } as Record<DataType, ItemType[]>;
+const FETCHERS = [getAllUsers, getAllClasses, getAllStudents, getAllTeachers, getAllRequests] as const;
 
-  const refreshAllData = async (): Promise<Record<DataType, ItemType[]>> => {
-    const results = await Promise.all([getAllUsers(), getAllClasses(), getAllStudents(), getAllTeachers(), getAllRequests()]);
-    return Object.fromEntries(['users', 'classes', 'students', 'teachers', 'requests'].map((key, i) => [key, results[i] || []])) as Record<DataType, ItemType[]>;
+export const useDataManager = () => {
+  const [data, setData] = useState<Record<DataType, ItemType[]>>(EMPTY_DATA);
+
+  const refreshAllData = async () => {
+    const results = await Promise.all(FETCHERS.map(fn => fn()));
+    return Object.fromEntries(DATA_TYPES.map((key, i) => [key, results[i] || []])) as Record<DataType, ItemType[]>;
   };
 
   useEffect(() => {
-    refreshAllData()
-      .then(setData)
-      .catch(() => setData({ users: [], classes: [], students: [], teachers: [], requests: [] }));
+    refreshAllData().then(setData).catch(() => setData(EMPTY_DATA));
   }, []);
 
   return { data, setData, refreshAllData };

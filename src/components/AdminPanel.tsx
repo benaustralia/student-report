@@ -17,32 +17,25 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => {
-  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[], teacherDisplayNames: {} as Record<string, string> });
+  const [state, setState] = useState({ 
+    isAdmin: false, 
+    loading: true, 
+    showDataBuilder: false, 
+    error: null as string | null, 
+    data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, 
+    openSections: { users: false, classes: true, students: true, incompleteReports: false }, 
+    teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, 
+    incompleteReports: [] as ReportData[], 
+    teacherDisplayNames: {} as Record<string, string> 
+  });
 
-  // Handle accordion state changes with auto-close functionality for Users and Classes
-  const handleBrowseAccordionChange = (section: 'users' | 'classes', isOpen: boolean) => {
-    setState(prev => {
-      // If opening a section, close the other one
-      if (isOpen) {
-        return {
-          ...prev,
-          openSections: {
-            ...prev.openSections,
-            users: section === 'users' ? true : false,
-            classes: section === 'classes' ? true : false
-          }
-        };
-      }
-      // If closing a section, just update that section
-      return {
-        ...prev,
-        openSections: {
-          ...prev.openSections,
-          [section]: false
-        }
-      };
-    });
-  };
+  const handleBrowseAccordionChange = (section: 'users' | 'classes', isOpen: boolean) => 
+    setState(prev => ({
+      ...prev,
+      openSections: isOpen 
+        ? { ...prev.openSections, users: section === 'users', classes: section === 'classes' }
+        : { ...prev.openSections, [section]: false }
+    }));
 
   const loadData = async () => {
     try {
@@ -56,25 +49,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
         getIncompleteReports().catch(() => [])
       ]);
       
-      // Load teacher display names
-      const teacherDisplayNames: Record<string, string> = {};
       const uniqueTeacherEmails = [...new Set(classes.map(c => c.teacherEmail))];
-      await Promise.all(uniqueTeacherEmails.map(async (email) => {
-        try {
-          const displayName = await getUserDisplayName(email);
-          teacherDisplayNames[email] = displayName || 'Unknown Teacher';
-        } catch (error) {
-          console.error(`Failed to get display name for ${email}:`, error);
-          teacherDisplayNames[email] = 'Unknown Teacher';
-        }
-      }));
-      const userMap = new Map();
-      teachers.forEach(t => t.email && userMap.set(t.email, { ...t, isAdmin: false }));
-      adminUsers.forEach(a => a.email && userMap.set(a.email, { ...a, isAdmin: a.isAdmin || false }));
-      const allUsers = Array.from(userMap.values());
-      const teacherMap = new Map();
-      teachers.forEach(t => t.email && teacherMap.set(t.email, t));
-      const uniqueTeachers = Array.from(teacherMap.values());
+      const teacherDisplayNames = Object.fromEntries(
+        await Promise.all(uniqueTeacherEmails.map(async email => 
+          [email, await getUserDisplayName(email).catch(() => 'Unknown Teacher') || 'Unknown Teacher']
+        ))
+      );
+      
+      const allUsers = [...new Map([
+        ...teachers.filter(t => t.email).map(t => [t.email, { ...t, isAdmin: false }]),
+        ...adminUsers.filter(a => a.email).map(a => [a.email, { ...a, isAdmin: a.isAdmin || false }])
+      ].reverse()).values()];
+      
+      const uniqueTeachers = [...new Map(teachers.filter(t => t.email).map(t => [t.email, t])).values()];
+      
       setState(prev => ({ 
         ...prev, 
         data: { users: allUsers, classes, students, teachers: uniqueTeachers, teacherCount: uniqueTeachers.length, adminCount: allUsers.filter(u => u.isAdmin).length }, 
@@ -87,47 +75,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
   };
 
 
-  useEffect(() => { (async () => { try { const adminStatus = await isUserAdmin(user.email || ''); setState(prev => ({ ...prev, isAdmin: adminStatus, loading: false })); if (adminStatus) await loadData(); } catch { setState(prev => ({ ...prev, error: 'Failed to check admin status', loading: false })); } })(); }, [user]);
   useEffect(() => { 
-    if (!state.showDataBuilder && state.isAdmin) {
-      loadData();
-    }
+    (async () => { 
+      try { 
+        const adminStatus = await isUserAdmin(user.email || ''); 
+        setState(prev => ({ ...prev, isAdmin: adminStatus, loading: false })); 
+        if (adminStatus) await loadData(); 
+      } catch { 
+        setState(prev => ({ ...prev, error: 'Failed to check admin status', loading: false })); 
+      } 
+    })(); 
+  }, [user]);
+  useEffect(() => { 
+    if (!state.showDataBuilder && state.isAdmin) loadData();
   }, [state.showDataBuilder, state.isAdmin]);
 
-  // Listen for data changes from DataBuilder
   useEffect(() => {
     const handleDataChanged = (event: CustomEvent) => {
-      const { type } = event.detail;
+      const { type, action } = event.detail;
+      const shouldReload = 
+        ['users', 'teachers', 'reports'].includes(type) ||
+        (type === 'classes' && action !== 'update') ||
+        (type === 'students' && action !== 'bulk_import');
       
-      // Only reload data for changes that affect the admin panel view
-      // Skip individual student deletions and class updates to prevent unnecessary refreshes
-      if (type === 'users' || type === 'teachers' || type === 'reports') {
-        loadData();
-      } else if (type === 'classes') {
-        // For classes, only reload if it's not an update (to avoid refreshing the whole app)
-        const { action } = event.detail;
-        if (action !== 'update') {
-          loadData();
-        } else {
-          // Skip refresh for class updates
-        }
-      } else if (type === 'students') {
-        // For students, reload for all actions except bulk import to keep stats updated
-        const { action } = event.detail;
-        if (action !== 'bulk_import') {
-          loadData();
-        } else {
-          // Skip refresh for bulk imports
-        }
-      } else if (type === 'requests') {
-        // Skip refresh for requests - StatisticsBar handles real-time updates
-      }
+      if (shouldReload) loadData();
     };
 
     window.addEventListener('dataChanged', handleDataChanged as EventListener);
-    return () => {
-      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
-    };
+    return () => window.removeEventListener('dataChanged', handleDataChanged as EventListener);
   }, []);
 
   if (state.loading) return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin mr-2" /><span>Loading admin panel...</span></div>;

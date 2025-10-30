@@ -22,88 +22,54 @@ interface RBAAppProps { user: User; }
 
 export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const { signOut } = useAuthContext();
-  
-  // Split large state into focused pieces
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [teacherDisplayNames, setTeacherDisplayNames] = useState<Record<string, string>>({});
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [openSections, setOpenSections] = useState({ adminPanel: false, allClasses: false });
-  const [activeAdminTab, setActiveAdminTab] = useState('browse');
-  const [openClassCardId, setOpenClassCardId] = useState<string | null>(null);
-  
-  // Prevent duplicate loading in React strict mode
   const isLoadingRef = React.useRef(false);
+  
+  const [state, setState] = useState({
+    classes: [] as Class[],
+    loading: true,
+    error: null as string | null,
+    isAdmin: false,
+    isSigningOut: false,
+    teacherDisplayNames: {} as Record<string, string>,
+    selectedStudentId: null as string | null,
+    openSections: { adminPanel: false, allClasses: false },
+    activeAdminTab: 'browse',
+    openClassCardId: null as string | null
+  });
 
-  // Handle accordion state changes with auto-close functionality
-  const handleAccordionChange = (section: 'adminPanel' | 'allClasses', isOpen: boolean) => {
-    setOpenSections(prev => {
-      // If opening a section, close the other one
-      if (isOpen) {
-        return {
-          adminPanel: section === 'adminPanel' ? true : false,
-          allClasses: section === 'allClasses' ? true : false
-        };
-      }
-      // If closing a section, just update that section
-      return { ...prev, [section]: false };
-    });
-  };
+  const handleAccordionChange = (section: 'adminPanel' | 'allClasses', isOpen: boolean) => 
+    setState(prev => ({
+      ...prev,
+      openSections: isOpen 
+        ? { adminPanel: section === 'adminPanel', allClasses: section === 'allClasses' }
+        : { ...prev.openSections, [section]: false }
+    }));
 
-  // Handle class card toggle with auto-close functionality
-  const handleClassCardToggle = (classId: string, isOpen: boolean) => {
-    if (isOpen) {
-      // Opening a class card - close all others
-      setOpenClassCardId(classId);
-    } else {
-      // Closing a class card
-      setOpenClassCardId(null);
-    }
-  };
+  const handleClassCardToggle = (classId: string, isOpen: boolean) => 
+    setState(prev => ({ ...prev, openClassCardId: isOpen ? classId : null }));
 
 
   const handleNavigateToStudent = async (studentId: string) => {
-    setSelectedStudentId(studentId);
+    setState(prev => ({ ...prev, selectedStudentId: studentId }));
     
     try {
-      // First, find which class contains this student
-      
-      for (const classData of classes) {
+      for (const classData of state.classes) {
         const students = await getStudentsForClass(classData.id);
         if (students.some((student: any) => student.id === studentId)) {
-          // First expand the teacher card
           window.dispatchEvent(new CustomEvent('expandTeacherForStudent', { 
             detail: { teacherEmail: classData.teacherEmail, classId: classData.id, studentId } 
           }));
           
-          // Wait for teacher card to expand, then dispatch class expansion event
           setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('expandClassForStudent', { 
-              detail: { classId: classData.id, studentId } 
-            }));
+            window.dispatchEvent(new CustomEvent('expandClassForStudent', { detail: { classId: classData.id, studentId } }));
           }, 200);
           
-          // Quick scroll to student with minimal delay
           const scrollToStudent = (attempts = 0) => {
-            const studentElement = document.querySelector(`[data-student-id="${studentId}"]`);
-            
-            if (studentElement) {
-              studentElement.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
-              });
-              return;
-            }
-            
-            if (attempts < 10) {
-              setTimeout(() => scrollToStudent(attempts + 1), 100);
-            }
+            const el = document.querySelector(`[data-student-id="${studentId}"]`);
+            if (el) return el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (attempts < 10) setTimeout(() => scrollToStudent(attempts + 1), 100);
           };
           
-          // Start scrolling after a delay to allow for teacher and class expansion
           setTimeout(() => scrollToStudent(), 500);
           return;
         }
@@ -114,56 +80,23 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   };
 
   const loadData = React.useCallback(async () => {
-    // Prevent duplicate loading in React strict mode
-    if (isLoadingRef.current) {
-      return;
-    }
-    
+    if (isLoadingRef.current) return;
     isLoadingRef.current = true;
     
     try {
-      setLoading(true);
-      setError(null);
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      const [adminStatus, allClasses] = await Promise.all([isUserAdmin(user.email || ''), getAllClasses()]);
       
-      // Load critical data first (admin check and classes)
-      const [adminStatus, allClasses] = await Promise.all([
-        isUserAdmin(user.email || ''),
-        getAllClasses()
-      ]);
-      
-      setIsAdmin(adminStatus);
+      const classes = adminStatus ? allClasses : allClasses.filter(cls => cls.teacherEmail === user.email);
+      setState(prev => ({ ...prev, isAdmin: adminStatus, classes, loading: false }));
       
       if (adminStatus) {
-        // For all admin users, use all classes
-        setClasses(allClasses);
-        
-        // Set loading to false immediately after classes are loaded
-        setLoading(false);
-        
-        // Load teacher names in background (non-blocking)
         const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
-        
-        Promise.all(
-          uniqueTeacherEmails.map(async (email) => ({ 
-            email, 
-            displayName: (await getUserDisplayName(email)) || 'Unknown Teacher' 
-          }))
-        ).then(displayNames => {
-          const displayNameMap = displayNames.reduce((acc, { email, displayName }) => ({ 
-            ...acc, 
-            [email]: displayName 
-          }), {} as Record<string, string>);
-          setTeacherDisplayNames(displayNameMap);
-        });
-      } else {
-        // For teacher-only users, filter classes by their email
-        const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
-        setClasses(teacherClasses);
-        setLoading(false);
+        Promise.all(uniqueTeacherEmails.map(async email => [email, await getUserDisplayName(email) || 'Unknown Teacher']))
+          .then(entries => setState(prev => ({ ...prev, teacherDisplayNames: Object.fromEntries(entries) })));
       }
     } catch (err) {
-      setError('Failed to load data');
-      setLoading(false);
+      setState(prev => ({ ...prev, error: 'Failed to load data', loading: false }));
     } finally {
       isLoadingRef.current = false;
     }
@@ -181,57 +114,36 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     return () => clearTimeout(prefetchTimer);
   }, [loadData]);
 
-  // Listen for data changes from DataBuilder
   useEffect(() => {
     const handleDataChanged = (event: CustomEvent) => {
-      const { type } = event.detail;
+      const { type, action } = event.detail;
+      const shouldReload = 
+        ['users', 'teachers'].includes(type) ||
+        (type === 'classes' && action !== 'update') ||
+        (type === 'students' && !['delete', 'bulk_import'].includes(action)) ||
+        (type === 'requests' && action === 'approve');
       
-      // Only reload data for changes that affect the main app view
-      // Skip individual student deletions and class updates to prevent unnecessary refreshes
-      if (type === 'users' || type === 'teachers') {
-        loadData();
-      } else if (type === 'classes') {
-        // For classes, only reload if it's not an update (to avoid refreshing the whole app)
-        const { action } = event.detail;
-        if (action !== 'update') {
-          loadData();
-        } else {
-          // Skip refresh for class updates
-        }
-      } else if (type === 'students') {
-        // For students, only reload if it's not a deletion or bulk import (to avoid refreshing the whole app)
-        const { action } = event.detail;
-        if (action !== 'delete' && action !== 'bulk_import') {
-          loadData();
-        } else {
-          // Skip refresh for student deletions and bulk imports
-        }
-      } else if (type === 'requests' && event.detail?.action === 'approve') {
-        // Listen for request approvals to refresh teacher data
-        loadData();
-      }
+      if (shouldReload) loadData();
     };
 
     window.addEventListener('dataChanged', handleDataChanged as EventListener);
-    return () => {
-      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
-    };
+    return () => window.removeEventListener('dataChanged', handleDataChanged as EventListener);
   }, [loadData]);
 
 
   const handleSignOut = async () => {
-    if (isSigningOut) return;
+    if (state.isSigningOut) return;
     try {
-      setIsSigningOut(true);
+      setState(prev => ({ ...prev, isSigningOut: true }));
       await signOut();
     } catch (error) {
       console.error('Error signing out:', error);
     } finally {
-      setIsSigningOut(false);
+      setState(prev => ({ ...prev, isSigningOut: false }));
     }
   };
 
-  if (loading) return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6" style={{minHeight: '100vh'}}>
+  if (state.loading) return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6" style={{minHeight: '100vh'}}>
     {/* BuzzingBee is position:fixed - no space needed */}
     
     {/* Header - SHOW REAL CONTENT (doesn't depend on data loading) */}
@@ -278,7 +190,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       </CardHeader>
     </Card>
   </div>;
-  if (error) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card className="border-destructive"><CardContent className="text-destructive py-4">{error}</CardContent></Card></div>;
+  if (state.error) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card className="border-destructive"><CardContent className="text-destructive py-4">{state.error}</CardContent></Card></div>;
 
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
     <Suspense fallback={null}>
@@ -286,25 +198,25 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     </Suspense>
     
     <div className="flex items-center justify-between">
-      <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{isAdmin ? '' : 'Teacher View - Your Classes'}</TypographyMuted></div>
+      <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{state.isAdmin ? '' : 'Teacher View - Your Classes'}</TypographyMuted></div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <Button 
             variant="outline" 
             onClick={handleSignOut} 
-            disabled={isSigningOut}
-            aria-label={isSigningOut ? 'Signing out...' : 'Sign out of account'}
+            disabled={state.isSigningOut}
+            aria-label={state.isSigningOut ? 'Signing out...' : 'Sign out of account'}
           >
             <LogOut className="h-4 w-4 mr-2" />
-            {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+            {state.isSigningOut ? 'Signing Out...' : 'Sign Out'}
           </Button>
         </div>
         <div className="text-xs text-muted-foreground">
           {user.email}
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin ? (
+          {state.isAdmin ? (
             <>
             </>
           ) : (
@@ -316,9 +228,9 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         </div>
       </div>
     </div>
-    {isAdmin && (
+    {state.isAdmin && (
       <Card>
-        <Collapsible open={openSections.adminPanel} onOpenChange={(isOpen) => handleAccordionChange('adminPanel', isOpen)}>
+        <Collapsible open={state.openSections.adminPanel} onOpenChange={(isOpen) => handleAccordionChange('adminPanel', isOpen)}>
           <CollapsibleTrigger asChild>
             <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between gap-2">
@@ -326,49 +238,49 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
                   <Database className="h-5 w-5 flex-shrink-0" />
                   <span>Admin Panel</span>
                 </CardTitle>
-                {openSections.adminPanel ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+                {state.openSections.adminPanel ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
               </div>
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent>
               <Suspense fallback={<div className="p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
-                <AdminPanel user={user} onNavigateToStudent={handleNavigateToStudent} onTabChange={setActiveAdminTab} />
+                <AdminPanel user={user} onNavigateToStudent={handleNavigateToStudent} onTabChange={tab => setState(prev => ({ ...prev, activeAdminTab: tab }))} />
               </Suspense>
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
       </Card>
     )}
-    {activeAdminTab !== 'build' && (
+    {state.activeAdminTab !== 'build' && (
       <Card>
-      <Collapsible open={openSections.allClasses} onOpenChange={(isOpen) => handleAccordionChange('allClasses', isOpen)}>
+      <Collapsible open={state.openSections.allClasses} onOpenChange={(isOpen) => handleAccordionChange('allClasses', isOpen)}>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2">
                 <GraduationCap className="h-5 w-5 flex-shrink-0" />
-                <span>{isAdmin ? 'All Classes' : 'Your Classes'}</span>
-                <Badge variant="secondary" className="text-xs">{classes.length}</Badge>
+                <span>{state.isAdmin ? 'All Classes' : 'Your Classes'}</span>
+                <Badge variant="secondary" className="text-xs">{state.classes.length}</Badge>
               </CardTitle>
-              {openSections.allClasses ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+              {state.openSections.allClasses ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
             </div>
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-4">
-            {classes.length === 0 ? (
+            {state.classes.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground mb-4">
-                  {isAdmin ? 'No classes found in the system.' : 'No classes assigned to you yet. Contact your administrator.'}
+                  {state.isAdmin ? 'No classes found in the system.' : 'No classes assigned to you yet. Contact your administrator.'}
                 </p>
               </div>
             ) : (
             <div className="space-y-4">
-              {isAdmin ? Object.values(classes.reduce((acc, classData) => {
+              {state.isAdmin ? Object.values(state.classes.reduce((acc, classData) => {
                 const teacherKey = `${classData.teacherEmail}`;
-                if (!acc[teacherKey]) acc[teacherKey] = { teacherName: teacherDisplayNames[classData.teacherEmail] || 'Unknown Teacher', teacherEmail: classData.teacherEmail, classes: [] };
+                if (!acc[teacherKey]) acc[teacherKey] = { teacherName: state.teacherDisplayNames[classData.teacherEmail] || 'Unknown Teacher', teacherEmail: classData.teacherEmail, classes: [] };
                 acc[teacherKey].classes.push(classData);
                 return acc;
               }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
@@ -377,18 +289,18 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
                   teacherName={teacherData.teacherName}
                   teacherEmail={teacherData.teacherEmail}
                   classes={teacherData.classes}
-                  selectedStudentId={selectedStudentId}
+                  selectedStudentId={state.selectedStudentId}
                   onStudentSelected={handleNavigateToStudent}
-                  openClassCardId={openClassCardId}
+                  openClassCardId={state.openClassCardId}
                   onClassCardToggle={handleClassCardToggle}
                 />
-              )) : classes.map((classData) => (
+              )) : state.classes.map((classData) => (
                 <ClassCard
                   key={classData.id}
                   classData={classData}
-                  selectedStudentId={selectedStudentId}
+                  selectedStudentId={state.selectedStudentId}
                   onStudentSelected={handleNavigateToStudent}
-                  isOpen={openClassCardId === classData.id}
+                  isOpen={state.openClassCardId === classData.id}
                   onToggle={(isOpen) => handleClassCardToggle(classData.id, isOpen)}
                 />
               ))}
