@@ -164,6 +164,12 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     
     try {
       const reports = await getReportsForClass(classData.id);
+      // Show count of pre-prepared PDFs (reports with pdfUrl)
+      const totalReports = reports.length;
+      const preparedCount = reports.filter(r => Boolean(r.pdfUrl)).length;
+      toast.info(`${preparedCount}/${totalReports} Reports Prepared`, {
+        description: 'Using stored PDFs where available'
+      });
       
       // Get student and teacher data for reports
       const students = await getStudentsForClass(classData.id);
