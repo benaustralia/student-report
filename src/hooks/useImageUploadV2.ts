@@ -148,14 +148,22 @@ export const useImageUploadV2 = ({
 
   // Initialize with existing image URL - this is the key fix
   const initializeWithUrl = useCallback((imageUrl: string | null) => {
-    // Remove debug logs to reduce console noise
-    
-    // Always prioritize the Firebase URL over any file selection
+    const resolve = async (raw: string) => {
+      try {
+        const needsRefresh = !/^https?:\/\//i.test(raw) || (!raw.includes('token=') && !raw.includes('alt=media'));
+        const { refreshDownloadURL } = await import('@/services/storageService');
+        const url = needsRefresh ? await refreshDownloadURL(raw) : raw;
+        setCurrentImageUrl(url);
+        setPreview(url);
+      } catch {
+        // Fall back to raw if refresh fails
+        setCurrentImageUrl(raw);
+        setPreview(raw);
+      }
+    };
+
     if (imageUrl) {
-      setCurrentImageUrl(imageUrl);
-      setPreview(imageUrl);
-      
-      // Clear any file selection since we're loading from database
+      resolve(imageUrl);
       setFile(null);
     } else {
       setCurrentImageUrl(null);
