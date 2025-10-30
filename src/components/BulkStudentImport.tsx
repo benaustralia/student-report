@@ -9,6 +9,7 @@ import { Loader2, Upload, CheckCircle, XCircle, AlertCircle, Users } from 'lucid
 import { importStudents, getStudentsForClass } from '@/services/firebaseService-ultra-final';
 import type { Class, Student } from '@/types';
 import { parseStudentsCSV, type ParsedStudent } from '@/utils/studentCsv';
+import { ExistingStudents, CsvInput, PreviewList, ErrorOrSuccess } from '@/components/helpers/bulkStudentImport';
 
 interface BulkStudentImportProps {
   classData: Class | null;
@@ -198,104 +199,10 @@ export function BulkStudentImport({
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Existing Students */}
-          <Card>
-            <CardHeader className="pb-3">
-              <h3 className="text-base font-semibold flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Existing Students in This Class
-                <Badge variant="secondary" className="ml-2">{existingStudents.length}</Badge>
-              </h3>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {loadingExisting ? (
-                <div className="flex items-center justify-center p-4">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span className="text-sm text-muted-foreground">Loading students...</span>
-                </div>
-              ) : existingStudents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No students in this class yet.</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto">
-                  {existingStudents.map((student) => (
-                    <div key={student.id} className="flex items-center gap-2 p-2 rounded border">
-                      <div className="font-medium text-sm">
-                        {student.firstName} {student.lastName}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* CSV Input */}
-          <Card>
-            <CardHeader className="pb-3">
-              <h3 className="text-base font-semibold">Student Data</h3>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Textarea
-                placeholder="Paste your CSV data here...&#10;Supports: firstName,lastName OR firstName lastName&#10;Multi-word last names: Ezra,De Los Reyes OR Ezra De Los Reyes&#10;Nicknames: Jackie (Chen Wu),Li OR Jackie (Chen Wu) Li&#10;Example:&#10;John,Smith&#10;Jane Doe&#10;Ezra De Los Reyes&#10;Jackie (Chen Wu) Li"
-                value={csvData}
-                onChange={(e) => handleCSVChange(e.target.value)}
-                className="min-h-[120px] font-mono text-sm"
-                disabled={isProcessing}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Preview */}
-          {parsedStudents.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <h3 className="text-base font-semibold flex items-center gap-2">
-                  Preview ({validCount} valid, {invalidCount} invalid)
-                </h3>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-2">
-                  {parsedStudents.map((student, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 rounded border">
-                      <div className="flex-1">
-                        <span className="font-medium">{student.firstName} {student.lastName}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {student.isValid ? (
-                          <Badge variant="default" className="text-xs">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Valid
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive" className="text-xs">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            {student.error}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Error/Success Messages */}
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          
-          {success && (
-            <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                {success}
-              </AlertDescription>
-            </Alert>
-          )}
+          <ExistingStudents loading={loadingExisting} students={existingStudents} />
+          <CsvInput value={csvData} onChange={handleCSVChange} disabled={isProcessing} />
+          <PreviewList parsed={parsedStudents} validCount={validCount} invalidCount={invalidCount} />
+          <ErrorOrSuccess error={error} success={success} />
 
           {/* Actions */}
           <DialogFooter>

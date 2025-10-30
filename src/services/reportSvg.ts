@@ -1,65 +1,8 @@
 import nsalogoPng from '@/assets/NSALogo.png?url';
-import { refreshDownloadURL } from '@/services/storageService';
+import { wrapTextWithNotoSans } from '@/services/textWrap';
+import { convertUrlToDataUrl } from '@/services/image';
 
 export type ReportTextWrap = (text: string, maxPixelWidth: number) => string[];
-
-export function wrapTextWithNotoSans(text: string, maxPixelWidth: number): string[] {
-  const measureCanvas = document.createElement('canvas');
-  const measureCtx = measureCanvas.getContext('2d');
-  if (!measureCtx) return [text];
-  measureCtx.font = '11px "Noto Sans SC", Arial, sans-serif';
-  if (measureCtx.measureText(text).width <= maxPixelWidth) return [text];
-  return wrapTextByWidth(text, maxPixelWidth, measureCtx);
-}
-
-function wrapTextByWidth(text: string, maxPixelWidth: number, measureCtx: CanvasRenderingContext2D): string[] {
-  const lines: string[] = [];
-  let currentLine = '';
-  const tokens = text.split(/(\s+|[。！？，、；：]|[.!?])/);
-  for (const token of tokens) {
-    if (!token) continue;
-    const testLine = currentLine + token;
-    const testWidth = measureCtx.measureText(testLine).width;
-    if (testWidth > maxPixelWidth) {
-      if (currentLine.length > 0) {
-        const trimmedLine = currentLine.trim();
-        const punctuationMarks = ['.', '。', '!', '！', '?', '？', ',', '，', ';', '；', ':', '：'];
-        const endsWithPunctuation = punctuationMarks.some(mark => trimmedLine.endsWith(mark));
-        if (endsWithPunctuation) {
-          lines.push(currentLine.trim());
-          currentLine = token;
-        } else {
-          lines.push(currentLine.trim());
-          currentLine = token;
-        }
-      } else {
-        if (measureCtx.measureText(token).width > maxPixelWidth) {
-          let tempLine = '';
-          for (const char of token) {
-            const testCharLine = tempLine + char;
-            if (measureCtx.measureText(testCharLine).width > maxPixelWidth) {
-              if (tempLine.length > 0) {
-                lines.push(tempLine);
-                tempLine = char;
-              } else {
-                lines.push(char);
-              }
-            } else {
-              tempLine += char;
-            }
-          }
-          currentLine = tempLine;
-        } else {
-          currentLine = token;
-        }
-      }
-    } else {
-      currentLine += token;
-    }
-  }
-  if (currentLine.length > 0) lines.push(currentLine.trim());
-  return lines;
-}
 
 export async function fetchSvgTemplate(url: string): Promise<string> {
   const response = await fetch(url);
@@ -67,41 +10,6 @@ export async function fetchSvgTemplate(url: string): Promise<string> {
   return await response.text();
 }
 
-export async function convertUrlToDataUrl(url: string): Promise<string> {
-  let effectiveUrl = url;
-  const isFirebase = effectiveUrl.includes('firebasestorage.googleapis.com');
-  if (isFirebase) {
-    try { effectiveUrl = await refreshDownloadURL(effectiveUrl); } catch {}
-  }
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    if (!isFirebase) img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('Could not get canvas context'));
-        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0);
-        try {
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-          resolve(dataUrl);
-        } catch (e) {
-          if (isFirebase) {
-            // fallback for CORS-tainted firebase images
-            resolve(effectiveUrl);
-          } else {
-            reject(e instanceof Error ? e : new Error('Failed to export canvas'));
-          }
-        }
-      } catch (error) {
-        reject(error instanceof Error ? error : new Error('Canvas conversion failed'));
-      }
-    };
-    img.onerror = () => reject(new Error(`Failed to load image: ${effectiveUrl}`));
-    img.src = effectiveUrl;
-  });
-}
 
 export interface ReportSvgData {
   studentName: string;

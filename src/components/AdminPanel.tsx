@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle, Users, ChevronDown, ChevronRight, GraduationCap } from 'lucide-react';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
+import { UsersSection, ClassesSection } from '@/components/helpers/adminPanel';
 import { isUserAdmin } from '@/services/firebaseService-ultra-final';
 import { loadAdminPanelData } from '@/services/adminData';
 import type { User } from 'firebase/auth';
@@ -123,94 +124,33 @@ export function AdminPanel({ user, onTabChange }: AdminPanelProps) {
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
       <StatisticsBar />
       <Tabs defaultValue="browse" className="w-full" onValueChange={onTabChange}>
-            <TabsList className="w-full">
-              <TabsTrigger value="browse" className="flex-1">Browse</TabsTrigger>
-              <TabsTrigger value="build" className="flex-1">Build</TabsTrigger>
-            </TabsList>
-            <TabsContent value="browse" className="space-y-4">
-              
-              {(state.data.adminCount > 0 || state.data.teacherCount > 0) && (
-                <Card><Collapsible open={state.openSections.users} onOpenChange={(isOpen) => handleBrowseAccordionChange('users', isOpen)}>
-            <CollapsibleTrigger asChild><CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 flex-shrink-0" />
-                  <span>Users</span>
-                  <Badge variant="secondary" className="text-xs">{state.data.adminCount + state.data.teacherCount}</Badge>
-                </CardTitle>
-                {state.openSections.users ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
-              </div>
-            </CardHeader></CollapsibleTrigger>
-            <CollapsibleContent><CardContent className="space-y-2">
-              {state.data.users.filter(u => u.isAdmin).map((u, i) => {
-                return <div key={u.id || i} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium truncate">{u.firstName} {u.lastName}</span>
-                  </div>
-                  <span className="text-sm text-muted-foreground truncate">{u.email}</span>
-                </div>
-              })}
-              {state.data.users.filter(u => !u.isAdmin).map((u, i) => {
-                return <div key={u.id || i} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium truncate">{u.firstName} {u.lastName}</span>
-                    <Badge variant="secondary" className="text-xs flex-shrink-0">Teacher</Badge>
-                  </div>
-                  <span className="text-sm text-muted-foreground truncate">{u.email}</span>
-                </div>
-              })}
-            </CardContent></CollapsibleContent>
-          </Collapsible></Card>)}
-        
-        {state.data.classes.length > 0 && (
-          <Card><Collapsible open={state.openSections.classes} onOpenChange={(isOpen) => handleBrowseAccordionChange('classes', isOpen)}>
-            <CollapsibleTrigger asChild><CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 flex-shrink-0" />
-                  <span>Classes</span>
-                  <Badge variant="secondary" className="text-xs">{state.data.classes.length}</Badge>
-                </CardTitle>
-                {state.openSections.classes ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
-              </div>
-            </CardHeader></CollapsibleTrigger>
-            <CollapsibleContent><CardContent className="space-y-4">
-              {Object.values(state.data.classes.reduce((acc, classData) => {
-                const teacherKey = `${classData.teacherEmail}`;
-                if (!acc[teacherKey]) acc[teacherKey] = { 
-                  teacherName: state.teacherDisplayNames[classData.teacherEmail] || 'Unknown Teacher', 
-                  teacherEmail: classData.teacherEmail, 
-                  classes: [] 
-                };
-                acc[teacherKey].classes.push(classData);
-                return acc;
-              }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
-                <Card key={teacherData.teacherEmail} className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{teacherData.teacherName}</span>
-                    </div>
-                    <div className="space-y-2">
-                      {teacherData.classes.map((classData) => (
-                        <div key={classData.id} className="flex items-center justify-between gap-2 p-2 border rounded">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{classData.classDay} at {classData.classTime}</span>
-                            <Badge variant="secondary" className="text-xs">{classData.classLevel}</Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </CardContent></CollapsibleContent>
-          </Collapsible></Card>)}
-            </TabsContent>
-            <TabsContent value="build" className="space-y-4">
-              <DataBuilder />
-            </TabsContent>
-          </Tabs>
+        <TabsList className="w-full">
+          <TabsTrigger value="browse" className="flex-1">Browse</TabsTrigger>
+          <TabsTrigger value="build" className="flex-1">Build</TabsTrigger>
+        </TabsList>
+        <TabsContent value="browse" className="space-y-4">
+          {(state.data.adminCount > 0 || state.data.teacherCount > 0) && (
+            <UsersSection
+              open={state.openSections.users}
+              onOpenChange={(isOpen) => handleBrowseAccordionChange('users', isOpen)}
+              adminCount={state.data.adminCount}
+              teacherCount={state.data.teacherCount}
+              users={state.data.users as any}
+            />
+          )}
+          {state.data.classes.length > 0 && (
+            <ClassesSection
+              open={state.openSections.classes}
+              onOpenChange={(isOpen) => handleBrowseAccordionChange('classes', isOpen)}
+              classes={state.data.classes as Class[]}
+              teacherDisplayNames={state.teacherDisplayNames}
+            />
+          )}
+        </TabsContent>
+        <TabsContent value="build" className="space-y-4">
+          <DataBuilder />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
