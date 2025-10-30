@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ interface AuthFormProps {
   setIsSigningIn: (signingIn: boolean) => void;
 }
 
-export const AuthForm: React.FC<AuthFormProps> = ({ onSignIn, isSigningIn, setIsSigningIn }) => {
+export function AuthForm({ onSignIn, isSigningIn, setIsSigningIn }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -36,7 +37,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSignIn, isSigningIn, setIs
     toast.error('Google sign-in failed. Please try again.');
   };
 
-  const handleEmailSignIn = async (e: React.FormEvent) => {
+  const handleEmailSignIn = async (e: FormEvent) => {
     e.preventDefault();
     setIsSigningIn(true);
 
@@ -191,4 +192,4 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSignIn, isSigningIn, setIs
       </div>
     </div>
   );
-};
+}

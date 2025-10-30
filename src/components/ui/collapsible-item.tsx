@@ -1,4 +1,4 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Save, X } from 'lucide-react';
 
@@ -10,11 +10,11 @@ interface CollapsibleItemProps {
   onDelete: () => void;
   onSave?: () => void;
   onCancel?: () => void;
-  children?: React.ReactNode;
+  children?: ReactNode;
   className?: string;
 }
 
-export const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
+export function CollapsibleItem({
   title,
   subtitle,
   isEditing,
@@ -24,7 +24,7 @@ export const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   onCancel,
   children,
   className = ""
-}) => {
+}: CollapsibleItemProps) {
   return (
     <div className={`p-4 border rounded-lg ${className}`}>
       {isEditing ? (
@@ -71,4 +71,4 @@ export const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       )}
     </div>
   );
-};
+}

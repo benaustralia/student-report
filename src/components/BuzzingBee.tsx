@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -8,7 +8,7 @@ interface BuzzingBeeProps {
   className?: string;
 }
 
-export const BuzzingBee: React.FC<BuzzingBeeProps> = ({ className = '' }) => {
+export function BuzzingBee({ className = '' }: BuzzingBeeProps) {
   const beeContainerRef = useRef<HTMLDivElement>(null);
   const leftWingRef = useRef<SVGPathElement>(null);
   const rightWingRef = useRef<SVGPathElement>(null);
@@ -194,4 +194,4 @@ export const BuzzingBee: React.FC<BuzzingBeeProps> = ({ className = '' }) => {
       </svg>
     </div>
   );
-};
+}

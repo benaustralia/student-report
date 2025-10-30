@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -28,14 +28,14 @@ interface ReportPreviewProps {
   isImageUploading?: boolean;
 }
 
-export const ReportPreview: React.FC<ReportPreviewProps> = ({
+export function ReportPreview({
   student,
   classData,
   reportData,
   reportText,
   artworkUrl,
   isImageUploading = false
-}) => {
+}: ReportPreviewProps) {
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchedTeacherEmail, setFetchedTeacherEmail] = useState<string | null>(null);
@@ -923,6 +923,6 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
       </Button>
     </div>
   );
-};
+}
 
 export default ReportPreview;

@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
 import nsalogoPng from '@/assets/NSALogo.png?url';
 // WebP version available at: @/assets/NSALogo.webp (27KB vs 108KB PNG)
 
 interface ReportTemplateProps { studentName: string; classLevel: string; classLocation: string; comments: string; teacher: string; date: string; artwork?: string; }
 
-export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, classLevel, classLocation, comments, teacher, date, artwork }) => {
+export function ReportTemplate({ studentName, classLevel, classLocation, comments, teacher, date, artwork }: ReportTemplateProps) {
   const svgRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState({ processedSvg: '', isLoading: true });
 
@@ -256,6 +256,6 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({ studentName, cla
       dangerouslySetInnerHTML={{ __html: state.processedSvg }} 
     />
   );
-};
+}
 
 export default ReportTemplate;

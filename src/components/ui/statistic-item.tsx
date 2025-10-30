@@ -1,4 +1,4 @@
-import React from 'react';
+ 
 import { TypographyLarge, TypographySmall } from '@/components/ui/typography';
 import type { LucideIcon } from 'lucide-react';
 
@@ -11,14 +11,14 @@ interface StatisticItemProps {
   className?: string;
 }
 
-export const StatisticItem: React.FC<StatisticItemProps> = ({
+export function StatisticItem({
   icon: Icon,
   value,
   label,
   loading = false,
   iconColor = 'text-muted-foreground',
   className = ''
-}) => {
+}: StatisticItemProps) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <Icon className={`h-4 w-4 ${iconColor}`} />
@@ -30,4 +30,4 @@ export const StatisticItem: React.FC<StatisticItemProps> = ({
       </TypographySmall>
     </div>
   );
-};
+}

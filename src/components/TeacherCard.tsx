@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StatisticItem } from '@/components/ui/statistic-item';
@@ -17,7 +17,7 @@ interface TeacherCardProps {
   onClassCardToggle?: (classId: string, isOpen: boolean) => void;
 }
 
-export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({ 
+export const TeacherCard = memo(function TeacherCard({ 
   teacherName, 
   teacherEmail, 
   classes,
@@ -25,11 +25,11 @@ export const TeacherCard: React.FC<TeacherCardProps> = React.memo(({
   onStudentSelected,
   openClassCardId,
   onClassCardToggle
-}) => {
+}: TeacherCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
 
-  const loadStudentCounts = React.useCallback(async () => {
+  const loadStudentCounts = useCallback(async () => {
     try {
       const classIds = classes.map(classData => classData.id);
       const studentCounts = await getStudentCountsForClasses(classIds);

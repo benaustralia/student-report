@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -20,7 +20,7 @@ interface ClassCardProps {
   onToggle?: (isOpen: boolean) => void;
 }
 
-export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, selectedStudentId, onStudentSelected, isOpen: externalIsOpen, onToggle }) => {
+export const ClassCard = memo(function ClassCard({ classData, selectedStudentId, onStudentSelected, isOpen: externalIsOpen, onToggle }: ClassCardProps) {
   const DEBUG = true;
   const [students, setStudents] = useState<Student[]>([]);
   const [internalIsOpen, setInternalIsOpen] = useState(false);
@@ -51,7 +51,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     }
   };
 
-  const loadStudentCount = React.useCallback(async () => {
+  const loadStudentCount = useCallback(async () => {
     try {
       const counts = await getStudentCountsForClasses([classData.id]);
       setStudentCount(counts[classData.id] || 0);
@@ -62,12 +62,12 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
   }, [classData.id]);
 
   // Load student count on mount to show accurate count - optimized
-  React.useEffect(() => {
+  useEffect(() => {
     loadStudentCount();
   }, [loadStudentCount]);
 
   // Listen for data changes from DataBuilder to refresh student count and list
-  React.useEffect(() => {
+  useEffect(() => {
     const handleDataChange = async (event: CustomEvent) => {
       const { type, action, itemId } = event.detail || {};
       

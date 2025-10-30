@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { Users, BookOpen, FileText } from 'lucide-react';
@@ -12,9 +12,9 @@ interface StatisticsBarProps {
   className?: string;
 }
 
-export const StatisticsBar: React.FC<StatisticsBarProps> = ({
+export function StatisticsBar({
   className = ''
-}) => {
+}: StatisticsBarProps) {
   const [stats, setStats] = useState({
     userCount: 0,
     classCount: 0,
@@ -130,4 +130,4 @@ export const StatisticsBar: React.FC<StatisticsBarProps> = ({
       </CardContent>
     </Card>
   );
-};
+}

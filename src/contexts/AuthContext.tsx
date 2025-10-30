@@ -1,13 +1,8 @@
-import React from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthContext } from './AuthContextType';
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
   return (
@@ -15,5 +10,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 

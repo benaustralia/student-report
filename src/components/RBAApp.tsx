@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, lazy, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,12 @@ import { ClassCard } from './ClassCard';
 import { TeacherCard } from './TeacherCard';
 
 // Lazy load ONLY non-critical components (below fold, behind interactions)
-const AdminPanel = React.lazy(() => import('./AdminPanel').then(module => ({ default: module.AdminPanel })));
-const BuzzingBee = React.lazy(() => import('./BuzzingBee').then(module => ({ default: module.BuzzingBee })));
+const AdminPanel = lazy(() => import('./AdminPanel').then(module => ({ default: module.AdminPanel })));
+const BuzzingBee = lazy(() => import('./BuzzingBee').then(module => ({ default: module.BuzzingBee })));
 
 interface RBAAppProps { user: User; }
 
-export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
+export function RBAApp({ user }: RBAAppProps) {
   const { signOut } = useAuthContext();
   
   // Split large state into focused pieces
@@ -36,7 +36,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   const [openClassCardId, setOpenClassCardId] = useState<string | null>(null);
   
   // Prevent duplicate loading in React strict mode
-  const isLoadingRef = React.useRef(false);
+  const isLoadingRef = useRef(false);
 
   // Handle accordion state changes with auto-close functionality
   const handleAccordionChange = (section: 'adminPanel' | 'allClasses', isOpen: boolean) => {
@@ -113,7 +113,7 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     }
   };
 
-  const loadData = React.useCallback(async () => {
+  const loadData = useCallback(async () => {
     // Prevent duplicate loading in React strict mode
     if (isLoadingRef.current) {
       return;
@@ -405,4 +405,4 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       </TypographySmall>
     </footer>
   </div>;
-};
+}

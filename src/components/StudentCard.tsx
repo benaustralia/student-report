@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense, lazy, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +25,7 @@ interface StudentCardProps {
   onStudentSelected?: (studentId: string) => void;
 }
 
-export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, classData, isSelected, onStudentSelected }) => {
+export const StudentCard = memo(function StudentCard({ student, classData, isSelected, onStudentSelected }: StudentCardProps) {
   const [state, setState] = useState({ 
     isOpen: false, 
     loading: false, 

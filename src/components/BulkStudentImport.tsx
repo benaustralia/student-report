@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,12 +23,12 @@ interface ParsedStudent {
   error?: string;
 }
 
-export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
+export function BulkStudentImport({
   classData,
   isOpen,
   onClose,
   onSuccess
-}) => {
+}: BulkStudentImportProps) {
   const [csvData, setCsvData] = useState('');
   const [parsedStudents, setParsedStudents] = useState<ParsedStudent[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -327,4 +327,4 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+}

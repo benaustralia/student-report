@@ -1,4 +1,4 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,13 @@ interface CollapsibleCardProps {
   badge?: string;
   isOpen: boolean;
   onToggle: (open: boolean) => void;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   subtitle?: string;
-  statistics?: React.ReactNode;
+  statistics?: ReactNode;
 }
 
-export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
+export function CollapsibleCard({
   title,
   icon: Icon,
   badge,
@@ -28,7 +28,7 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   className = "",
   subtitle,
   statistics
-}) => {
+}: CollapsibleCardProps) {
   return (
     <Card className={className}>
       <Collapsible open={isOpen} onOpenChange={onToggle}>
@@ -69,4 +69,4 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
       </Collapsible>
     </Card>
   );
-};
+}

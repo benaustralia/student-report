@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ interface ImageUploadProps {
   className?: string;
 }
 
-export const ImageUpload: React.FC<ImageUploadProps> = ({
+export const ImageUpload = ({
   value,
   onChange,
   onRemove,
@@ -22,7 +22,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   maxSize = 20,
   acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
   className,
-}) => {
+}: ImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {

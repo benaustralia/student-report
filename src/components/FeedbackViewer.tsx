@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { Search, Copy, Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
@@ -11,13 +12,13 @@ import type { ReportData } from '@/types';
 
 interface FeedbackViewerProps {
   teacherEmail: string;
-  trigger?: React.ReactNode;
+  trigger?: ReactNode;
 }
 
-export const FeedbackViewer: React.FC<FeedbackViewerProps> = ({ 
+export function FeedbackViewer({ 
   teacherEmail, 
   trigger 
-}) => {
+}: FeedbackViewerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [reports, setReports] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -176,4 +177,4 @@ export const FeedbackViewer: React.FC<FeedbackViewerProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+}

@@ -34,7 +34,7 @@ interface DataBuilderUIProps {
   userEmail: string | null;
 }
 
-export const DataBuilderUI: React.FC<DataBuilderUIProps> = ({ userEmail }) => {
+export function DataBuilderUI({ userEmail }: DataBuilderUIProps) {
   const emptyItems = Object.fromEntries(Object.entries(CONFIG.SECTIONS).map(([key, config]: [string, any]) => [key, config.empty])) as Record<DataType, ItemType>;
   const { data, newItems, updateItem, handleAction, handleRequestAction, handleBulkImportSuccess } = useDataBuilderOperations(emptyItems);
   
@@ -299,5 +299,5 @@ export const DataBuilderUI: React.FC<DataBuilderUIProps> = ({ userEmail }) => {
       )}
     </div>
   );
-};
+}
 

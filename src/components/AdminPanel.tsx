@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -16,7 +16,7 @@ interface AdminPanelProps {
   onTabChange?: (activeTab: string) => void;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => {
+export function AdminPanel({ user, onTabChange }: AdminPanelProps) {
   const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[], teacherDisplayNames: {} as Record<string, string> });
 
   // Handle accordion state changes with auto-close functionality for Users and Classes
@@ -239,4 +239,4 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
           </Tabs>
     </div>
   );
-};
+}
