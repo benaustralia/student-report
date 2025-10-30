@@ -93,3 +93,18 @@ export const refreshDownloadURL = async (urlOrPath: string): Promise<string> => 
     throw new Error(`Failed to refresh download URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
+
+/** Build a public, tokenless download URL (works when rules allow public read). */
+export const toPublicURL = (urlOrPath: string): string => {
+  let path = '';
+  if (/^https?:\/\//i.test(urlOrPath)) {
+    const urlObj = new URL(urlOrPath);
+    const maybe = urlObj.pathname.split('/o/')[1]?.split('?')[0] || '';
+    path = decodeURIComponent(maybe);
+  } else {
+    path = urlOrPath.replace(/^\/+/, '');
+  }
+  if (!path) throw new Error('Invalid storage URL or path');
+  const bucket = 'student-reports-final.appspot.com';
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
+};

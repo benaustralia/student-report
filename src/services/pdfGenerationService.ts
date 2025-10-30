@@ -1,5 +1,5 @@
 import type { ReportData, Student, Class, Teacher } from '@/types';
-import { refreshDownloadURL } from './storageService';
+import { refreshDownloadURL, toPublicURL } from './storageService';
 import { getStorageInstance } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -47,12 +47,13 @@ const convertArtworkToDataUrl = async (artworkUrl: string): Promise<string> => {
   if (DEBUG) console.log('[pdf] convertArtworkToDataUrl:start', { artworkUrl });
   let freshUrl: string;
   try {
-    freshUrl = await refreshDownloadURL(artworkUrl);
+    // Prefer public URL to avoid auth/CORS
+    freshUrl = toPublicURL(artworkUrl);
     if (DEBUG) console.log('[pdf] convertArtworkToDataUrl:refreshed', { freshUrl });
   } catch (e: any) {
     if (e?.message?.includes('object-not-found')) {
       if (DEBUG) console.warn('[pdf] convertArtworkToDataUrl:missing-original, try alternate');
-      freshUrl = await tryAlternateArtworkPath(artworkUrl);
+      freshUrl = toPublicURL(await tryAlternateArtworkPath(artworkUrl));
       if (DEBUG) console.log('[pdf] convertArtworkToDataUrl:alternate-refreshed', { freshUrl });
     } else {
       throw new Error(`Failed to refresh download URL: ${e?.message || 'unknown error'}`);

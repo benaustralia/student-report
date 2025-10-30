@@ -13,10 +13,11 @@ service firebase.storage {
       allow read, write: if request.auth != null;
     }
     
-    // Student reports images - allow authenticated users to read student artwork
-    // Matches both student-reports/{studentId}/ and student-reports/students/{studentId}/
-    match /student-reports/{allSegments=**} {
-      allow read, write: if request.auth != null;
+    // Student reports images
+    // Public read for artwork to avoid token/CORS issues; writes require auth
+    match /student-reports/students/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
     
     // Pre-generated PDFs - allow authenticated users to read and write PDFs
@@ -24,11 +25,8 @@ match /pdfs/{reportId}/{allPaths=**} {
   allow read, write: if request.auth != null;
 }
 
+// Legacy path kept for safety (auth required)
 match /student-reports/student/{allPaths=**} {
-  allow read, write: if request.auth != null;
-}
-
-match /student-reports/students/{allPaths=**} {
   allow read, write: if request.auth != null;
 }
   }

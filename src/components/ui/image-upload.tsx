@@ -26,7 +26,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const [displaySrc, setDisplaySrc] = useState<string | null>(value || null);
 
-  // Resolve Firebase Storage URLs to tokened download URLs for display
+  // Resolve Firebase Storage URLs to public alt=media (no token) for display
   useEffect(() => {
     let cancelled = false;
     const resolve = async () => {
@@ -35,15 +35,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         return;
       }
       try {
-        const isHttp = /^https?:\/\//i.test(value);
-        const hasToken = value.includes('token=') || value.includes('alt=media');
-        if (isHttp && hasToken) {
-          if (!cancelled) setDisplaySrc(value);
-          return;
-        }
-        const { refreshDownloadURL } = await import('@/services/storageService');
-        const fresh = await refreshDownloadURL(value);
-        if (!cancelled) setDisplaySrc(fresh);
+        const { toPublicURL } = await import('@/services/storageService');
+        const publicUrl = toPublicURL(value);
+        if (!cancelled) setDisplaySrc(publicUrl);
       } catch {
         if (!cancelled) setDisplaySrc(value);
       }
