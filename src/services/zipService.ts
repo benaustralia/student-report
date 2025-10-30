@@ -113,10 +113,13 @@ export const generateClassZIP = async (
           throw error;
         }
       }
-      const pdfBlob = report.pdfUrl ? await downloadPDFFromStorage(report.pdfUrl) : null;
-      const finalPdfBlob = pdfBlob || await generatePDFBlob(report);
-      if (finalPdfBlob?.size) {
-        folder.file(`${report.studentName.replace(/\s+/g, '_')}_${report.date.replace(/\//g, '-')}.pdf`, finalPdfBlob);
+      if (!report.pdfUrl) {
+        skippedCount++;
+        continue;
+      }
+      const pdfBlob = await downloadPDFFromStorage(report.pdfUrl);
+      if (pdfBlob?.size) {
+        folder.file(`${report.studentName.replace(/\s+/g, '_')}_${report.date.replace(/\//g, '-')}.pdf`, pdfBlob);
         successCount++;
       } else {
         skippedCount++;
