@@ -20,18 +20,57 @@ const wrapText = (text: string, maxWidth: number): string[] => {
   if (DEBUG) console.log('[pdf] wrapText:start', { textLength: text.length, maxWidth, preview: text.substring(0, 50) });
   const lines: string[] = [];
   let currentLine = '';
-  const words = text.split(/\s+/);
-  if (DEBUG) console.log('[pdf] wrapText:words', { wordCount: words.length, firstWords: words.slice(0, 5) });
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const estimatedWidth = testLine.length * 7;
-    if (estimatedWidth > maxWidth && currentLine) {
-      if (DEBUG) console.log('[pdf] wrapText:wrap', { estimatedWidth, maxWidth, currentLineLength: currentLine.length });
-      lines.push(currentLine);
-      currentLine = word;
-    } else currentLine = testLine;
+  
+  // Split by whitespace but preserve whitespace for proper spacing
+  const parts = text.split(/(\s+)/);
+  if (DEBUG) console.log('[pdf] wrapText:parts', { partCount: parts.length, firstParts: parts.slice(0, 5) });
+  
+  for (const part of parts) {
+    if (!part) continue;
+    
+    // If this is whitespace, just add it to current line
+    if (/^\s+$/.test(part)) {
+      currentLine += part;
+      continue;
+    }
+    
+    // Check if this part contains Chinese characters
+    const hasChinese = /[\u4e00-\u9fff]/.test(part);
+    
+    if (hasChinese) {
+      // Handle Chinese character-by-character
+      for (let i = 0; i < part.length; i++) {
+        const char = part[i];
+        const testLine = currentLine + char;
+        // Chinese characters are wider: estimate ~11px per Chinese char, ~7px per English
+        const estimatedWidth = testLine.split('').reduce((sum, c) => {
+          return sum + (/[\u4e00-\u9fff]/.test(c) ? 11 : 7);
+        }, 0);
+        
+        if (estimatedWidth > maxWidth && currentLine) {
+          if (DEBUG) console.log('[pdf] wrapText:wrap-chinese', { estimatedWidth, maxWidth, char });
+          lines.push(currentLine.trim());
+          currentLine = char;
+        } else {
+          currentLine = testLine;
+        }
+      }
+    } else {
+      // Handle English/space-separated text
+      const testLine = currentLine ? `${currentLine}${part}` : part;
+      const estimatedWidth = testLine.length * 7;
+      
+      if (estimatedWidth > maxWidth && currentLine) {
+        if (DEBUG) console.log('[pdf] wrapText:wrap-english', { estimatedWidth, maxWidth });
+        lines.push(currentLine.trim());
+        currentLine = part;
+      } else {
+        currentLine = testLine;
+      }
+    }
   }
-  if (currentLine) lines.push(currentLine);
+  
+  if (currentLine.trim()) lines.push(currentLine.trim());
   if (DEBUG) console.log('[pdf] wrapText:result', { lineCount: lines.length, lineLengths: lines.map(l => l.length) });
   return lines.length > 0 ? lines : [''];
 };

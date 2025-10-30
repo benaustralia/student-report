@@ -64,37 +64,59 @@ const createSVGElement = (doc: Document, tag: string, attrs: Record<string, stri
 const wrapText = (text: string, maxWidth: number): string[] => {
   if (DEBUG) console.log('[zip-gen] wrapText:start', { textLength: text.length, maxWidth, preview: text.substring(0, 50) });
   
-  // Use the exact same simple approach that works perfectly for individual PDFs
-  // This handles both English and Chinese text correctly
   const lines: string[] = [];
   let currentLine = '';
   
-  // Split by whitespace to handle both English words and Chinese character blocks
-  const words = text.split(/\s+/);
-  if (DEBUG) console.log('[zip-gen] wrapText:words', { wordCount: words.length, firstWords: words.slice(0, 5) });
+  // Split by whitespace for English words, but also handle Chinese character-by-character
+  const parts = text.split(/(\s+)/);
+  if (DEBUG) console.log('[zip-gen] wrapText:parts', { partCount: parts.length, firstParts: parts.slice(0, 5) });
   
-  for (const word of words) {
-    if (!word) continue;
+  for (const part of parts) {
+    if (!part) continue;
     
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const estimatedWidth = testLine.length * 7;
-    // Use the same 7px-per-character estimate that works for individual PDFs
-    // This works for both English and Chinese characters in the Noto Sans SC font
-    if (estimatedWidth > maxWidth && currentLine) {
-      if (DEBUG) console.log('[zip-gen] wrapText:wrap', { 
-        estimatedWidth, 
-        maxWidth, 
-        currentLineLength: currentLine.length,
-        currentLinePreview: currentLine.substring(0, 30)
-      });
-      lines.push(currentLine);
-      currentLine = word;
+    // If this is whitespace, just add it to current line
+    if (/^\s+$/.test(part)) {
+      currentLine += part;
+      continue;
+    }
+    
+    // Check if this part contains Chinese characters
+    const hasChinese = /[\u4e00-\u9fff]/.test(part);
+    
+    if (hasChinese) {
+      // Handle Chinese character-by-character
+      for (let i = 0; i < part.length; i++) {
+        const char = part[i];
+        const testLine = currentLine + char;
+        // Chinese characters are wider: estimate ~11px per Chinese char, ~7px per English
+        const estimatedWidth = testLine.split('').reduce((sum, c) => {
+          return sum + (/[\u4e00-\u9fff]/.test(c) ? 11 : 7);
+        }, 0);
+        
+        if (estimatedWidth > maxWidth && currentLine) {
+          if (DEBUG) console.log('[zip-gen] wrapText:wrap-chinese', { estimatedWidth, maxWidth, char });
+          lines.push(currentLine.trim());
+          currentLine = char;
+        } else {
+          currentLine = testLine;
+        }
+      }
     } else {
-      currentLine = testLine;
+      // Handle English/space-separated text
+      const testLine = currentLine ? `${currentLine}${part}` : part;
+      const estimatedWidth = testLine.length * 7;
+      
+      if (estimatedWidth > maxWidth && currentLine) {
+        if (DEBUG) console.log('[zip-gen] wrapText:wrap-english', { estimatedWidth, maxWidth });
+        lines.push(currentLine.trim());
+        currentLine = part;
+      } else {
+        currentLine = testLine;
+      }
     }
   }
   
-  if (currentLine) lines.push(currentLine);
+  if (currentLine.trim()) lines.push(currentLine.trim());
   if (DEBUG) console.log('[zip-gen] wrapText:result', { 
     lineCount: lines.length, 
     lines: lines.map(l => ({ length: l.length, preview: l.substring(0, 40) }))
