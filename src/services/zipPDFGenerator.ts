@@ -66,9 +66,8 @@ const wrapText = (text: string, maxWidth: number): string[] => {
   if (!ctx) return [text];
   ctx.font = '11px "Noto Sans SC", Arial, sans-serif';
   
-  // Wait for font to load if possible
-  if (document.fonts && document.fonts.check) {
-    // Check if font is loaded, but don't block if not
+  // Wait for font to load if possible (non-blocking)
+  if (typeof document !== 'undefined' && document.fonts) {
     document.fonts.ready.catch(() => {});
   }
   

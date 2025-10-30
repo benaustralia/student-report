@@ -303,8 +303,8 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                 }
               }
               // If it's already a Date object
-              else if (timestamp instanceof Date) {
-                dateObj = timestamp;
+              else if (timestamp && typeof timestamp === 'object' && 'getTime' in timestamp && typeof (timestamp as any).getTime === 'function') {
+                dateObj = timestamp as Date;
               }
               // Fallback: try to convert
               else if (timestamp) {
