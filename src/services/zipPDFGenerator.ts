@@ -173,17 +173,19 @@ export const generatePDFBlob = async (reportData: ClassReport): Promise<Blob> =>
       throw new Error(`Failed to load artwork: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+  // Only update non-comment tspan elements (comments are already added as separate text elements above)
   const textMap = {
     '1': reportData.studentName,
     '2': reportData.classLevel,
     '3': reportData.classLocation,
-    '4': wrapText(reportData.comments?.trim() || '', 350).join('\n'),
     '5': reportData.teacher,
     '6': formattedDate
   };
   svgClone.querySelectorAll('text tspan').forEach(t => {
-    if (t.textContent && textMap[t.textContent as keyof typeof textMap]) {
-      t.textContent = textMap[t.textContent as keyof typeof textMap];
+    const token = t.textContent?.trim();
+    // Skip token '4' (comments) since we already added it as separate text elements with proper wrapping
+    if (token && token !== '4' && textMap[token as keyof typeof textMap]) {
+      t.textContent = textMap[token as keyof typeof textMap];
     }
   });
   Object.entries({
