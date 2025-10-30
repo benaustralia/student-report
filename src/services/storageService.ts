@@ -60,16 +60,12 @@ export const deleteImageFromStorage = async (url: string): Promise<void> => {
 };
 
 export const generateImagePath = (studentId: string, filename: string): string => {
-  // Normalize folder even if caller passed a raw name with parentheses/spaces
-  const normId = studentId
-    .replace(/[()]/g, '')
-    .replace(/[\n\r\t]/g, ' ')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/\/-+/g, '/')
-    .replace(/-+\//g, '/');
+  // studentId should already be normalized (from buildStudentFolderName via StudentCard)
+  // Just sanitize the filename to ensure no invalid characters
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  return `student-reports/${normId}/profile_${sanitizedFilename}`;
+  // Ensure studentId doesn't have leading/trailing slashes
+  const cleanPath = studentId.replace(/^\/+|\/+$/g, '');
+  return `student-reports/${cleanPath}/profile_${sanitizedFilename}`;
 };
 
 // Shared folder naming to keep artwork and PDFs in the same place
