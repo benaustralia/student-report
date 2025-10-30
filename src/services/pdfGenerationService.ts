@@ -107,48 +107,37 @@ const generateSVGFromReport = async (
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = `${teacher.firstName} ${teacher.lastName}`;
   const date = new Date(report.createdAt).toLocaleDateString('en-GB');
-  const textMap: Record<string, string> = {
-    '1': studentName,
-    '2': classData.classLevel,
-    '3': classData.classLocation,
-    '4': wrapText(report.reportText?.trim() || '', 350).join('\n'),
-    '5': teacherName,
-    '6': date
-  };
-  
-  let replacedCount = 0;
-  const tspans = Array.from(svgClone.querySelectorAll('text tspan'));
-  tspans.forEach((tspan) => {
-    const token = tspan.textContent || '';
-    const value = textMap[token];
-    if (!value) return;
-    // Special handling for multi-line report body (token '4')
-    if (token === '4' && value.includes('\n')) {
-      const parentText = tspan.parentElement as SVGTextElement | null;
-      if (parentText) {
-        // Clear original content and add tspans per line
-        while (parentText.firstChild) parentText.removeChild(parentText.firstChild);
-        const lines = value.split(/\n+/);
-        lines.forEach((line, idx) => {
-          const lineTspan = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-          if (idx === 0) {
-            lineTspan.setAttribute('x', parentText.getAttribute('x') || tspan.getAttribute('x') || '');
-            lineTspan.setAttribute('y', parentText.getAttribute('y') || tspan.getAttribute('y') || '');
-          } else {
-            lineTspan.setAttribute('x', parentText.getAttribute('x') || tspan.getAttribute('x') || '');
-            lineTspan.setAttribute('dy', '1.2em');
-          }
-          lineTspan.textContent = line;
-          parentText.appendChild(lineTspan);
-        });
-        replacedCount++;
-        return;
-      }
-    }
-    tspan.textContent = value;
-    replacedCount++;
+  // Remove template placeholders to prevent overlay issues
+  svgClone.querySelectorAll('text.st1, text.st2').forEach((t) => {
+    if (t.textContent && /^[123456]$/.test(t.textContent.trim())) t.remove();
   });
-  if (DEBUG) console.log('[pdf] generateSVGFromReport:text-replaced', { replacedCount });
+  const create = (tag: string, attrs: Record<string, string> = {}) => {
+    const el = svgDoc.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    return el;
+  };
+  const addText = (x: number, y: number, text: string, size = '13px') => {
+    const el = create('text', {
+      transform: `translate(${x} ${y})`,
+      'font-family': 'Noto Sans SC',
+      fill: 'black',
+      'font-size': size
+    });
+    el.textContent = text;
+    svgClone.appendChild(el);
+  };
+  // Header/meta
+  ([
+    [206.17, 222.41, studentName],
+    [206.17, 250.43, classData.classLevel],
+    [206.44, 278.45, classData.classLocation],
+    [327.71, 727.44, teacherName],
+    [327.71, 745.52, date]
+  ] as [number, number, string][]).forEach(([x, y, t]) => addText(x, y, t));
+  // Report body
+  const lines = wrapText(report.reportText?.trim() || '', 350);
+  lines.forEach((line, i) => addText(179.27, 590.33 + i * 16, line, '11px'));
+  if (DEBUG) console.log('[pdf] generateSVGFromReport:text-added', { lines: lines.length });
 
   // Force visible black text to avoid template styles hiding content
   const styleEl = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
@@ -209,14 +198,7 @@ const generatePDFBlob = async (svgString: string): Promise<Blob> => {
   return pdfBlob;
 };
 
-const safePathSegment = (value: string): string =>
-  value
-    .replace(/[\n\r\t]/g, ' ')
-    .replace(/[()]/g, '')
-    .replace(/\//g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim();
+// kept for historical reference but no longer used (folder building centralized)
 
 const uploadPDFToStorage = async (
   pdfBlob: Blob,
