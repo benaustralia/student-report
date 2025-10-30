@@ -51,7 +51,9 @@ export const downloadClassAsZIP = async (
   students: Student[],
   teacher: Teacher
 ): Promise<number> => {
-  const folder = (await getJSZip()).folder(className);
+  const JSZip = await getJSZip();
+  const zip = new JSZip();
+  const folder = zip.folder(className);
   if (!folder) throw new Error('Failed to create ZIP folder');
   let successCount = 0;
   for (const report of reports) {
@@ -77,7 +79,7 @@ export const downloadClassAsZIP = async (
     }
   }
   if (successCount === 0) throw new Error('No valid reports to download');
-  downloadZIP(await folder.generateAsync({ type: 'blob' }), `${className}_reports.zip`);
+  downloadZIP(await zip.generateAsync({ type: 'blob' }), `${className}_reports.zip`);
   return successCount;
 };
 
@@ -86,7 +88,9 @@ export const generateClassZIP = async (
   className: string,
   teacherName: string
 ): Promise<ZIPGenerationResult> => {
-  const folder = (await getJSZip()).folder(`${teacherName}_${className}`);
+  const JSZip = await getJSZip();
+  const zip = new JSZip();
+  const folder = zip.folder(`${teacherName}_${className}`);
   if (!folder) throw new Error('Failed to create ZIP folder');
   let successCount = 0;
   let skippedCount = 0;
@@ -123,6 +127,6 @@ export const generateClassZIP = async (
     }
   }
   if (successCount === 0) throw new Error('No valid reports to download');
-  downloadZIP(await folder.generateAsync({ type: 'blob' }), `${teacherName}_${className}_reports.zip`);
+  downloadZIP(await zip.generateAsync({ type: 'blob' }), `${teacherName}_${className}_reports.zip`);
   return { successCount, skippedCount };
 };
