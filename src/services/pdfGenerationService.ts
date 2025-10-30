@@ -101,6 +101,8 @@ const generateSVGFromReport = async (
   const svgDoc = new DOMParser().parseFromString(reportTemplateSvg, 'image/svg+xml');
   const svgClone = svgDoc.documentElement.cloneNode(true) as SVGElement;
   if (DEBUG) console.log('[pdf] generateSVGFromReport:start', { reportId: report.id });
+  // Preserve whitespace so \n breaks are honored when using tspans
+  svgClone.setAttribute('xml:space', 'preserve');
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = `${teacher.firstName} ${teacher.lastName}`;
@@ -115,12 +117,36 @@ const generateSVGFromReport = async (
   };
   
   let replacedCount = 0;
-  svgClone.querySelectorAll('text tspan').forEach((tspan) => {
-    const textContent = tspan.textContent;
-    if (textContent && textMap[textContent]) {
-      tspan.textContent = textMap[textContent];
-      replacedCount++;
+  const tspans = Array.from(svgClone.querySelectorAll('text tspan'));
+  tspans.forEach((tspan) => {
+    const token = tspan.textContent || '';
+    const value = textMap[token];
+    if (!value) return;
+    // Special handling for multi-line report body (token '4')
+    if (token === '4' && value.includes('\n')) {
+      const parentText = tspan.parentElement as SVGTextElement | null;
+      if (parentText) {
+        // Clear original content and add tspans per line
+        while (parentText.firstChild) parentText.removeChild(parentText.firstChild);
+        const lines = value.split(/\n+/);
+        lines.forEach((line, idx) => {
+          const lineTspan = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          if (idx === 0) {
+            lineTspan.setAttribute('x', parentText.getAttribute('x') || tspan.getAttribute('x') || '');
+            lineTspan.setAttribute('y', parentText.getAttribute('y') || tspan.getAttribute('y') || '');
+          } else {
+            lineTspan.setAttribute('x', parentText.getAttribute('x') || tspan.getAttribute('x') || '');
+            lineTspan.setAttribute('dy', '1.2em');
+          }
+          lineTspan.textContent = line;
+          parentText.appendChild(lineTspan);
+        });
+        replacedCount++;
+        return;
+      }
     }
+    tspan.textContent = value;
+    replacedCount++;
   });
   if (DEBUG) console.log('[pdf] generateSVGFromReport:text-replaced', { replacedCount });
 
