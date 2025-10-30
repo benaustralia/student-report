@@ -169,6 +169,20 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           getReportsForClass(classData.id),
           getTeacherByEmail(classData.teacherEmail)
         ]);
+        // Heal artworkUrl fields to tokened URLs to avoid raw unauthenticated GETs
+        await Promise.all(
+          reports.map(async (r) => {
+            try {
+              if (r.artworkUrl && !r.artworkUrl.includes('token=')) {
+                const { refreshDownloadURL } = await import('@/services/storageService');
+                const fresh = await refreshDownloadURL(r.artworkUrl);
+                if (fresh && fresh !== r.artworkUrl) {
+                  await updateReport(r.id, { artworkUrl: fresh });
+                }
+              }
+            } catch {}
+          })
+        );
         const effectiveTeacher = teacher || {
           id: 'unknown',
           email: classData.teacherEmail,
