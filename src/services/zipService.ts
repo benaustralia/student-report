@@ -26,9 +26,14 @@ export { type ClassReport };
 
 const downloadPDFFromStorage = async (pdfUrl: string): Promise<Blob | null> => {
   try {
-    const r = await fetch(await refreshDownloadURL(pdfUrl));
-    if (!r.ok || (await r.blob()).size === 0) throw new Error('Invalid PDF');
-    return await r.blob();
+    const refreshed = await refreshDownloadURL(pdfUrl);
+    const res = await fetch(refreshed, { method: 'GET' });
+    if (!res.ok) throw new Error('Failed to fetch PDF');
+    const blob = await res.blob();
+    if (!blob || blob.size === 0) throw new Error('Empty PDF');
+    const type = blob.type || res.headers.get('Content-Type') || '';
+    if (!type.includes('pdf') && type !== '') throw new Error('Not a PDF');
+    return blob;
   } catch {
     return null;
   }
