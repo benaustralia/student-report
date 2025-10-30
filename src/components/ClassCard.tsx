@@ -198,7 +198,8 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
             // Fallback: try to convert
             return new Date(timestamp as string | number).toLocaleDateString('en-GB');
           })(),
-          artwork: report.artworkUrl || ''
+          artwork: report.artworkUrl || '',
+          pdfUrl: report.pdfUrl
         };
       });
       

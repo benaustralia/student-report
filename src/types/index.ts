@@ -58,6 +58,7 @@ export interface ReportData {
   teacherEmail: string;
   reportText: string;
   artworkUrl?: string;
+  pdfUrl?: string;  // URL of pre-generated PDF in Firebase Storage
   studentName?: string;  // Added for simplified import structure
   createdAt: Date;
   updatedAt: Date;

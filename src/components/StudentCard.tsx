@@ -8,9 +8,10 @@ import { TypographySmall } from '@/components/ui/typography';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports } from '@/services/firebaseService-ultra-final';
+import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports, getTeacherByEmail } from '@/services/firebaseService-ultra-final';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { generatePDFInBackground } from '@/services/pdfGenerationService';
 import type { Student, Class, ReportData } from '@/types';
 
 // Lazy load heavy components
@@ -49,7 +50,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         studentName: `${student.firstName} ${student.lastName}`,
         ...(imageUrl && { artworkUrl: imageUrl })
       };
-      await createOrUpdateReport(reportData);
+      const reportId = await createOrUpdateReport(reportData);
       
       // Update the last saved text and clear unsaved changes flag
       lastSavedTextRef.current = state.reportText.trim();
@@ -64,11 +65,31 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       
       // Notify other components that reports data has changed
       window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'reports' } }));
+      
+      // Trigger background PDF generation (fire-and-forget)
+      // Fetch the saved report and get teacher data, then generate PDF
+      try {
+        const savedReports = await getReportsForStudent(student.id);
+        const savedReport = savedReports.find(r => r.id === reportId) || savedReports[0];
+        if (savedReport) {
+          const teacher = await getTeacherByEmail(classData.teacherEmail);
+          if (teacher) {
+            // Generate PDF in background (non-blocking)
+            generatePDFInBackground(savedReport, student, classData, teacher).catch(error => {
+              console.error('Background PDF generation failed:', error);
+              // Silent failure - user doesn't need to know about background generation
+            });
+          }
+        }
+      } catch (pdfError) {
+        // Silent failure for background PDF generation
+        console.error('Failed to trigger PDF generation:', pdfError);
+      }
     } catch (error) {
       console.error('Error saving report:', error);
       toast.error('Failed to save report. Please try again.');
     }
-  }, [state.reportText, student.id, classData.id, classData.teacherEmail]);
+  }, [state.reportText, student.id, classData.id, classData.teacherEmail, student]);
 
   const imageUpload = useImageUploadV2({
     userId: `students/${student.id}`,

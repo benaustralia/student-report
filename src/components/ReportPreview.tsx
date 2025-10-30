@@ -15,6 +15,7 @@ import nsalogoPng from '@/assets/NSALogo.png?url';
 // WebP version available at: @/assets/NSALogo.webp (27KB vs 108KB PNG)
 import { getTeacherByEmail } from '@/services/firebaseService-ultra-final';
 import { refreshDownloadURL } from '@/services/storageService';
+import { isReportReadyForPDF } from '@/services/pdfGenerationService';
 import type { Student, Class, ReportData, Teacher } from '@/types';
 // PDF generation is now handled server-side via Netlify function
 
@@ -573,6 +574,25 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
         disabled={isImageUploading || !canDownload}
         className="w-full sm:w-auto"
         onClick={async () => {
+          // Validate report meets PDF generation criteria
+          const reportForValidation: ReportData = {
+            id: reportData?.id || '',
+            studentId: student.id,
+            classId: classData.id,
+            teacherEmail: classData.teacherEmail,
+            reportText: reportText?.trim() || '',
+            artworkUrl: artworkUrl || undefined,
+            createdAt: reportData?.createdAt || new Date(),
+            updatedAt: reportData?.updatedAt || new Date()
+          };
+          
+          if (!isReportReadyForPDF(reportForValidation)) {
+            toast.error('PDF generation requires both an image and written feedback', {
+              description: 'Please add both an image and written feedback to generate a PDF report'
+            });
+            return;
+          }
+          
           const toastId = toast.loading('Generating PDF report...', {
             description: 'This may take a few seconds'
           });
