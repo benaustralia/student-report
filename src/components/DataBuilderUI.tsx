@@ -7,25 +7,12 @@ import { CollapsibleItem } from '@/components/ui/collapsible-item';
 import { Plus, Users, BookOpen, GraduationCap, ChevronDown, ChevronRight, Upload, FileText, Check, X, Loader2 } from 'lucide-react';
 import type { AdminUser, Class, Student, Teacher, Request } from '@/types';
 import { useDataBuilderOperations, type DataType, type ItemType } from '@/hooks/useDataBuilderOperations';
+import { CONFIG, CLASS_OPTIONS, formatFieldLabel } from '@/config/dataBuilder';
 
 // Lazy load heavy components
 const BulkStudentImport = lazy(() => import('./BulkStudentImport').then(m => ({ default: m.BulkStudentImport })));
 
-const CLASS_OPTIONS = { levels: ['Early Learning', 'Primary', 'Intermediate', 'Advanced', 'Master', 'Adult', 'Sketching'], days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], times: ['10:30am', '1:30pm', '3:45pm', '4:30pm'], locations: ['Mount Waverley', 'Box Hill', 'Balwyn North Primary School', 'Camberwell', 'Doncaster Gardens Primary School', 'Preston', 'Pines', 'Glen Waverley Primary School', 'Serpell Primary School'] };
-
-const CONFIG: any = {
-  CLASS_OPTIONS,
-  SECTIONS: {
-    requests: { icon: FileText, title: 'Requests', fields: ['type', 'status', 'teacherEmail', 'classId', 'studentId', 'studentFirstName', 'studentLastName', 'notes'], empty: { type: 'add_student', status: 'pending', teacherEmail: '', classId: '', notes: '' } },
-    users: { icon: Users, title: 'Admins', fields: ['firstName', 'lastName', 'email', 'isAdmin'], empty: { firstName: '', lastName: '', email: '', isAdmin: true } },
-    classes: { icon: BookOpen, title: 'Classes', fields: ['classLevel', 'classDay', 'classTime', 'classLocation', 'teacherEmail'], empty: { classLevel: '', classDay: '', classTime: '', classLocation: '', teacherEmail: '' } },
-    students: { icon: GraduationCap, title: 'Students', fields: ['firstName', 'lastName', 'classId'], empty: { firstName: '', lastName: '', classId: '' } },
-    teachers: { icon: Users, title: 'Teachers', fields: ['firstName', 'lastName', 'email'], empty: { firstName: '', lastName: '', email: '' } }
-  },
-  FIELD_CONFIGS: Object.fromEntries(['classLevel', 'classDay', 'classTime', 'classLocation'].map(field => [field, { options: CLASS_OPTIONS[field.replace('class', '').toLowerCase() + 's' as keyof typeof CLASS_OPTIONS], placeholder: `Select ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}...` }]))
-};
-
-const formatFieldLabel = (field: string) => field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+ 
 const createSelectField = (value: string, onValueChange: (v: string) => void, placeholder: string, options: string[], renderOption?: (option: string) => string) => (
   <Select value={value} onValueChange={onValueChange}><SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent>{options.map(option => <SelectItem key={option} value={option}>{renderOption?.(option) ?? option}</SelectItem>)}</SelectContent></Select>
 );

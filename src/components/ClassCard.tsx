@@ -11,6 +11,7 @@ import { StudentCard } from './StudentCard';
 import { ClassStudentManagementModal } from './ClassStudentManagementModal';
 import { generateClassZIP, type ClassReport, type ZIPGenerationResult } from '@/services/zipService';
 import { isReportReadyForPDF, generatePDFInBackground } from '@/services/pdfGenerationService';
+import { prepareMissingPdfsForClass } from '@/services/classReportPrep';
 
 interface ClassCardProps {
   classData: Class;
@@ -159,62 +160,13 @@ export const ClassCard = memo(function ClassCard({ classData, selectedStudentId,
     return () => window.removeEventListener('expandClassForStudent', handleExpandClass as unknown as EventListener);
   }, [classData.id, students.length, loadStudents]);
 
-  // When class is open and students are loaded, prepare missing PDFs in background
   useEffect(() => {
     const maybePrepare = async () => {
       if (!isOpen || !hasLoadedStudents) return;
       try {
         if (DEBUG) console.log('[class] maybePrepare:start', { classId: classData.id });
-        const [reports, teacher] = await Promise.all([
-          getReportsForClass(classData.id),
-          getTeacherByEmail(classData.teacherEmail)
-        ]);
-        const effectiveTeacher = teacher || {
-          id: 'unknown',
-          email: classData.teacherEmail,
-          firstName: classData.teacherFirstName || (classData.teacherEmail?.split('@')[0] || 'Unknown'),
-          lastName: classData.teacherLastName || 'Teacher',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        if (!teacher && DEBUG) console.log('[class] maybePrepare:teacher-fallback', { email: classData.teacherEmail });
-        const checkPdfExists = async (pdfUrl?: string) => {
-          if (!pdfUrl) return false;
-          try {
-            const { refreshDownloadURL } = await import('@/services/storageService');
-            const url = await refreshDownloadURL(pdfUrl);
-            const res = await fetch(url, { method: 'HEAD' });
-            return res.ok;
-          } catch { return false; }
-        };
-        const existence = await Promise.all(reports.map(r => checkPdfExists(r.pdfUrl)));
-        const total = reports.length;
-        const prepared = existence.filter(Boolean).length;
-        const toPrepare = reports.filter((r, i) => !existence[i] && isReportReadyForPDF(r)).length;
-        if (DEBUG) console.log('[class] maybePrepare:counts', { total, prepared, toPrepare });
-        toast.info(`${prepared}/${total} Reports Prepared`, {
-          description: toPrepare > 0 ? `${toPrepare} preparing now` : 'All set'
-        });
-        await Promise.all(
-          reports.map(async (r, i) => {
-            if (r.pdfUrl && !existence[i]) {
-              try { await updateReport(r.id, { pdfUrl: undefined }); } catch {}
-              if (DEBUG) console.log('[class] maybePrepare:cleared-stale', { reportId: r.id });
-            }
-          })
-        );
-        reports
-          .filter(r => isReportReadyForPDF(r) && !r.pdfUrl)
-          .forEach(r => {
-            const student = students.find(s => s.id === r.studentId);
-            if (student) {
-              if (DEBUG) console.log('[class] maybePrepare:trigger-bg', {
-                reportId: r.id,
-                student: `${student.firstName} ${student.lastName}`
-              });
-              generatePDFInBackground(r, student, classData, effectiveTeacher);
-            }
-          });
+        const { total, prepared, toPrepare } = await prepareMissingPdfsForClass(classData, students, DEBUG);
+        toast.info(`${prepared}/${total} Reports Prepared`, { description: toPrepare > 0 ? `${toPrepare} preparing now` : 'All set' });
       } catch (err) {
         console.error('Background PDF preparation failed:', err);
       }

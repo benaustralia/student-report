@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
-import nsalogoPng from '@/assets/NSALogo.png?url';
-// WebP version available at: @/assets/NSALogo.webp (27KB vs 108KB PNG)
+import { fetchSvgTemplate, injectReportIntoSvg, convertUrlToDataUrl } from '@/services/reportSvg';
 
 interface ReportTemplateProps { studentName: string; classLevel: string; classLocation: string; comments: string; teacher: string; date: string; artwork?: string; }
 
@@ -9,233 +8,28 @@ export function ReportTemplate({ studentName, classLevel, classLocation, comment
   const svgRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState({ processedSvg: '', isLoading: true });
 
-  const convertUrlToDataUrl = async (url: string): Promise<string> => new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous'; // Now that CORS is configured, this should work
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { 
-          reject(new Error('Could not get canvas context'));
-          return; 
-        }
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg', 0.9));
-      } catch (error) { 
-        console.error('Canvas conversion failed:', error);
-        reject(error);
-      }
-    };
-    img.onerror = () => {
-      console.error('Image load failed:', url);
-      reject(new Error(`Failed to load image: ${url}`));
-    };
-    img.src = url;
-  });
-
-  // Use the same text wrapping logic as PDF generation for accurate preview
-  const wrapTextWithNotoSans = (text: string, maxPixelWidth: number): string[] => {
-    const measureCanvas = document.createElement('canvas');
-    const measureCtx = measureCanvas.getContext('2d');
-    if (!measureCtx) return [text];
-    
-    measureCtx.font = '11px "Noto Sans SC", Arial, sans-serif';
-    
-    if (measureCtx.measureText(text).width <= maxPixelWidth) {
-      return [text];
-    }
-    
-    return wrapTextByWidth(text, maxPixelWidth, measureCtx);
-  };
-
-  const wrapTextByWidth = (text: string, maxPixelWidth: number, measureCtx: CanvasRenderingContext2D): string[] => {
-    const lines: string[] = [];
-    let currentLine = '';
-    
-    const tokens = text.split(/(\s+|[。！？，、；：]|[.!?])/);
-    
-    for (const token of tokens) {
-      if (!token) continue;
-      
-      const testLine = currentLine + token;
-      const testWidth = measureCtx.measureText(testLine).width;
-      
-      if (testWidth > maxPixelWidth) {
-        if (currentLine.length > 0) {
-          // Check if current line ends with punctuation (English or Chinese)
-          const trimmedLine = currentLine.trim();
-          const punctuationMarks = ['.', '。', '!', '！', '?', '？', ',', '，', ';', '；', ':', '：'];
-          const endsWithPunctuation = punctuationMarks.some(mark => trimmedLine.endsWith(mark));
-          
-          if (endsWithPunctuation) {
-            // Keep punctuation with the last word - don't break the line here
-            lines.push(currentLine.trim());
-            currentLine = token;
-          } else {
-            lines.push(currentLine.trim());
-            currentLine = token;
-          }
-        } else {
-          if (measureCtx.measureText(token).width > maxPixelWidth) {
-            let tempLine = '';
-            for (const char of token) {
-              const testCharLine = tempLine + char;
-              if (measureCtx.measureText(testCharLine).width > maxPixelWidth) {
-                if (tempLine.length > 0) {
-                  lines.push(tempLine);
-                  tempLine = char;
-                } else {
-                  lines.push(char);
-                }
-              } else {
-                tempLine += char;
-              }
-            }
-            currentLine = tempLine;
-          } else {
-            currentLine = token;
-          }
-        }
-      } else {
-        currentLine += token;
-      }
-    }
-    
-    if (currentLine.length > 0) {
-      lines.push(currentLine.trim());
-    }
-    
-    return lines;
-  };
+  // helpers moved to services/reportSvg
 
   useEffect(() => {
     const processSvgTemplate = async () => {
       try {
         setState(prev => ({ ...prev, isLoading: true }));
-        const response = await fetch(reportTemplateSvg);
-        const svgText = await response.text();
-        const parser = new DOMParser();
-        const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
-        const svgElement = svgDoc.querySelector('svg');
-        if (!svgElement) throw new Error('Could not parse SVG template');
-        const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
-
-        const addTextElement = (x: number, y: number, text: string, className: string = 'st5') => {
-          const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
-          textElement.setAttribute('class', className);
-          textElement.setAttribute('transform', `translate(${x} ${y})`);
-          textElement.setAttribute('font-family', 'Arial, "Microsoft YaHei", "SimSun", sans-serif');
-          textElement.textContent = text;
-          return textElement;
-        };
-
-        const addWrappedTextElement = (x: number, y: number, text: string, className: string = 'st5', lineHeight: number = 16) => {
-          const maxPixelWidth = 350; // Same as PDF generation
-          const wrappedLines = wrapTextWithNotoSans(text, maxPixelWidth);
-          const textElements: SVGTextElement[] = [];
-          wrappedLines.forEach((line, index) => {
-            const trimmedLine = line.replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, '');
-            if (trimmedLine) {
-              const textElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'text');
-              textElement.setAttribute('class', className);
-              textElement.setAttribute('transform', `translate(${x} ${y + (index * lineHeight)})`);
-              textElement.setAttribute('font-family', 'Noto Sans SC, Arial, sans-serif');
-              textElement.setAttribute('font-size', '11px');
-              textElement.textContent = trimmedLine;
-              textElements.push(textElement);
-            }
-          });
-          return textElements;
-        };
-
-        const textElements = [
-          { x: 206.17, y: 222.41, text: studentName },
-          { x: 206.17, y: 250.43, text: classLevel },
-          { x: 206.44, y: 278.45, text: classLocation },
-          { x: 327.71, y: 727.44, text: teacher },
-          { x: 327.71, y: 745.52, text: date }
-        ];
-
-        // Remove all numerical markers (1-6) from both st1 and st2 classes
-        svgClone.querySelectorAll('text.st1, text.st2').forEach(text => {
-          if (text.textContent && /^[123456]$/.test(text.textContent.trim())) text.remove();
+        const svgText = await fetchSvgTemplate(reportTemplateSvg);
+        const artworkDataUrl = artwork ? await convertUrlToDataUrl(artwork) : undefined;
+        const processed = injectReportIntoSvg(svgText, {
+          studentName,
+          classLevel,
+          classLocation,
+          teacherName: teacher,
+          date,
+          reportText: comments,
+          artworkDataUrl
         });
-
-        textElements.forEach(({ x, y, text }) => svgClone.appendChild(addTextElement(x, y, text, 'st5')));
-
-        if (comments?.trim()) {
-          addWrappedTextElement(179.27, 590.33, comments, 'st5', 16).forEach(element => svgClone.appendChild(element));
-        }
-
-        if (artwork) {
-          try {
-            const dataUrl = await convertUrlToDataUrl(artwork);
-            const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-            imageElement.setAttribute('href', dataUrl);
-            imageElement.setAttribute('x', '97.64'); // Centered: (595.28 - 400) / 2
-            imageElement.setAttribute('y', '308.45'); // Below class location
-            imageElement.setAttribute('width', '400');
-            imageElement.setAttribute('height', '250');
-            imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            svgClone.appendChild(imageElement);
-          } catch (error) { console.error('Failed to load artwork image:', error); }
-        }
-
-        const logoElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-        logoElement.setAttribute('href', nsalogoPng);
-        logoElement.setAttribute('x', '55');
-        logoElement.setAttribute('y', '680');
-        logoElement.setAttribute('width', '80');
-        logoElement.setAttribute('height', '80');
-        logoElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        svgClone.appendChild(logoElement);
-
-        svgClone.setAttribute('width', '100%');
-        svgClone.setAttribute('height', 'auto');
-        svgClone.setAttribute('viewBox', '0 0 595.28 600'); // Crop to content area, remove bottom whitespace
-        svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-
-        const styleElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
-        styleElement.textContent = `
-          text { 
-            fill: black !important; 
-            fill-opacity: 1 !important; 
-            opacity: 1 !important; 
-            color: black !important;
-            font-family: 'Noto Sans SC', Arial, sans-serif !important;
-            font-weight: normal !important;
-            font-size: 11px !important;
-          } 
-          .st1, .st2 { 
-            fill: transparent !important; 
-            fill-opacity: 0 !important; 
-            opacity: 0 !important; 
-          }
-          .st5 { 
-            fill: black !important; 
-            fill-opacity: 1 !important; 
-            opacity: 1 !important; 
-          }
-          svg { 
-            max-width: 100%; 
-            height: 100%; 
-            width: 100%;
-          }
-          @media (max-width: 768px) {
-            svg { max-width: 100%; height: 100%; }
-          }
-        `;
-        svgClone.appendChild(styleElement);
-
-        setState(prev => ({ ...prev, processedSvg: new XMLSerializer().serializeToString(svgClone) }));
+        setState(prev => ({ ...prev, processedSvg: processed }));
       } catch (error) {
         console.error('Error processing SVG template:', error);
-        const response = await fetch(reportTemplateSvg);
-        const svgText = await response.text();
-        setState(prev => ({ ...prev, processedSvg: svgText }));
+        const fallback = await fetchSvgTemplate(reportTemplateSvg);
+        setState(prev => ({ ...prev, processedSvg: fallback }));
       } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }

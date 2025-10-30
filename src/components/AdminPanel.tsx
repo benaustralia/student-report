@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle, Users, ChevronDown, ChevronRight, GraduationCap } from 'lucide-react';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
-import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports, getUserDisplayName } from '@/services/firebaseService-ultra-final';
+import { isUserAdmin } from '@/services/firebaseService-ultra-final';
+import { loadAdminPanelData } from '@/services/adminData';
 import type { User } from 'firebase/auth';
 import type { Class, Student, AdminUser, Teacher, ReportData } from '@/types';
 
@@ -47,41 +48,14 @@ export function AdminPanel({ user, onTabChange }: AdminPanelProps) {
   const loadData = async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      const [adminUsers, teachers, classes, students, teacherReportStats, incompleteReports] = await Promise.all([
-        getAllUsers().catch(() => []), 
-        getAllTeachers().catch(() => []), 
-        getAllClasses().catch(() => []), 
-        getAllStudents().catch(() => []),
-        getTeacherReportCounts().catch(() => ({})),
-        getIncompleteReports().catch(() => [])
-      ]);
-      
-      // Load teacher display names
-      const teacherDisplayNames: Record<string, string> = {};
-      const uniqueTeacherEmails = [...new Set(classes.map(c => c.teacherEmail))];
-      await Promise.all(uniqueTeacherEmails.map(async (email) => {
-        try {
-          const displayName = await getUserDisplayName(email);
-          teacherDisplayNames[email] = displayName || 'Unknown Teacher';
-        } catch (error) {
-          console.error(`Failed to get display name for ${email}:`, error);
-          teacherDisplayNames[email] = 'Unknown Teacher';
-        }
-      }));
-      const userMap = new Map();
-      teachers.forEach(t => t.email && userMap.set(t.email, { ...t, isAdmin: false }));
-      adminUsers.forEach(a => a.email && userMap.set(a.email, { ...a, isAdmin: a.isAdmin || false }));
-      const allUsers = Array.from(userMap.values());
-      const teacherMap = new Map();
-      teachers.forEach(t => t.email && teacherMap.set(t.email, t));
-      const uniqueTeachers = Array.from(teacherMap.values());
-      setState(prev => ({ 
-        ...prev, 
-        data: { users: allUsers, classes, students, teachers: uniqueTeachers, teacherCount: uniqueTeachers.length, adminCount: allUsers.filter(u => u.isAdmin).length }, 
-        teacherReportStats,
-        incompleteReports,
-        teacherDisplayNames,
-        loading: false 
+      const d = await loadAdminPanelData();
+      setState(prev => ({
+        ...prev,
+        data: { users: d.users, classes: d.classes, students: d.students, teachers: d.teachers, teacherCount: d.teacherCount, adminCount: d.adminCount },
+        teacherReportStats: d.teacherReportStats,
+        incompleteReports: d.incompleteReports,
+        teacherDisplayNames: d.teacherDisplayNames,
+        loading: false
       }));
     } catch { setState(prev => ({ ...prev, loading: false })); }
   };

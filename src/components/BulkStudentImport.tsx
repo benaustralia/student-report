@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Loader2, Upload, CheckCircle, XCircle, AlertCircle, Users } from 'lucide-react';
 import { importStudents, getStudentsForClass } from '@/services/firebaseService-ultra-final';
 import type { Class, Student } from '@/types';
+import { parseStudentsCSV, type ParsedStudent } from '@/utils/studentCsv';
 
 interface BulkStudentImportProps {
   classData: Class | null;
@@ -16,12 +17,7 @@ interface BulkStudentImportProps {
   onSuccess: () => void;
 }
 
-interface ParsedStudent {
-  firstName: string;
-  lastName: string;
-  isValid: boolean;
-  error?: string;
-}
+ 
 
 export function BulkStudentImport({
   classData,
