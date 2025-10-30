@@ -125,9 +125,30 @@ const generatePDFBlob = async (svgString: string): Promise<Blob> => {
   return pdfBlob;
 };
 
-const uploadPDFToStorage = async (pdfBlob: Blob, reportId: string): Promise<string> => {
-  const storageRef = ref(getStorageInstance(), `pdfs/${reportId}/report.pdf`);
-  await uploadBytes(storageRef, new File([pdfBlob], 'report.pdf', { type: 'application/pdf' }));
+const safePathSegment = (value: string): string =>
+  value
+    .replace(/[\n\r\t]/g, ' ')
+    .replace(/\//g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const uploadPDFToStorage = async (
+  pdfBlob: Blob,
+  reportId: string,
+  student?: Student,
+  classData?: Class
+): Promise<string> => {
+  const file = new File([pdfBlob], 'report.pdf', { type: 'application/pdf' });
+  const basePath = (() => {
+    if (student && classData) {
+      const studentName = safePathSegment(`${student.firstName}${student.lastName ? ' ' + student.lastName : ''}`);
+      const classDay = safePathSegment(classData.classDay || 'Unknown');
+      return `student-reports/student/${studentName}-${classDay}`;
+    }
+    return `pdfs/${reportId}`;
+  })();
+  const storageRef = ref(getStorageInstance(), `${basePath}/report.pdf`);
+  await uploadBytes(storageRef, file);
   return getDownloadURL(storageRef);
 };
 
@@ -149,7 +170,12 @@ export const generateAndStorePDF = async (
   teacher: Teacher
 ): Promise<string> => {
   if (!isReportReadyForPDF(report)) throw new Error('Report does not meet PDF generation criteria: must have both image and text');
-  return uploadPDFToStorage(await generatePDFBlob(await generateSVGFromReport(report, student, classData, teacher)), report.id);
+  return uploadPDFToStorage(
+    await generatePDFBlob(await generateSVGFromReport(report, student, classData, teacher)),
+    report.id,
+    student,
+    classData
+  );
 };
 
 const updateReportPDFUrl = async (reportId: string, pdfUrl: string | undefined): Promise<void> => {
