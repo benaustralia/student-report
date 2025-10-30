@@ -42,7 +42,7 @@ function AppContent() {
     };
   }, []);
 
-  // Global guard: rewrite fetch/XHR requests to Firebase Storage without tokens
+  // Global guard: rewrite fetch requests to Firebase Storage without tokens
   useEffect(() => {
     const isFirebaseStorageUrl = (url: string) =>
       /^https?:\/\//i.test(url) && url.includes('firebasestorage.googleapis.com') && !url.includes('token=') && !url.includes('alt=media');
@@ -61,28 +61,8 @@ function AppContent() {
       return originalFetch(input as any, init);
     };
 
-    // Wrap XHR
-    const OriginalXHR = window.XMLHttpRequest;
-    const openOrig: any = OriginalXHR.prototype.open as any;
-    OriginalXHR.prototype.open = function(method: string, url: string, ...rest: any[]) {
-      if (typeof url === 'string' && isFirebaseStorageUrl(url)) {
-        (async () => {
-          try {
-            const { refreshDownloadURL } = await import('@/services/storageService');
-            const fresh = await refreshDownloadURL(url);
-            openOrig.apply(this, [method, fresh, ...rest]);
-          } catch {
-            openOrig.apply(this, [method, url, ...rest]);
-          }
-        })();
-        return; // open will be called asynchronously above
-      }
-      return openOrig.apply(this, [method, url, ...rest]);
-    };
-
     return () => {
       window.fetch = originalFetch;
-      OriginalXHR.prototype.open = openOrig;
     };
   }, []);
 
