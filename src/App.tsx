@@ -14,33 +14,7 @@ function AppContent() {
   const { user, loading, error } = useAuthContext();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // Global guard: rewrite Firebase Storage image src values without tokens to fresh tokened URLs
-  useEffect(() => {
-    const OriginalImage = (window as any).Image as typeof Image;
-    const descriptor = Object.getOwnPropertyDescriptor(OriginalImage.prototype, 'src');
-    if (!descriptor || !descriptor.set) return;
-    const setter = descriptor.set.bind(OriginalImage.prototype);
-    const refreshedSetter = async function (this: HTMLImageElement, value: string) {
-      try {
-        const isHttp = /^https?:\/\//i.test(value);
-        const isFirebase = isHttp && value.includes('firebasestorage.googleapis.com');
-        const hasToken = isHttp && (value.includes('token=') || value.includes('alt=media'));
-        if (isFirebase && !hasToken) {
-          const { refreshDownloadURL } = await import('@/services/storageService');
-          const fresh = await refreshDownloadURL(value);
-          return setter.call(this, fresh);
-        }
-      } catch {
-        // fall through
-      }
-      return setter.call(this, value);
-    } as unknown as (this: HTMLImageElement, val: string) => void;
-
-    Object.defineProperty(OriginalImage.prototype, 'src', { ...descriptor, set: refreshedSetter });
-    return () => {
-      Object.defineProperty(OriginalImage.prototype, 'src', descriptor);
-    };
-  }, []);
+  // (removed) Global Image.src interceptor; now using public URLs instead
 
   // Global guard: rewrite fetch requests to Firebase Storage without tokens
   useEffect(() => {
