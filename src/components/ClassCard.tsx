@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, Users, Download, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses } from '@/services/firebaseService-ultra-final';
+import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses, updateReport } from '@/services/firebaseService-ultra-final';
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
 import { ClassStudentManagementModal } from './ClassStudentManagementModal';
@@ -166,12 +166,29 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           getReportsForClass(classData.id),
           getTeacherByEmail(classData.teacherEmail)
         ]);
+        const checkPdfExists = async (pdfUrl?: string) => {
+          if (!pdfUrl) return false;
+          try {
+            const { refreshDownloadURL } = await import('@/services/storageService');
+            const url = await refreshDownloadURL(pdfUrl);
+            const res = await fetch(url, { method: 'HEAD' });
+            return res.ok;
+          } catch { return false; }
+        };
+        const existence = await Promise.all(reports.map(r => checkPdfExists(r.pdfUrl)));
         const total = reports.length;
-        const prepared = reports.filter(r => Boolean(r.pdfUrl)).length;
-        const toPrepare = reports.filter(r => isReportReadyForPDF(r) && !r.pdfUrl).length;
+        const prepared = existence.filter(Boolean).length;
+        const toPrepare = reports.filter((r, i) => !existence[i] && isReportReadyForPDF(r)).length;
         toast.info(`${prepared}/${total} Reports Prepared`, {
           description: toPrepare > 0 ? `${toPrepare} preparing now` : 'All set'
         });
+        await Promise.all(
+          reports.map(async (r, i) => {
+            if (r.pdfUrl && !existence[i]) {
+              try { await updateReport(r.id, { pdfUrl: undefined }); } catch {}
+            }
+          })
+        );
         reports
           .filter(r => isReportReadyForPDF(r) && !r.pdfUrl)
           .forEach(r => {
@@ -199,10 +216,20 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
       const students = await getStudentsForClass(classData.id);
       const teacher = await getTeacherByEmail(classData.teacherEmail);
 
-      // Show counts: prepared PDFs and ready (image+text)
+      // Show counts: verified prepared PDFs and ready (image+text)
+      const checkPdfExists = async (pdfUrl?: string) => {
+        if (!pdfUrl) return false;
+        try {
+          const { refreshDownloadURL } = await import('@/services/storageService');
+          const url = await refreshDownloadURL(pdfUrl);
+          const res = await fetch(url, { method: 'HEAD' });
+          return res.ok;
+        } catch { return false; }
+      };
+      const existence = await Promise.all(reports.map(r => checkPdfExists(r.pdfUrl)));
       const totalReports = reports.length;
-      const preparedCount = reports.filter(r => Boolean(r.pdfUrl)).length;
-      const readyCount = reports.filter(r => isReportReadyForPDF(r)).length;
+      const preparedCount = existence.filter(Boolean).length;
+      const readyCount = reports.filter((r, i) => isReportReadyForPDF(r) && !existence[i]).length;
       toast.info(`${preparedCount}/${totalReports} Reports Prepared`, {
         description: `${readyCount} ready to prepare`
       });

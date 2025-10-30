@@ -28,8 +28,30 @@ const wrapText = (text: string, maxWidth: number): string[] => {
   return lines.length > 0 ? lines : [''];
 };
 
+const tryAlternateArtworkPath = async (url: string): Promise<string> => {
+  // Swap folder segment students <-> student and retry
+  const swapped = url
+    .replace(/\/students\//, '/student/')
+    .replace(/%2Fstudents%2F/g, '%2Fstudent%2F');
+  if (swapped !== url) return await refreshDownloadURL(swapped);
+  const swappedBack = url
+    .replace(/\/student\//, '/students/')
+    .replace(/%2Fstudent%2F/g, '%2Fstudents%2F');
+  if (swappedBack !== url) return await refreshDownloadURL(swappedBack);
+  throw new Error('Alternate artwork path not applicable');
+};
+
 const convertArtworkToDataUrl = async (artworkUrl: string): Promise<string> => {
-  const freshUrl = await refreshDownloadURL(artworkUrl);
+  let freshUrl: string;
+  try {
+    freshUrl = await refreshDownloadURL(artworkUrl);
+  } catch (e: any) {
+    if (e?.message?.includes('object-not-found')) {
+      freshUrl = await tryAlternateArtworkPath(artworkUrl);
+    } else {
+      throw new Error(`Failed to refresh download URL: ${e?.message || 'unknown error'}`);
+    }
+  }
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';

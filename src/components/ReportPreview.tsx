@@ -267,27 +267,27 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
       // Add artwork if present - REQUIRED when provided
       if (artworkUrl) {
         // Always refresh the URL to ensure it's valid and not expired
-        const freshUrl = await refreshDownloadURL(artworkUrl);
-        
-        // Load image and convert to data URL to embed in SVG
+          const freshUrl = await refreshDownloadURL(artworkUrl);
+          
+          // Load image and convert to data URL to embed in SVG
         // Always use crossOrigin='anonymous' to avoid CORS tainting
         const artworkDataUrl = await new Promise<string>((resolve, reject) => {
           // Always use crossOrigin='anonymous' to avoid tainted canvas
           // Set it BEFORE setting src, otherwise it's ignored
           const artworkImg = new Image();
-          artworkImg.crossOrigin = 'anonymous';
+            artworkImg.crossOrigin = 'anonymous';
           
-          artworkImg.onload = () => {
-            try {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              if (!ctx) { 
-                reject(new Error('Could not get canvas context'));
-                return; 
-              }
-              canvas.width = artworkImg.naturalWidth;
-              canvas.height = artworkImg.naturalHeight;
-              ctx.drawImage(artworkImg, 0, 0);
+            artworkImg.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { 
+                  reject(new Error('Could not get canvas context'));
+                  return; 
+                }
+                canvas.width = artworkImg.naturalWidth;
+                canvas.height = artworkImg.naturalHeight;
+                ctx.drawImage(artworkImg, 0, 0);
               
               // Try to export canvas - should work if crossOrigin was set correctly
               try {
@@ -302,9 +302,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               }
             } catch (error) { 
               console.error('Canvas conversion failed:', error);
-              reject(error);
-            }
-          };
+                reject(error);
+              }
+            };
           
           artworkImg.onerror = (error) => {
             console.error('Image failed to load with crossOrigin:', freshUrl, error);
@@ -312,18 +312,18 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
           };
           
           // Set src AFTER crossOrigin to ensure it takes effect
-          artworkImg.src = freshUrl;
-        });
-        
-        // Add to SVG
-        const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-        artworkElement.setAttribute('href', artworkDataUrl);
-        artworkElement.setAttribute('x', '97.64');
-        artworkElement.setAttribute('y', '308.45');
-        artworkElement.setAttribute('width', '400');
-        artworkElement.setAttribute('height', '250');
-        artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        svgClone.appendChild(artworkElement);
+            artworkImg.src = freshUrl;
+          });
+          
+          // Add to SVG
+          const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+          artworkElement.setAttribute('href', artworkDataUrl);
+          artworkElement.setAttribute('x', '97.64');
+          artworkElement.setAttribute('y', '308.45');
+          artworkElement.setAttribute('width', '400');
+          artworkElement.setAttribute('height', '250');
+          artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svgClone.appendChild(artworkElement);
         
         // Verify the data URL or URL is valid
         if (!artworkDataUrl) {
@@ -413,9 +413,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
               return;
             }
             
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const pngDataUrl = canvas.toDataURL('image/png');
-            setPngDataUrl(pngDataUrl);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngDataUrl = canvas.toDataURL('image/png');
+        setPngDataUrl(pngDataUrl);
             setPreviewError(null); // Clear any errors on success
             URL.revokeObjectURL(svgUrl);
             document.body.removeChild(tempDiv);

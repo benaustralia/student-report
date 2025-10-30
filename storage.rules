@@ -27,5 +27,9 @@ match /pdfs/{reportId}/{allPaths=**} {
 match /student-reports/student/{allPaths=**} {
   allow read, write: if request.auth != null;
 }
+
+match /student-reports/students/{allPaths=**} {
+  allow read, write: if request.auth != null;
+}
   }
 }
