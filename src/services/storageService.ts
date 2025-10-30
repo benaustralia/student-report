@@ -105,6 +105,6 @@ export const toPublicURL = (urlOrPath: string): string => {
     path = urlOrPath.replace(/^\/+/, '');
   }
   if (!path) throw new Error('Invalid storage URL or path');
-  const bucket = 'student-reports-final.appspot.com';
+  const bucket = (storage as any)?.app?.options?.storageBucket || 'student-reports-final.firebasestorage.app';
   return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
 };
