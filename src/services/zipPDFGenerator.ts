@@ -62,55 +62,28 @@ const createSVGElement = (doc: Document, tag: string, attrs: Record<string, stri
 };
 
 const wrapText = (text: string, maxWidth: number): string[] => {
-  const ctx = document.createElement('canvas').getContext('2d');
-  if (!ctx) return [text];
-  ctx.font = '11px "Noto Sans SC", Arial, sans-serif';
-  
-  // Wait for font to load if possible (non-blocking)
-  if (typeof document !== 'undefined' && document.fonts) {
-    document.fonts.ready.catch(() => {});
-  }
-  
-  if (ctx.measureText(text).width <= maxWidth) return [text];
-  
+  // Use the exact same simple approach that works perfectly for individual PDFs
+  // This handles both English and Chinese text correctly
   const lines: string[] = [];
   let currentLine = '';
   
-  // Split by spaces first for English, then handle Chinese character-by-character
-  const tokens = text.split(/(\s+|[。！？，、；：]|[.!?])/);
-  
-  for (const token of tokens) {
-    if (!token) continue;
+  // Split by whitespace to handle both English words and Chinese character blocks
+  for (const word of text.split(/\s+/)) {
+    if (!word) continue;
     
-    // For Chinese characters (no spaces), break character-by-character if needed
-    const isChinese = /[\u4e00-\u9fff]/.test(token);
-    if (isChinese && !token.match(/^\s+$/)) {
-      // Handle Chinese character-by-character
-      for (let i = 0; i < token.length; i++) {
-        const char = token[i];
-        const testLine = currentLine + char;
-        const width = ctx.measureText(testLine).width;
-        if (width > maxWidth && currentLine) {
-          lines.push(currentLine.trim());
-          currentLine = char;
-        } else {
-          currentLine = testLine;
-        }
-      }
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    // Use the same 7px-per-character estimate that works for individual PDFs
+    // This works for both English and Chinese characters in the Noto Sans SC font
+    if (testLine.length * 7 > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
     } else {
-      // Handle English/space-separated text
-      const testLine = currentLine + token;
-      if (ctx.measureText(testLine).width > maxWidth && currentLine) {
-        lines.push(currentLine.trim());
-        currentLine = token;
-      } else {
-        currentLine = testLine;
-      }
+      currentLine = testLine;
     }
   }
   
-  if (currentLine.trim()) lines.push(currentLine.trim());
-  return lines.length > 0 ? lines : [text];
+  if (currentLine) lines.push(currentLine);
+  return lines.length > 0 ? lines : [''];
 };
 
 const addText = (doc: Document, svg: SVGSVGElement, x: number, y: number, text: string, size = '13px') => {
