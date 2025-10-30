@@ -25,6 +25,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 }) => {
   const [uploading, setUploading] = useState(false);
   const [displaySrc, setDisplaySrc] = useState<string | null>(value || null);
+  const [triedAlt, setTriedAlt] = useState(false);
 
   // Resolve Firebase Storage URLs to public alt=media (no token) for display
   useEffect(() => {
@@ -114,6 +115,17 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               src={displaySrc}
               alt="Preview of uploaded image"
               className="mx-auto h-20 w-20 object-cover rounded"
+              onError={() => {
+                if (!displaySrc) return;
+                if (triedAlt) return; // avoid loops
+                let altUrl = displaySrc
+                  .replace('%2Fstudents%2F', '%2Fstudent%2F')
+                  .replace('/students/', '/student/');
+                if (altUrl !== displaySrc) {
+                  setTriedAlt(true);
+                  setDisplaySrc(altUrl);
+                }
+              }}
             />
             <p className="text-sm text-muted-foreground">Click to change</p>
           </div>
