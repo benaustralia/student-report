@@ -60,8 +60,16 @@ export const deleteImageFromStorage = async (url: string): Promise<void> => {
 };
 
 export const generateImagePath = (studentId: string, filename: string): string => {
+  // Normalize folder even if caller passed a raw name with parentheses/spaces
+  const normId = studentId
+    .replace(/[()]/g, '')
+    .replace(/[\n\r\t]/g, ' ')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/\/-+/g, '/')
+    .replace(/-+\//g, '/');
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  return `student-reports/${studentId}/profile_${sanitizedFilename}`;
+  return `student-reports/${normId}/profile_${sanitizedFilename}`;
 };
 
 // Shared folder naming to keep artwork and PDFs in the same place
