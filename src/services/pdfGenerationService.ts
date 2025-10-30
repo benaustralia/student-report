@@ -113,10 +113,25 @@ const generateSVGFromReport = async (
     '6': date
   };
   
+  let replacedCount = 0;
   svgClone.querySelectorAll('text tspan').forEach((tspan) => {
     const textContent = tspan.textContent;
-    if (textContent && textMap[textContent]) tspan.textContent = textMap[textContent];
+    if (textContent && textMap[textContent]) {
+      tspan.textContent = textMap[textContent];
+      replacedCount++;
+    }
   });
+  if (DEBUG) console.log('[pdf] generateSVGFromReport:text-replaced', { replacedCount });
+
+  // Force visible black text to avoid template styles hiding content
+  const styleEl = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'style');
+  styleEl.textContent = (
+    "text { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; color: black !important;" +
+    " font-family: 'Noto Sans SC', Arial, sans-serif !important; font-weight: normal !important; font-size: 11px !important; } " +
+    ".st1, .st2 { fill: transparent !important; fill-opacity: 0 !important; opacity: 0 !important; } " +
+    ".st5 { fill: black !important; fill-opacity: 1 !important; opacity: 1 !important; }"
+  );
+  svgClone.appendChild(styleEl);
   
   if (report.artworkUrl?.trim()) {
     try {
