@@ -64,6 +64,23 @@ export const generateImagePath = (studentId: string, filename: string): string =
   return `student-reports/${studentId}/profile_${sanitizedFilename}`;
 };
 
+// Shared folder naming to keep artwork and PDFs in the same place
+export const buildStudentFolderName = (
+  firstName: string,
+  lastName: string | undefined,
+  classDay: string | undefined
+): string => {
+  const base = `${firstName || ''} ${lastName || ''}`.trim();
+  const day = (classDay || 'Unknown').trim();
+  const combined = `${base}-${day}`;
+  return combined
+    .replace(/[()]/g, '') // drop parentheses to avoid duplicate variants
+    .replace(/[\n\r\t\/]+/g, ' ')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+};
+
 /**
  * Get a fresh download URL from a Firebase Storage URL
  * Useful when the old download token has expired

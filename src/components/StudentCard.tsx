@@ -10,6 +10,7 @@ import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports, getTeacherByEmail } from '@/services/firebaseService-ultra-final';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
+import { buildStudentFolderName } from '@/services/storageService';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { generatePDFInBackground } from '@/services/pdfGenerationService';
 import type { Student, Class, ReportData } from '@/types';
@@ -91,8 +92,9 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     }
   }, [state.reportText, student.id, classData.id, classData.teacherEmail, student]);
 
+  const folder = buildStudentFolderName(student.firstName, student.lastName, classData.classDay);
   const imageUpload = useImageUploadV2({
-    userId: `students/${student.id}`,
+    userId: `students/${folder}`,
     onError: (error) => console.error('Image upload error:', error),
     onRemove: () => saveReport(null),
   });

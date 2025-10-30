@@ -1,5 +1,5 @@
 import type { ReportData, Student, Class, Teacher } from '@/types';
-import { refreshDownloadURL, toPublicURL } from './storageService';
+import { refreshDownloadURL, toPublicURL, buildStudentFolderName } from './storageService';
 import { getStorageInstance } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -212,8 +212,10 @@ const generatePDFBlob = async (svgString: string): Promise<Blob> => {
 const safePathSegment = (value: string): string =>
   value
     .replace(/[\n\r\t]/g, ' ')
+    .replace(/[()]/g, '')
     .replace(/\//g, '-')
     .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
     .trim();
 
 const uploadPDFToStorage = async (
@@ -222,12 +224,13 @@ const uploadPDFToStorage = async (
   student: Student,
   classData: Class
 ): Promise<string> => {
-  const studentName = safePathSegment(
-    `${student.firstName}${student.lastName ? ' ' + student.lastName : ''}`
+  const folder = buildStudentFolderName(
+    student.firstName,
+    student.lastName,
+    classData.classDay
   );
-  const classDay = safePathSegment(classData.classDay || 'Unknown');
-  const basePath = `student-reports/students/${studentName}-${classDay}`;
-  const fileName = `${studentName}-${classDay}.pdf`;
+  const basePath = `student-reports/students/${folder}`;
+  const fileName = `${folder}.pdf`;
   const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
   const storageRef = ref(getStorageInstance(), `${basePath}/${fileName}`);
   if (DEBUG) console.log('[pdf] uploadPDFToStorage:path', { basePath, fileName, reportId: _reportId });
