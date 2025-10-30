@@ -203,8 +203,25 @@ const uploadPDFToStorage = async (
   const basePath = `student-reports/students/${studentName}-${classDay}`;
   const storageRef = ref(getStorageInstance(), `${basePath}/report.pdf`);
   if (DEBUG) console.log('[pdf] uploadPDFToStorage:path', { basePath, reportId: _reportId });
-  await uploadBytes(storageRef, file);
-  const url = await getDownloadURL(storageRef);
+  try {
+    await uploadBytes(storageRef, file);
+  } catch (e: any) {
+    console.error('[pdf] uploadPDFToStorage:upload-error', {
+      message: e?.message,
+      code: e?.code
+    });
+    throw e;
+  }
+  let url: string;
+  try {
+    url = await getDownloadURL(storageRef);
+  } catch (e: any) {
+    console.error('[pdf] uploadPDFToStorage:url-error', {
+      message: e?.message,
+      code: e?.code
+    });
+    throw e;
+  }
   if (DEBUG) console.log('[pdf] uploadPDFToStorage:url', url);
   return url;
 };
@@ -279,8 +296,11 @@ export const generatePDFInBackground = async (
         console.error(`Failed to update report ${report.id} with PDF URL:`, error);
       }
     })
-    .catch((error) => {
-      console.error(`Failed to generate PDF for report ${report.id}:`, error);
+    .catch((error: any) => {
+      console.error(`Failed to generate PDF for report ${report.id}:`, {
+        message: error?.message,
+        code: error?.code
+      });
       if (report.pdfUrl) updateReportPDFUrl(report.id, undefined).catch((err: unknown) => console.error(`Failed to clear pdfUrl for report ${report.id}:`, err));
     });
 };

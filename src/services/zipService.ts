@@ -119,6 +119,7 @@ export const generateClassZIP = async (
         }
       }
       if (!report.pdfUrl) {
+        console.warn('[zip] skip: no pdfUrl', { student: report.studentName, date: report.date });
         skippedCount++;
         continue;
       }
@@ -127,6 +128,7 @@ export const generateClassZIP = async (
         folder.file(`${report.studentName.replace(/\s+/g, '_')}_${report.date.replace(/\//g, '-')}.pdf`, pdfBlob);
         successCount++;
       } else {
+        console.warn('[zip] skip: failed download or empty pdf', { student: report.studentName, pdfUrl: report.pdfUrl });
         skippedCount++;
       }
     } catch (error) {

@@ -199,7 +199,10 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           .forEach(r => {
             const student = students.find(s => s.id === r.studentId);
             if (student && teacher) {
-              if (DEBUG) console.log('[class] maybePrepare:trigger-bg', { reportId: r.id });
+              if (DEBUG) console.log('[class] maybePrepare:trigger-bg', {
+                reportId: r.id,
+                student: `${student.firstName} ${student.lastName}`
+              });
               generatePDFInBackground(r, student, classData, teacher);
             }
           });
