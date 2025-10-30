@@ -222,14 +222,15 @@ const uploadPDFToStorage = async (
   student: Student,
   classData: Class
 ): Promise<string> => {
-  const file = new File([pdfBlob], 'report.pdf', { type: 'application/pdf' });
   const studentName = safePathSegment(
     `${student.firstName}${student.lastName ? ' ' + student.lastName : ''}`
   );
   const classDay = safePathSegment(classData.classDay || 'Unknown');
   const basePath = `student-reports/students/${studentName}-${classDay}`;
-  const storageRef = ref(getStorageInstance(), `${basePath}/report.pdf`);
-  if (DEBUG) console.log('[pdf] uploadPDFToStorage:path', { basePath, reportId: _reportId });
+  const fileName = `${studentName}-${classDay}.pdf`;
+  const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+  const storageRef = ref(getStorageInstance(), `${basePath}/${fileName}`);
+  if (DEBUG) console.log('[pdf] uploadPDFToStorage:path', { basePath, fileName, reportId: _reportId });
   try {
     await uploadBytes(storageRef, file);
   } catch (e: any) {
