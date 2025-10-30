@@ -106,7 +106,50 @@ const generateSVGFromReport = async (
   
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = `${teacher.firstName} ${teacher.lastName}`;
-  const date = new Date(report.createdAt).toLocaleDateString('en-GB');
+  
+  // Safely format date with validation (same logic as ClassCard.tsx)
+  const date = (() => {
+    const timestamp = report.createdAt;
+    let dateObj: Date | null = null;
+    
+    try {
+      if (timestamp && typeof timestamp === 'object') {
+        // Firestore timestamp with seconds property
+        if ('seconds' in timestamp) {
+          dateObj = new Date((timestamp as { seconds: number }).seconds * 1000);
+        }
+        // Firestore Timestamp object with toDate method
+        else if ('toDate' in timestamp && typeof (timestamp as { toDate: () => Date }).toDate === 'function') {
+          dateObj = (timestamp as { toDate: () => Date }).toDate();
+        }
+      }
+      // If it's already a Date object
+      else if (timestamp && typeof timestamp === 'object' && 'getTime' in timestamp && typeof (timestamp as any).getTime === 'function') {
+        dateObj = timestamp as Date;
+      }
+      // Fallback: try to convert
+      else if (timestamp) {
+        dateObj = new Date(timestamp as string | number);
+      }
+      
+      // Validate the date and format it
+      if (dateObj && !isNaN(dateObj.getTime())) {
+        const formatted = dateObj.toLocaleDateString('en-GB');
+        // Double-check the formatted string isn't "Invalid Date"
+        if (formatted && formatted !== 'Invalid Date' && formatted !== 'NaN/NaN/NaN') {
+          if (DEBUG) console.log('[pdf] date:formatted-success', { reportId: report.id, formatted });
+          return formatted;
+        }
+      }
+    } catch (error) {
+      if (DEBUG) console.warn('[pdf] date-format-error', { reportId: report.id, timestamp, error });
+    }
+    
+    // Fallback to current date if all else fails
+    const fallback = new Date().toLocaleDateString('en-GB');
+    if (DEBUG) console.warn('[pdf] date:using-fallback', { reportId: report.id, fallback, originalTimestamp: timestamp });
+    return fallback;
+  })();
   // Remove template placeholders to prevent overlay issues
   svgClone.querySelectorAll('text.st1, text.st2').forEach((t) => {
     if (t.textContent && /^[123456]$/.test(t.textContent.trim())) t.remove();
