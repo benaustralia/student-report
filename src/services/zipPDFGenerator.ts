@@ -105,7 +105,7 @@ const wrapText = (text: string, maxWidth: number): string[] => {
       // Handle English/space-separated text
       const testLine = currentLine ? `${currentLine}${part}` : part;
       // Use smaller estimate for English to allow wider lines before wrapping
-      const estimatedWidth = testLine.length * 6;
+      const estimatedWidth = testLine.length * 5.5;
       
       if (estimatedWidth > maxWidth && currentLine) {
         if (DEBUG) console.log('[zip-gen] wrapText:wrap-english', { estimatedWidth, maxWidth });
