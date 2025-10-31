@@ -173,7 +173,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     
     setGeneratingPng(true);
     setPreviewError(null); // Clear any previous errors
-    toast.info('Generating report preview...', { duration: 2000 });
+    // Removed toast to prevent scroll disruption - preview generation is now on-demand
     try {
       // Create a temporary ReportTemplate component to get the SVG
       const tempDiv = document.createElement('div');
@@ -505,16 +505,18 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     fetchTeacher();
   }, [classData.teacherEmail, fetchedTeacherEmail]);
 
-  // Generate PNG preview when teacher data is available
-  useEffect(() => {
-    if (teacher && !pngDataUrl && !previewError) {
+  // Generate PNG preview only when dialog opens (on user request)
+  // This prevents scroll disruption during typing
+  const handleDialogOpenChange = (open: boolean) => {
+    if (open && teacher && !pngDataUrl && !generatingPng && !previewError) {
+      // Generate preview when user opens the dialog
       generatePngPreview();
     }
-  }, [teacher]); // Only regenerate when teacher changes
+  };
 
       return (
         <div className="flex flex-col sm:flex-row gap-2">
-          <Dialog>
+          <Dialog onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
               <Button 
                 variant="outline" 
@@ -593,9 +595,11 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
             return;
           }
           
+          // Show loading toast only when user explicitly requests download (not during auto-save/typing)
           const toastId = toast.loading('Generating PDF report...', {
             description: 'This may take a few seconds'
           });
+          // Note: This toast should not appear during typing/auto-save - only on explicit download button click
           
           try {
             // Create SVG content
