@@ -206,9 +206,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
         const prepared = existence.filter(Boolean).length;
         const toPrepare = reports.filter((r, i) => !existence[i] && isReportReadyForPDF(r)).length;
         if (DEBUG) console.log('[class] maybePrepare:counts', { total, prepared, toPrepare });
-        toast.info(`${prepared}/${total} Reports Prepared`, {
-          description: toPrepare > 0 ? `${toPrepare} preparing now` : 'All set'
-        });
+        // Removed toast to prevent scroll disruption when opening class
         await Promise.all(
           reports.map(async (r, i) => {
             if (r.pdfUrl && !existence[i]) {

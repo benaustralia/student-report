@@ -52,18 +52,18 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     if (file) {
       setUploading(true);
       
-      // Validate file
-      if (!acceptedTypes.includes(file.type)) {
-        alert(`File type not supported. Please use: ${acceptedTypes.join(', ')}`);
-        setUploading(false);
-        return;
-      }
-      
-      if (file.size > maxSize * 1024 * 1024) {
-        alert(`File size must be less than ${maxSize}MB. Large images will be automatically compressed for optimal quality.`);
-        setUploading(false);
-        return;
-      }
+          // Validate file
+          if (!acceptedTypes.includes(file.type)) {
+            console.warn(`File type not supported. Please use: ${acceptedTypes.join(', ')}`);
+            setUploading(false);
+            return;
+          }
+          
+          if (file.size > maxSize * 1024 * 1024) {
+            console.warn(`File size must be less than ${maxSize}MB. Large images will be automatically compressed for optimal quality.`);
+            setUploading(false);
+            return;
+          }
 
       // Create preview
       const preview = URL.createObjectURL(file);

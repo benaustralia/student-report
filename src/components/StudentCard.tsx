@@ -60,11 +60,13 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       // Show Sonner toast for successful save (silent for auto-save to avoid scroll disruption)
       if (!isAutoSave) {
         toast.success('Report saved successfully', { duration: 3000 });
+        // Only dispatch dataChanged event on manual saves to prevent scroll disruption during auto-save
+        // Dispatch asynchronously to avoid blocking and scroll issues
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'reports' } }));
+        }, 0);
       }
-      // Auto-save is silent - no toast to prevent scroll disruption
-      
-      // Notify other components that reports data has changed
-      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'reports' } }));
+      // Auto-save is silent - no toast, no dataChanged event to prevent scroll disruption
       
       // Trigger background PDF generation (fire-and-forget)
       // Fetch the saved report and get teacher data, then generate PDF
@@ -157,7 +159,8 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
 
   const handleAIGenerate = () => {
     if (!state.reportText.trim()) {
-      alert('Please enter some notes or ideas first to generate a report.');
+      // Silent validation - no alert to prevent scroll disruption
+      console.warn('Cannot generate AI report: no notes entered');
       return;
     }
 
@@ -211,11 +214,11 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         
         setState(prev => ({ ...prev, reportText: generatedText, hasUnsavedChanges: true }));
       } else {
-        alert('Failed to generate report text. Please try again.');
+        console.error('Failed to generate report text. Please try again.');
       }
     } catch (error) {
       console.error('Error generating AI report:', error);
-      alert('Failed to generate AI report. Please check your API key or try again.');
+      console.error('Failed to generate AI report. Please check your API key or try again.');
     } finally {
       setState(prev => ({ ...prev, generatingAI: false }));
     }
