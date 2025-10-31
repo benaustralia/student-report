@@ -57,12 +57,11 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       lastSavedTextRef.current = state.reportText.trim();
       setState(prev => ({ ...prev, hasUnsavedChanges: false }));
       
-      // Show Sonner toast for successful save
-      if (isAutoSave) {
-        toast.success('Report auto-saved', { duration: 2000 });
-      } else {
+      // Show Sonner toast for successful save (silent for auto-save to avoid scroll disruption)
+      if (!isAutoSave) {
         toast.success('Report saved successfully', { duration: 3000 });
       }
+      // Auto-save is silent - no toast to prevent scroll disruption
       
       // Notify other components that reports data has changed
       window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'reports' } }));
