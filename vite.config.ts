@@ -127,6 +127,12 @@ export default defineConfig({
               return 'sonner';
             }
             
+            // CRITICAL: Double-check that next-themes didn't slip through
+            // This should never happen if the check above works, but just in case
+            if (id.includes('next-themes')) {
+              return 'react-vendor';
+            }
+            
             // All other node_modules - split by size to avoid large vendor bundle
             return 'vendor';
           }
