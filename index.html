@@ -16,11 +16,44 @@
     <!-- Noto Sans SC Font - Load only when Chinese text is detected (lazy load) -->
     <!-- Removed from initial load to save 60+ KiB - will be loaded dynamically if needed -->
     
-    <!-- Preconnect to Firebase for faster auth/data loading -->
-    <link rel="preconnect" href="https://student-reports-final.firebaseapp.com" crossorigin>
-    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
-    <link rel="dns-prefetch" href="https://www.gstatic.com">
+    <!-- Preconnect to Firebase - deferred until after initial load to avoid blocking -->
+    <!-- These will be added dynamically after page is interactive -->
+    <script>
+      // Defer third-party preconnects until after initial load
+      // This prevents blocking the critical rendering path
+      (function() {
+        const addPreconnects = () => {
+          const preconnects = [
+            { href: 'https://student-reports-final.firebaseapp.com', crossorigin: true },
+            { href: 'https://firestore.googleapis.com', crossorigin: true },
+            { href: 'https://firebasestorage.googleapis.com', crossorigin: true }
+          ];
+          
+          preconnects.forEach(({ href, crossorigin }) => {
+            const link = document.createElement('link');
+            link.rel = 'preconnect';
+            link.href = href;
+            if (crossorigin) link.crossOrigin = 'anonymous';
+            document.head.appendChild(link);
+          });
+          
+          // DNS prefetch for gstatic (Firebase)
+          const dnsPrefetch = document.createElement('link');
+          dnsPrefetch.rel = 'dns-prefetch';
+          dnsPrefetch.href = 'https://www.gstatic.com';
+          document.head.appendChild(dnsPrefetch);
+        };
+        
+        // Add preconnects after page is interactive
+        if (document.readyState === 'complete') {
+          setTimeout(addPreconnects, 100);
+        } else {
+          window.addEventListener('load', () => {
+            setTimeout(addPreconnects, 100);
+          }, { once: true });
+        }
+      })();
+    </script>
     
     <!-- CSS will be loaded by Vite - don't block here -->
     
