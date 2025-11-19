@@ -157,7 +157,11 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         });
       } else {
         // For teacher-only users, filter classes by their email
-        const teacherClasses = allClasses.filter(cls => cls.teacherEmail === user.email);
+        // Normalize emails for case-insensitive comparison (emails should be case-insensitive)
+        const normalizedUserEmail = (user.email || '').toLowerCase().trim();
+        const teacherClasses = allClasses.filter(cls => 
+          (cls.teacherEmail || '').toLowerCase().trim() === normalizedUserEmail
+        );
         setClasses(teacherClasses);
         setLoading(false);
       }
