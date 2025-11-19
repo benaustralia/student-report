@@ -61,7 +61,8 @@ export default defineConfig({
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
             // React core - MUST stay together, don't split
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react/jsx-runtime')) {
+            // Include next-themes with React since it depends on React hooks
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react/jsx-runtime') || id.includes('next-themes')) {
               return 'react-vendor';
             }
             
@@ -74,11 +75,6 @@ export default defineConfig({
             }
             if (id.includes('firebase/storage')) {
               return 'firebase-storage';
-            }
-            
-            // Theme provider (next-themes) - separate chunk
-            if (id.includes('next-themes')) {
-              return 'theme-provider';
             }
             
             // Google OAuth - lazy loaded
@@ -171,6 +167,15 @@ export default defineConfig({
   },
   // Optimize dependencies to avoid Rollup issues
   optimizeDeps: {
-    exclude: ['@rollup/rollup-linux-x64-gnu']
+    exclude: ['@rollup/rollup-linux-x64-gnu'],
+    // Force React to be a singleton to prevent multiple instances
+    include: ['react', 'react-dom', 'react/jsx-runtime']
+  },
+  // Ensure React is resolved correctly across all chunks
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "./src"),
+    },
+    dedupe: ['react', 'react-dom']
   }
 })
