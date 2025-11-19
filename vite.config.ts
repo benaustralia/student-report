@@ -62,14 +62,13 @@ export default defineConfig({
         manualChunks: (id) => {
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
-            // CRITICAL: next-themes MUST be with React - check this FIRST before other conditions
-            // next-themes uses React hooks and will fail if React isn't available
-            if (id.includes('next-themes')) {
-              return 'react-vendor';
-            }
+            // CRITICAL: React and all React-dependent libraries MUST stay together
+            // Use more specific path matching to avoid false positives
+            const isReact = id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react/jsx-runtime') || id === 'react' || id === 'react-dom';
+            const isNextThemes = id.includes('next-themes');
             
-            // React core - MUST stay together, don't split
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react/jsx-runtime')) {
+            // Put React and next-themes in the same chunk - this is critical!
+            if (isReact || isNextThemes) {
               return 'react-vendor';
             }
             
