@@ -1,13 +1,13 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuthContext } from './hooks/useAuthContext';
-import { LoginForm } from './components/LoginForm';
 // Don't import storageService here - it pulls in Storage dependencies
 // Import dynamically only when needed (after login)
 
-// GoogleAuthWrapper is no longer needed - GoogleLoginButton handles its own loading
+// Lazy load ALL heavy components to reduce initial bundle size
+// LoginForm includes Card, Input, Label, Button - all Radix UI components (~100KB+)
+const LoginForm = lazy(() => import('./components/LoginForm').then(m => ({ default: m.LoginForm })));
+
 // RBAApp - only load after login (saves ~340KB on login page)
 const RBAApp = lazy(() => import('./components/RBAApp').then(m => ({ default: m.RBAApp })));
 
@@ -79,12 +79,12 @@ function AppContent() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin mr-2" />
+        <div className="flex items-center justify-center py-12 border rounded-lg bg-card">
+          <div className="flex items-center">
+            <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mr-2" />
             <span>Loading...</span>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -92,11 +92,9 @@ function AppContent() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <Card className="border-destructive">
-          <CardContent className="text-destructive py-4">
-            <p>Authentication Error: {error}</p>
-          </CardContent>
-        </Card>
+        <div className="border-destructive border rounded-lg bg-card p-4 text-destructive">
+          <p>Authentication Error: {error}</p>
+        </div>
       </div>
     );
   }
@@ -104,11 +102,17 @@ function AppContent() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <LoginForm 
-          onSignIn={handleSignIn}
-          isSigningIn={isSigningIn}
-          setIsSigningIn={setIsSigningIn}
-        />
+        <Suspense fallback={
+          <div className="flex items-center justify-center">
+            <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
+          <LoginForm 
+            onSignIn={handleSignIn}
+            isSigningIn={isSigningIn}
+            setIsSigningIn={setIsSigningIn}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -117,12 +121,12 @@ function AppContent() {
         return (
           <Suspense fallback={
             <div className="max-w-4xl mx-auto p-4 sm:p-6">
-              <Card>
-                <CardContent className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin mr-2" />
+              <div className="flex items-center justify-center py-12 border rounded-lg bg-card">
+                <div className="flex items-center">
+                  <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mr-2" />
                   <span>Loading...</span>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           }>
             <RBAApp user={user} />

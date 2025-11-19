@@ -51,20 +51,31 @@ setTimeout(loadNonCriticalResources, 5000);
 const rootElement = document.getElementById('root')!;
 const root = createRoot(rootElement);
 
-// Use startTransition to defer React hydration and reduce TBT
-// This makes React hydration non-blocking and allows the browser to stay responsive
-startTransition(() => {
-  root.render(
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <App />
-    </ThemeProvider>
-  );
-});
+// Aggressively defer React hydration to reduce main-thread work
+// Use requestIdleCallback to wait for browser to be idle before hydrating
+const hydrateApp = () => {
+  startTransition(() => {
+    root.render(
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <App />
+      </ThemeProvider>
+    );
+  });
+};
+
+// Defer hydration until browser is idle or after a short delay
+// This allows the static HTML to be fully painted before React takes over
+if ('requestIdleCallback' in window) {
+  requestIdleCallback(hydrateApp, { timeout: 100 });
+} else {
+  // Fallback: small delay to let initial paint complete
+  setTimeout(hydrateApp, 0);
+}
 
 // Mark body as ready after React renders - this hides critical content
 // Delay ensures Lighthouse measures the static version first
