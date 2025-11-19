@@ -138,19 +138,9 @@ export default defineConfig({
     },
     // Increase chunk size warning limit to 1000kb temporarily
     chunkSizeWarningLimit: 1000,
-    // Use terser for better minification (smaller output than esbuild)
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: false, // Keep console for debugging
-        drop_debugger: true,
-        pure_funcs: ['console.debug', 'console.trace'], // Remove debug logs
-        passes: 2, // Multiple passes for better compression
-      },
-      format: {
-        comments: false, // Remove all comments
-      },
-    },
+    // Use esbuild for minification - more reliable than terser, avoids variable hoisting issues
+    // Terser was causing "Cannot access variable before initialization" errors
+    minify: 'esbuild',
     // Target modern browsers for smaller bundles
     target: 'esnext',
     // Enable CSS code splitting
