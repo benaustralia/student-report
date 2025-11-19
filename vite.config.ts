@@ -123,11 +123,6 @@ export default defineConfig({
               return 'sonner';
             }
             
-            // Next-themes dependencies
-            if (id.includes('next-themes')) {
-              return 'theme-provider';
-            }
-            
             // All other node_modules - split by size to avoid large vendor bundle
             return 'vendor';
           }
