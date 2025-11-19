@@ -132,9 +132,8 @@ export default defineConfig({
             return 'auth-core';
           }
           
-          if (id.includes('src/components/theme-provider')) {
-            return 'theme-provider-code';
-          }
+          // Don't split theme-provider - it needs to stay with main code to access React properly
+          // Splitting it causes module resolution issues with next-themes
         },
         // Optimize chunk file names for better caching
         chunkFileNames: 'assets/[name]-[hash].js',
