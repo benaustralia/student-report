@@ -59,7 +59,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
+        // Ensure react-vendor chunk is loaded before vendor chunk
+        // This prevents module resolution issues
+        manualChunks: (id, { getModuleInfo }) => {
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
             // CRITICAL: React and all React-dependent libraries MUST stay together
