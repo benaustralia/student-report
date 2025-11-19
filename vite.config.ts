@@ -59,9 +59,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Ensure react-vendor chunk is loaded before vendor chunk
-        // This prevents module resolution issues
-        manualChunks: (id, { getModuleInfo }) => {
+        manualChunks: (id) => {
+          // CRITICAL: Check for next-themes FIRST, before ANY other conditions
+          // This must be the very first check to ensure it's always caught
+          if (id.includes('next-themes')) {
+            return 'react-vendor';
+          }
+          
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
             // CRITICAL: React and all React-dependent libraries MUST stay together
