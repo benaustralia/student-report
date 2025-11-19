@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { AuthProvider } from './contexts/AuthContext';
+// Lazy load AuthProvider - only needed when App renders, not on initial module load
+const AuthProvider = lazy(() => import('./contexts/AuthContext').then(m => ({ default: m.AuthProvider })));
 import { useAuthContext } from './hooks/useAuthContext';
 // Don't import storageService here - it pulls in Storage dependencies
 // Import dynamically only when needed (after login)
@@ -150,13 +151,19 @@ export default function TeacherReports() {
   }, []);
   
   return (
-    <AuthProvider>
-      <AppContent />
-      {showToaster && (
-        <Suspense fallback={null}>
-          <Toaster />
-        </Suspense>
-      )}
-    </AuthProvider>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <AuthProvider>
+        <AppContent />
+        {showToaster && (
+          <Suspense fallback={null}>
+            <Toaster />
+          </Suspense>
+        )}
+      </AuthProvider>
+    </Suspense>
   );
 }

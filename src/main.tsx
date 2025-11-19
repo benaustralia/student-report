@@ -1,7 +1,8 @@
-import { startTransition } from 'react'
+import { startTransition, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
-import { ThemeProvider } from './components/theme-provider'
+// Lazy load ThemeProvider - only needed after React hydrates, not on initial load
+const ThemeProvider = lazy(() => import('./components/theme-provider').then(m => ({ default: m.ThemeProvider })))
 
 // Hide critical content once React is ready
 const hideCriticalContent = () => {
@@ -59,14 +60,16 @@ const hydrateApp = () => {
     // Yield to browser before rendering
     setTimeout(() => {
       root.render(
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <App />
-        </ThemeProvider>
+        <Suspense fallback={null}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <App />
+          </ThemeProvider>
+        </Suspense>
       );
     }, 0);
   });

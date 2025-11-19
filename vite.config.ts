@@ -112,12 +112,25 @@ export default defineConfig({
               return 'icons';
             }
             
-            // Utilities
-            if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority') || id.includes('vaul')) {
-              return 'utils';
+            // Utilities - split further
+            if (id.includes('clsx') || id.includes('tailwind-merge')) {
+              return 'utils-core';
+            }
+            if (id.includes('class-variance-authority') || id.includes('vaul')) {
+              return 'utils-extended';
             }
             
-            // All other node_modules
+            // Sonner (toast notifications) - lazy loaded
+            if (id.includes('sonner')) {
+              return 'sonner';
+            }
+            
+            // Next-themes dependencies
+            if (id.includes('next-themes')) {
+              return 'theme-provider';
+            }
+            
+            // All other node_modules - split by size to avoid large vendor bundle
             return 'vendor';
           }
           
