@@ -57,45 +57,78 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // React core - MUST stay together, don't split
-          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
+        manualChunks: (id) => {
+          // Split node_modules into smaller chunks
+          if (id.includes('node_modules')) {
+            // React core - MUST stay together, don't split
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react/jsx-runtime')) {
+              return 'react-vendor';
+            }
+            
+            // Firebase - split by feature
+            if (id.includes('firebase/app') || id.includes('firebase/auth')) {
+              return 'firebase-auth';
+            }
+            if (id.includes('firebase/firestore')) {
+              return 'firebase-firestore';
+            }
+            if (id.includes('firebase/storage')) {
+              return 'firebase-storage';
+            }
+            
+            // Theme provider (next-themes) - separate chunk
+            if (id.includes('next-themes')) {
+              return 'theme-provider';
+            }
+            
+            // Google OAuth - lazy loaded
+            if (id.includes('@react-oauth/google')) {
+              return 'google-oauth';
+            }
+            
+            // ZIP library
+            if (id.includes('jszip')) {
+              return 'zip-vendor';
+            }
+            
+            // GSAP animations
+            if (id.includes('gsap')) {
+              return 'gsap-vendor';
+            }
+            
+            // Radix UI - group related components
+            if (id.includes('@radix-ui/react-dialog') || id.includes('@radix-ui/react-alert-dialog')) {
+              return 'radix-dialogs';
+            }
+            if (id.includes('@radix-ui/react-select') || id.includes('@radix-ui/react-label') || id.includes('@radix-ui/react-dropdown-menu')) {
+              return 'radix-forms';
+            }
+            if (id.includes('@radix-ui/react-collapsible') || id.includes('@radix-ui/react-tabs') || id.includes('@radix-ui/react-scroll-area')) {
+              return 'radix-layout';
+            }
+            
+            // Icons
+            if (id.includes('lucide-react')) {
+              return 'icons';
+            }
+            
+            // Utilities
+            if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority') || id.includes('vaul')) {
+              return 'utils';
+            }
+            
+            // All other node_modules
+            return 'vendor';
+          }
           
-          // Firebase - split by feature
-          'firebase-auth': ['firebase/app', 'firebase/auth'],
-          'firebase-firestore': ['firebase/firestore'],
-          'firebase-storage': ['firebase/storage'],
+          // Split source code into smaller chunks
+          if (id.includes('src/contexts') || id.includes('src/hooks/useAuth')) {
+            return 'auth-core';
+          }
           
-          // Google OAuth - lazy loaded
-          'google-oauth': ['@react-oauth/google'],
-          
-          // ZIP library
-          'zip-vendor': ['jszip'],
-          
-          // GSAP animations
-          'gsap-vendor': ['gsap', '@gsap/react'],
-          
-          // Radix UI - group related components
-          'radix-dialogs': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-alert-dialog'
-          ],
-          'radix-forms': [
-            '@radix-ui/react-select',
-            '@radix-ui/react-label',
-            '@radix-ui/react-dropdown-menu'
-          ],
-          'radix-layout': [
-            '@radix-ui/react-collapsible',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-scroll-area'
-          ],
-          
-          // Icons
-          'icons': ['lucide-react'],
-          
-          // Utilities
-          'utils': ['clsx', 'tailwind-merge', 'class-variance-authority', 'vaul']
+          if (id.includes('src/components/theme-provider')) {
+            return 'theme-provider-code';
+          }
         },
         // Optimize chunk file names for better caching
         chunkFileNames: 'assets/[name]-[hash].js',

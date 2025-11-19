@@ -51,30 +51,34 @@ setTimeout(loadNonCriticalResources, 5000);
 const rootElement = document.getElementById('root')!;
 const root = createRoot(rootElement);
 
-// Aggressively defer React hydration to reduce main-thread work
-// Use requestIdleCallback to wait for browser to be idle before hydrating
+// Break up React hydration into smaller chunks to avoid long main-thread tasks
+// Use setTimeout(0) to yield to browser between operations, keeping main thread responsive
 const hydrateApp = () => {
+  // Use startTransition to mark this as non-urgent work
   startTransition(() => {
-    root.render(
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <App />
-      </ThemeProvider>
-    );
+    // Yield to browser before rendering
+    setTimeout(() => {
+      root.render(
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <App />
+        </ThemeProvider>
+      );
+    }, 0);
   });
 };
 
-// Defer hydration until browser is idle or after a short delay
+// Defer hydration until browser is idle or after a delay
 // This allows the static HTML to be fully painted before React takes over
 if ('requestIdleCallback' in window) {
-  requestIdleCallback(hydrateApp, { timeout: 100 });
+  requestIdleCallback(hydrateApp, { timeout: 200 });
 } else {
-  // Fallback: small delay to let initial paint complete
-  setTimeout(hydrateApp, 0);
+  // Fallback: delay to let initial paint complete
+  setTimeout(hydrateApp, 50);
 }
 
 // Mark body as ready after React renders - this hides critical content

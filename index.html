@@ -144,9 +144,10 @@
       })();
     </script>
     
-    <!-- Load script asynchronously to avoid blocking critical content paint -->
-    <!-- The static H1 should paint immediately, React will hydrate later -->
-    <script type="module" src="/src/main.tsx" async></script>
+    <!-- Load script with defer to delay execution until after HTML parsing -->
+    <!-- This ensures static HTML paints first, then scripts execute -->
+    <!-- Using defer instead of async ensures scripts execute in order -->
+    <script type="module" src="/src/main.tsx" defer></script>
     <script>
       // Hide critical content once React hydrates (prevents duplicate content)
       // This ensures smooth transition from static HTML to React
