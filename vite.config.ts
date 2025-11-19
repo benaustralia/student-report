@@ -44,6 +44,8 @@ export default defineConfig({
     alias: {
       "@": resolve(__dirname, "./src"),
     },
+    // Ensure React is resolved correctly across all chunks - prevents multiple React instances
+    dedupe: ['react', 'react-dom']
   },
   server: {
     allowedHosts: [
@@ -170,12 +172,5 @@ export default defineConfig({
     exclude: ['@rollup/rollup-linux-x64-gnu'],
     // Force React to be a singleton to prevent multiple instances
     include: ['react', 'react-dom', 'react/jsx-runtime']
-  },
-  // Ensure React is resolved correctly across all chunks
-  resolve: {
-    alias: {
-      "@": resolve(__dirname, "./src"),
-    },
-    dedupe: ['react', 'react-dom']
   }
 })
