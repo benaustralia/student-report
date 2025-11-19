@@ -63,9 +63,22 @@ export default defineConfig({
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
             // CRITICAL: React and all React-dependent libraries MUST stay together
-            // Use more specific path matching to avoid false positives
-            const isReact = id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react/jsx-runtime') || id === 'react' || id === 'react-dom';
-            const isNextThemes = id.includes('next-themes');
+            // Check for React using multiple patterns to catch all variations
+            const isReact = 
+              id.includes('/react/') || 
+              id.includes('/react-dom/') || 
+              id.includes('/react/jsx-runtime') || 
+              id.includes('node_modules/react/') ||
+              id.includes('node_modules/react-dom/') ||
+              id === 'react' || 
+              id === 'react-dom' ||
+              id.endsWith('/react') ||
+              id.endsWith('/react-dom');
+            
+            // Check for next-themes using multiple patterns
+            const isNextThemes = 
+              id.includes('next-themes') || 
+              id.includes('node_modules/next-themes');
             
             // Put React and next-themes in the same chunk - this is critical!
             if (isReact || isNextThemes) {
