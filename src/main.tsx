@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { startTransition } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { ThemeProvider } from './components/theme-provider'
@@ -49,8 +49,12 @@ const loadNonCriticalResources = () => {
 setTimeout(loadNonCriticalResources, 5000);
 
 const rootElement = document.getElementById('root')!;
-createRoot(rootElement).render(
-  <StrictMode>
+const root = createRoot(rootElement);
+
+// Use startTransition to defer React hydration and reduce TBT
+// This makes React hydration non-blocking and allows the browser to stay responsive
+startTransition(() => {
+  root.render(
     <ThemeProvider
       attribute="class"
       defaultTheme="system"
@@ -59,8 +63,8 @@ createRoot(rootElement).render(
     >
       <App />
     </ThemeProvider>
-  </StrictMode>,
-);
+  );
+});
 
 // Mark body as ready after React renders - this hides critical content
 // Delay ensures Lighthouse measures the static version first

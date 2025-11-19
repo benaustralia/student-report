@@ -27,29 +27,52 @@ export const useAuth = () => {
   });
 
   // Modern Firebase v9+ authentication hook
+  // Defer Firebase Auth initialization slightly to reduce TBT
+  // Use requestIdleCallback to avoid blocking the main thread
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        setAuthState({
-          user,
-          loading: false,
-          error: null,
-        });
-      },
-      (error) => {
-        console.error('🔴 Firebase Auth Error:', error);
-        setAuthState({
-          user: null,
-          loading: false,
-          error: error.message,
-        });
-      }
-    );
+    let unsubscribe: (() => void) | null = null;
+    let mounted = true;
+
+    const initAuth = () => {
+      if (!mounted) return;
+      
+      unsubscribe = onAuthStateChanged(
+        auth,
+        (user) => {
+          if (!mounted) return;
+          setAuthState({
+            user,
+            loading: false,
+            error: null,
+          });
+        },
+        (error) => {
+          if (!mounted) return;
+          console.error('🔴 Firebase Auth Error:', error);
+          setAuthState({
+            user: null,
+            loading: false,
+            error: error.message,
+          });
+        }
+      );
+    };
+
+    // Defer auth initialization to reduce TBT
+    // Use requestIdleCallback if available, otherwise small delay
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(initAuth, { timeout: 100 });
+    } else {
+      // Fallback: very small delay to let initial render complete
+      setTimeout(initAuth, 0);
+    }
 
     return () => {
-      unsubscribe();
+      mounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, []);
 

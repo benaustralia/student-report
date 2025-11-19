@@ -10,5 +10,10 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
+  // Use React.useMemo to prevent unnecessary re-renders during hydration
+  // This reduces TBT by avoiding theme detection work during initial render
+  return React.useMemo(
+    () => <NextThemesProvider {...props}>{children}</NextThemesProvider>,
+    [children, props.attribute, props.defaultTheme, props.enableSystem, props.disableTransitionOnChange]
+  );
 }
