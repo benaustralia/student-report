@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TypographyH1, TypographyMuted, TypographySmall } from '@/components/ui/typography';
 import { Loader2, Users, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
 import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData, getStudentsForClass } from '@/services/firebaseService-ultra-final';
+import { preloadFirestore } from '@/services/firestoreLazy';
 import type { Class } from '@/types';
 import type { User } from 'firebase/auth';
 import { ThemeToggle } from './theme-toggle';
@@ -174,6 +175,13 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   }, [user.email]);
 
   useEffect(() => {
+    // Preload Firestore immediately when user is authenticated (parallel with render)
+    // This prevents waterfall delay when getAllClasses() is called
+    // Don't await - let it load in background while we render
+    preloadFirestore().catch(() => {
+      // Silently fail - Firestore will load when needed anyway
+    });
+    
     // Force refresh data when user logs in to get latest student counts
     loadData();
     

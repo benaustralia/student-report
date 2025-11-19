@@ -1,7 +1,7 @@
 import type { ReportData, Student, Class, Teacher } from '@/types';
 import { refreshDownloadURL, toPublicURL, buildStudentFolderName } from './storageService';
-import { getStorageInstance } from '../config/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { updateReport } from './firebaseService-ultra-final';
+// Firebase Storage is lazy-loaded - don't import here
 
 const DEBUG = true; // flip to false to silence logs
 
@@ -303,7 +303,11 @@ const uploadPDFToStorage = async (
   const basePath = `student-reports/students/${folder}`;
   const fileName = `${folder}.pdf`;
   const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-  const storageRef = ref(getStorageInstance(), `${basePath}/${fileName}`);
+  // Lazy load Firebase Storage only when needed
+  const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+  const { getStorageInstance } = await import('../config/firebaseStorage');
+  const storage = await getStorageInstance();
+  const storageRef = ref(storage, `${basePath}/${fileName}`);
   if (DEBUG) console.log('[pdf] uploadPDFToStorage:path', { basePath, fileName, reportId: _reportId });
   try {
     await uploadBytes(storageRef, file);
@@ -332,8 +336,11 @@ export const deletePDFFromStorage = async (pdfUrl: string): Promise<void> => {
   try {
     const path = decodeURIComponent(new URL(pdfUrl).pathname.split('/o/')[1]?.split('?')[0] || '');
     if (!path) throw new Error('Invalid storage URL');
-    const { deleteObject } = await import('firebase/storage');
-    await deleteObject(ref(getStorageInstance(), path));
+    // Lazy load Firebase Storage only when needed
+    const { ref, deleteObject } = await import('firebase/storage');
+    const { getStorageInstance } = await import('../config/firebaseStorage');
+    const storage = await getStorageInstance();
+    await deleteObject(ref(storage, path));
   } catch (error: any) {
     if (error?.code !== 'storage/object-not-found') console.error('Error deleting PDF:', error);
   }
@@ -358,7 +365,7 @@ export const generateAndStorePDF = async (
 };
 
 const updateReportPDFUrl = async (reportId: string, pdfUrl: string | undefined): Promise<void> => {
-  await (await import('./firebaseService-ultra-final')).updateReport(reportId, { pdfUrl });
+  await updateReport(reportId, { pdfUrl });
 };
 
 export const generatePDFInBackground = async (

@@ -1,7 +1,17 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth } from '@/config/firebase';
+
+// Lazy-load signOut - only needed after login
+let firebaseSignOut: any = null;
+const getSignOut = async () => {
+  if (!firebaseSignOut) {
+    const { signOut } = await import('firebase/auth');
+    firebaseSignOut = signOut;
+  }
+  return firebaseSignOut;
+};
 
 interface AuthState {
   user: User | null;
@@ -46,7 +56,8 @@ export const useAuth = () => {
   const signOut = async () => {
     try {
       setAuthState(prev => ({ ...prev, loading: true, error: null }));
-      await firebaseSignOut(auth);
+      const signOutFn = await getSignOut();
+      await signOutFn(auth);
     } catch (error) {
       setAuthState(prev => ({
         ...prev,

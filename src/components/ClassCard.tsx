@@ -6,6 +6,7 @@ import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, Users, Download, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses, updateReport } from '@/services/firebaseService-ultra-final';
+import { refreshDownloadURL } from '@/services/storageService';
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
 import { ClassStudentManagementModal } from './ClassStudentManagementModal';
@@ -174,7 +175,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           reports.map(async (r) => {
             try {
               if (r.artworkUrl && !r.artworkUrl.includes('token=')) {
-                const { refreshDownloadURL } = await import('@/services/storageService');
+                // refreshDownloadURL is now statically imported
                 const fresh = await refreshDownloadURL(r.artworkUrl);
                 if (fresh && fresh !== r.artworkUrl) {
                   await updateReport(r.id, { artworkUrl: fresh });
@@ -195,7 +196,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
         const checkPdfExists = async (pdfUrl?: string) => {
           if (!pdfUrl) return false;
           try {
-            const { refreshDownloadURL } = await import('@/services/storageService');
+            // refreshDownloadURL is now statically imported
             const url = await refreshDownloadURL(pdfUrl);
             const res = await fetch(url, { method: 'HEAD' });
             return res.ok;
@@ -267,7 +268,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
       const checkPdfExists = async (pdfUrl?: string) => {
         if (!pdfUrl) return false;
         try {
-          const { refreshDownloadURL } = await import('@/services/storageService');
+          // refreshDownloadURL is now statically imported
           const url = await refreshDownloadURL(pdfUrl);
           const res = await fetch(url, { method: 'HEAD' });
           return res.ok;

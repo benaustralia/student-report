@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Sitemap (if you have one, uncomment and add URL)
+# Sitemap: https://nsastudentreports.netlify.app/sitemap.xml
+

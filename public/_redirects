@@ -2,5 +2,6 @@
 /assets/* 200
 
 # SPA fallback - only redirect if file doesn't exist
+# Note: robots.txt in public/ will be served automatically by Netlify
 /*    /index.html   200
 

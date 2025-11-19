@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
+import type { FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+// Firestore and Storage are lazy-loaded - don't import here to avoid loading on login page
 
 // Firebase config for student-reports-final
 const firebaseConfig = {
@@ -14,7 +14,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
+let app: FirebaseApp;
 try {
   app = initializeApp(firebaseConfig);
   
@@ -41,23 +41,8 @@ try {
 // Initialize Firebase services
 export const auth = getAuth(app);
 
-// Lazy load Firestore to reduce initial bundle size
-let _db: ReturnType<typeof getFirestore> | null = null;
-export const getDb = () => {
-  if (!_db) {
-    _db = getFirestore(app);
-  }
-  return _db;
-};
-
-// Lazy load Storage to reduce initial bundle size
-let _storage: ReturnType<typeof getStorage> | null = null;
-export const getStorageInstance = () => {
-  if (!_storage) {
-    _storage = getStorage(app);
-  }
-  return _storage;
-};
+// Firestore and Storage are in separate files to allow proper code splitting
+// Import from firebaseFirestore.ts and firebaseStorage.ts when needed
 
 // Enable Firebase performance optimizations
 if (typeof window !== 'undefined') {

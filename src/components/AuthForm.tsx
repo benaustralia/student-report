@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GoogleLogin } from '@react-oauth/google';
 import { Loader2, Mail, Lock } from 'lucide-react';
-import { signInWithGoogle, signInWithEmail, resetPassword } from '../services/firebaseService-ultra-final';
+import { signInWithGoogle, signInWithEmail, resetPassword } from '../services/firebaseAuth';
 import { toast } from 'sonner';
 
 interface AuthFormProps {

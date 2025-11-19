@@ -1,9 +1,7 @@
-import { signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc, writeBatch, setDoc } from 'firebase/firestore';
-import { auth, getDb, googleProvider } from '../config/firebase';
+// Auth functions moved to firebaseAuth.ts to prevent Firestore loading on login page
+import ensureFirestore from './firestoreLazy';
 
-// Lazy-loaded Firestore instance
-const db = getDb();
+// Firestore will be lazy-loaded when needed - don't import or initialize here
 import type { Class, Student, ReportData, Teacher, AdminUser, LegacyReportData, Request } from '../types';
 
 export interface UserData { uid: string; email: string; displayName: string; isWhitelisted: boolean; }
@@ -38,6 +36,7 @@ const [reports, classes, students, users, teachers] =
 
 // Ultra-compact document operations with monadic error handling + function merging
 const createDoc = async (collectionName: string, data: Record<string, unknown>, customId?: string) => {
+  const { collection, addDoc, setDoc, doc, db } = await ensureFirestore();
   const docData = { ...data, createdAt: new Date(), updatedAt: new Date() };
   return customId ? (await setDoc(doc(db, collectionName, customId), docData), customId) :
     (await addDoc(collection(db, collectionName), docData)).id;
@@ -82,13 +81,14 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
   
   
   const queryPromise = (async () => {
+    const { collection, query, where, getDocs, db } = await ensureFirestore();
     try {
       const q = conditions.length ? 
         query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : 
         collection(db, collectionName);
       const snapshot = await getDocs(q);
       
-      const results = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+      const results = snapshot.docs.map((doc: any) => ({ ...doc.data(), id: doc.id } as T));
       
       return results;
     } catch (error: any) {
@@ -98,10 +98,10 @@ const getDocsByQuery = async <T>(collectionName: string, conditions: any[] = [])
         await new Promise(resolve => setTimeout(resolve, 1000));
         try {
           const q = conditions.length ? 
-            query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) : 
+            query(collection(db, collectionName), ...conditions.map(([field, op, value]) => where(field, op, value))) :
             collection(db, collectionName);
           const snapshot = await getDocs(q);
-          return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
+          return snapshot.docs.map((doc: any) => ({ ...doc.data(), id: doc.id } as T));
         } catch (retryError) {
           console.error(`Failed to fetch ${collectionName} after retry:`, retryError);
           return [];
@@ -131,44 +131,19 @@ const withRetry = <T extends (...args: any[]) => Promise<any>>(fn: T) =>
     }
   };
 
-const updateDocById = withRetry(async (collectionName: string, id: string, updates: Record<string, unknown>) => 
-  updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() })
-);
+const updateDocById = withRetry(async (collectionName: string, id: string, updates: Record<string, unknown>) => {
+  const { updateDoc, doc, db } = await ensureFirestore();
+  return updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
+});
 
-const deleteDocById = withRetry(async (collectionName: string, id: string) => 
-  deleteDoc(doc(db, collectionName, id))
-);
+const deleteDocById = withRetry(async (collectionName: string, id: string) => {
+  const { deleteDoc, doc, db } = await ensureFirestore();
+  return deleteDoc(doc(db, collectionName, id));
+});
 
-// Ultra-compact auth functions with composition + function merging
-export const signInWithGoogle = async (credential?: string) => {
-  
-  const result = credential ? 
-    await signInWithCredential(auth, GoogleAuthProvider.credential(credential)) :
-    await signInWithPopup(auth, googleProvider);
-  
-  return result.user;
-};
-
-export const signOutUser = () => signOut(auth);
-export const onAuthStateChange = (callback: (user: unknown) => void) => onAuthStateChanged(auth, callback);
-
-// Email/Password Authentication Functions
-export const signUpWithEmail = async (email: string, password: string, displayName?: string) => {
-  const result = await createUserWithEmailAndPassword(auth, email, password);
-  if (displayName && result.user) {
-    await updateProfile(result.user, { displayName });
-  }
-  return result.user;
-};
-
-export const signInWithEmail = async (email: string, password: string) => {
-  const result = await signInWithEmailAndPassword(auth, email, password);
-  return result.user;
-};
-
-export const resetPassword = async (email: string) => {
-  await sendPasswordResetEmail(auth, email);
-};
+// Auth functions moved to firebaseAuth.ts - import from there for login
+// Re-export for backward compatibility (but prefer firebaseAuth.ts for login page)
+export { signInWithGoogle, signInWithEmail, resetPassword, signOutUser, onAuthStateChange } from './firebaseAuth';
 
 // Ultra-compact admin check with monadic composition + function merging
 export const isUserAdmin = async (email: string): Promise<boolean> => {
@@ -250,6 +225,7 @@ export const cleanReportsWithoutStudentNames = async (): Promise<void> => {
   const reportsToDelete = reports.filter(report => !report.studentName);
   
   if (reportsToDelete.length > 0) {
+    const { writeBatch, doc, db } = await ensureFirestore();
     const batch = writeBatch(db);
     reportsToDelete.forEach(report => batch.delete(doc(db, 'reports', report.id)));
     await batch.commit();
@@ -275,7 +251,8 @@ export const getAllClasses = classes.getAll;
 export const getAllTeachers = teachers.getAll;
 
 // Ultra-compact import functions with batch composition + function merging
-const batchImport = <T>(collectionName: string, data: T[]) => {
+const batchImport = async <T>(collectionName: string, data: T[]) => {
+  const { writeBatch, doc, collection, db } = await ensureFirestore();
   const batch = writeBatch(db);
   data.forEach(item => {
     const docRef = doc(collection(db, collectionName));
@@ -344,6 +321,7 @@ export const declineRequest = async (requestId: string, adminEmail: string): Pro
   updateDocById('requests', requestId, { status: 'declined', declinedBy: adminEmail, declinedAt: new Date() });
 
 export const importRequests = async (requestsData: Request[]): Promise<void> => {
+  const { writeBatch, doc, collection, db } = await ensureFirestore();
   const batch = writeBatch(db);
   requestsData.forEach(request => {
     const docRef = doc(collection(db, 'requests'));
@@ -358,6 +336,7 @@ export const cleanupOrphanedStudents = async (): Promise<{ deleted: number; stud
   const orphanedStudents = await getOrphanedStudents();
   if (orphanedStudents.length === 0) return { deleted: 0, students: [] };
   
+  const { writeBatch, doc, db } = await ensureFirestore();
   const batch = writeBatch(db);
   orphanedStudents.forEach(student => batch.delete(doc(db, 'students', student.id)));
   await batch.commit();
@@ -366,6 +345,7 @@ export const cleanupOrphanedStudents = async (): Promise<{ deleted: number; stud
 };
 
 export const importReports = async (reportsData: LegacyReportData[]): Promise<void> => {
+  const { writeBatch, doc, collection, db } = await ensureFirestore();
   const batch = writeBatch(db);
   reportsData.forEach(report => {
     const docRef = doc(collection(db, 'reports'));
@@ -440,6 +420,7 @@ export const cleanupDuplicateReports = async (studentId: string): Promise<void> 
   const reports = await getReportsForStudent(studentId);
   if (reports.length <= 1) return;
   
+  const { writeBatch, doc, db } = await ensureFirestore();
   const batch = writeBatch(db);
   (reports as ReportData[]).slice(1).forEach(report => batch.delete(doc(db, 'reports', report.id)));
   await batch.commit();
@@ -458,6 +439,7 @@ export const removeDuplicateAdminUsers = async (): Promise<{ removed: number; ke
   
   for (const [, userGroup] of Object.entries(emailGroups)) {
     if ((userGroup as AdminUser[]).length > 1) {
+      const { writeBatch, doc, db } = await ensureFirestore();
       const batch = writeBatch(db);
       (userGroup as AdminUser[]).slice(1).forEach(user => batch.delete(doc(db, 'adminUsers', user.id)));
       await batch.commit();
@@ -496,6 +478,7 @@ export const deduplicateStudents = async (): Promise<{ removed: number; kept: nu
       
       try {
         // Delete duplicates in batches
+        const { writeBatch, doc, db } = await ensureFirestore();
         const batch = writeBatch(db);
         toRemove.forEach(student => batch.delete(doc(db, 'students', student.id)));
         await batch.commit();

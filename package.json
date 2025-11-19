@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "lighthouse": "bun lighthouse-local.js",
     "lighthouse:auth": "node lighthouse-auth.js",
     "debug:auth": "node playwright-debug.js"
   },
@@ -52,6 +53,7 @@
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.0",
+    "baseline-browser-mapping": "^2.8.29",
     "chrome-launcher": "^1.1.2",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -62,9 +64,13 @@
     "playwright-extra": "^4.3.6",
     "playwright-extra-plugin-stealth": "^0.0.1",
     "postcss": "^8.4.0",
+    "terser": "^5.36.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
     "vite-plugin-compression": "^0.5.1"
+  },
+  "overrides": {
+    "baseline-browser-mapping": "^2.8.29"
   }
 }

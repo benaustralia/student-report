@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { X, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { toPublicURL } from '@/services/storageService';
 
 interface ImageUploadProps {
   value?: string | null;
@@ -36,7 +37,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         return;
       }
       try {
-        const { toPublicURL } = await import('@/services/storageService');
+        // toPublicURL is now statically imported
         const publicUrl = toPublicURL(value);
         if (!cancelled) setDisplaySrc(publicUrl);
       } catch {

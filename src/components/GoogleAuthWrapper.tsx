@@ -1,15 +1,13 @@
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import type { ReactNode } from 'react';
 
 interface GoogleAuthWrapperProps {
   children: ReactNode;
 }
 
+// Don't load Google OAuth provider until user actually needs it
+// The children (LoginForm) will handle loading the provider when button is clicked
 export function GoogleAuthWrapper({ children }: GoogleAuthWrapperProps) {
-  return (
-    <GoogleOAuthProvider clientId="1089251772494-s8a9lafg8ju91vvaq426bkvj5mon7vm9.apps.googleusercontent.com">
-      {children}
-    </GoogleOAuthProvider>
-  );
+  // Just render children - the GoogleLoginButton will handle loading the provider
+  return <>{children}</>;
 }
 

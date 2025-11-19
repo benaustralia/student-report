@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { uploadImageToStorage, deleteImageFromStorage, generateImagePath } from '@/services/storageService';
+import { uploadImageToStorage, deleteImageFromStorage, generateImagePath, refreshDownloadURL } from '@/services/storageService';
 import { compressImage } from '@/utils/imageUtils';
 
 interface UseImageUploadV2Options {
@@ -151,7 +151,7 @@ export const useImageUploadV2 = ({
     const resolve = async (raw: string) => {
       try {
         const needsRefresh = !/^https?:\/\//i.test(raw) || (!raw.includes('token=') && !raw.includes('alt=media'));
-        const { refreshDownloadURL } = await import('@/services/storageService');
+        // refreshDownloadURL is now statically imported
         const url = needsRefresh ? await refreshDownloadURL(raw) : raw;
         setCurrentImageUrl(url);
         setPreview(url);

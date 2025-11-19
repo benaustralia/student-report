@@ -2,11 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { Users, BookOpen, FileText } from 'lucide-react';
-import { collection, onSnapshot, query } from 'firebase/firestore';
-import { getDb } from '@/config/firebase';
-
-// Lazy-loaded Firestore instance
-const db = getDb();
+// Firestore is lazy-loaded - only import when needed
 
 interface StatisticsBarProps {
   className?: string;
@@ -23,81 +19,106 @@ export const StatisticsBar: React.FC<StatisticsBarProps> = ({
   });
 
   useEffect(() => {
-    const unsubscribeFunctions: (() => void)[] = [];
+    let unsubscribeFunctions: (() => void)[] = [];
+    let isMounted = true;
 
-    // Listen to adminUsers and teachers collections to get total user count
-    let adminCount = 0;
-    let teacherCount = 0;
+    // Lazy load Firestore only when component mounts (after login)
+    const setupListeners = async () => {
+      const { collection, onSnapshot, query } = await import('firebase/firestore');
+      const { getDb } = await import('@/config/firebaseFirestore');
+      const db = await getDb();
 
-    const updateUserCount = () => {
-      setStats(prev => ({ ...prev, userCount: adminCount + teacherCount }));
+      if (!isMounted) return;
+
+      // Listen to adminUsers and teachers collections to get total user count
+      let adminCount = 0;
+      let teacherCount = 0;
+
+      const updateUserCount = () => {
+        if (isMounted) {
+          setStats(prev => ({ ...prev, userCount: adminCount + teacherCount }));
+        }
+      };
+
+      const adminUnsubscribe = onSnapshot(
+        query(collection(db, 'adminUsers')),
+        (snapshot) => {
+          adminCount = snapshot.docs.filter(doc => doc.data().isAdmin === true).length;
+          updateUserCount();
+        },
+        (error) => {
+          console.error('Error listening to adminUsers:', error);
+          adminCount = 0;
+          updateUserCount();
+        }
+      );
+      unsubscribeFunctions.push(adminUnsubscribe);
+
+      const teachersUnsubscribe = onSnapshot(
+        query(collection(db, 'teachers')),
+        (snapshot) => {
+          teacherCount = snapshot.size;
+          updateUserCount();
+        },
+        (error) => {
+          console.error('Error listening to teachers:', error);
+          teacherCount = 0;
+          updateUserCount();
+        }
+      );
+      unsubscribeFunctions.push(teachersUnsubscribe);
+
+      // Listen to classes collection
+      const classesUnsubscribe = onSnapshot(
+        query(collection(db, 'classes')),
+        (snapshot) => {
+          const classCount = snapshot.size;
+          if (isMounted) {
+            setStats(prev => ({ ...prev, classCount }));
+          }
+        },
+        (error) => {
+          console.error('Error listening to classes:', error);
+          if (isMounted) {
+            setStats(prev => ({ ...prev, classCount: 0 }));
+          }
+        }
+      );
+      unsubscribeFunctions.push(classesUnsubscribe);
+
+      // Listen to students collection
+      const studentsUnsubscribe = onSnapshot(
+        query(collection(db, 'students')),
+        (snapshot) => {
+          const studentCount = snapshot.size;
+          if (isMounted) {
+            setStats(prev => ({ ...prev, studentCount }));
+          }
+        },
+        (error) => {
+          console.error('Error listening to students:', error);
+          if (isMounted) {
+            setStats(prev => ({ ...prev, studentCount: 0 }));
+          }
+        }
+      );
+      unsubscribeFunctions.push(studentsUnsubscribe);
+
+      // Set loading to false after first data load
+      const timer = setTimeout(() => {
+        if (isMounted) {
+          setStats(prev => ({ ...prev, loading: false }));
+        }
+      }, 1000);
+      unsubscribeFunctions.push(() => clearTimeout(timer));
     };
 
-    const adminUnsubscribe = onSnapshot(
-      query(collection(db, 'adminUsers')),
-      (snapshot) => {
-        adminCount = snapshot.docs.filter(doc => doc.data().isAdmin === true).length;
-        updateUserCount();
-      },
-      (error) => {
-        console.error('Error listening to adminUsers:', error);
-        adminCount = 0;
-        updateUserCount();
-      }
-    );
-    unsubscribeFunctions.push(adminUnsubscribe);
-
-    const teachersUnsubscribe = onSnapshot(
-      query(collection(db, 'teachers')),
-      (snapshot) => {
-        teacherCount = snapshot.size;
-        updateUserCount();
-      },
-      (error) => {
-        console.error('Error listening to teachers:', error);
-        teacherCount = 0;
-        updateUserCount();
-      }
-    );
-    unsubscribeFunctions.push(teachersUnsubscribe);
-
-    // Listen to classes collection
-    const classesUnsubscribe = onSnapshot(
-      query(collection(db, 'classes')),
-      (snapshot) => {
-        const classCount = snapshot.size;
-        setStats(prev => ({ ...prev, classCount }));
-      },
-      (error) => {
-        console.error('Error listening to classes:', error);
-        setStats(prev => ({ ...prev, classCount: 0 }));
-      }
-    );
-    unsubscribeFunctions.push(classesUnsubscribe);
-
-    // Listen to students collection
-    const studentsUnsubscribe = onSnapshot(
-      query(collection(db, 'students')),
-      (snapshot) => {
-        const studentCount = snapshot.size;
-        setStats(prev => ({ ...prev, studentCount }));
-      },
-      (error) => {
-        console.error('Error listening to students:', error);
-        setStats(prev => ({ ...prev, studentCount: 0 }));
-      }
-    );
-    unsubscribeFunctions.push(studentsUnsubscribe);
-
-    // Set loading to false after first data load
-    const timer = setTimeout(() => {
-      setStats(prev => ({ ...prev, loading: false }));
-    }, 1000);
+    setupListeners();
 
     // Cleanup function
     return () => {
+      isMounted = false;
       unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
-      clearTimeout(timer);
     };
   }, []);
 

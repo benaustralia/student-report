@@ -1,13 +1,5 @@
-import { 
-  ref, 
-  uploadBytes, 
-  getDownloadURL, 
-  deleteObject 
-} from 'firebase/storage';
-import { getStorageInstance } from '../config/firebase';
-
-// Lazy-loaded Storage instance
-const storage = getStorageInstance();
+// Firebase Storage is lazy-loaded - only import when needed
+// Don't import getStorageInstance here - import dynamically in functions
 
 /**
  * Simple Firebase Storage service for images
@@ -17,6 +9,11 @@ export const uploadImageToStorage = async (
   path: string
 ): Promise<string> => {
   try {
+    // Lazy load Firebase Storage only when needed
+    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    const { getStorageInstance } = await import('../config/firebaseStorage');
+    const storage = await getStorageInstance();
+    
     // Create a reference to the file location
     const storageRef = ref(storage, path);
     
@@ -35,6 +32,11 @@ export const uploadImageToStorage = async (
 
 export const deleteImageFromStorage = async (url: string): Promise<void> => {
   try {
+    // Lazy load Firebase Storage only when needed
+    const { ref, deleteObject } = await import('firebase/storage');
+    const { getStorageInstance } = await import('../config/firebaseStorage');
+    const storage = await getStorageInstance();
+    
     // Extract the path from the URL
     const urlObj = new URL(url);
     const path = decodeURIComponent(urlObj.pathname.split('/o/')[1]?.split('?')[0] || '');
@@ -91,6 +93,11 @@ export const buildStudentFolderName = (
  */
 export const refreshDownloadURL = async (urlOrPath: string): Promise<string> => {
   try {
+    // Lazy load Firebase Storage only when needed
+    const { ref, getDownloadURL } = await import('firebase/storage');
+    const { getStorageInstance } = await import('../config/firebaseStorage');
+    const storage = await getStorageInstance();
+    
     // Accept either a full download URL or a storage path
     let path = '';
     if (/^https?:\/\//i.test(urlOrPath)) {
@@ -126,6 +133,7 @@ export const toPublicURL = (urlOrPath: string): string => {
     path = urlOrPath.replace(/^\/+/, '');
   }
   if (!path) throw new Error('Invalid storage URL or path');
-  const bucket = (storage as any)?.app?.options?.storageBucket || 'student-reports-final.firebasestorage.app';
+  // Use hardcoded bucket name to avoid loading Storage module
+  const bucket = 'student-reports-final.firebasestorage.app';
   return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
 };

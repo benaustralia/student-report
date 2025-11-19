@@ -1,0 +1,9 @@
+jackson@tester.com
+testmyass9
+
+
+export TEST_EMAIL="jackson@tester.com"
+export TEST_PASSWORD="testmyass9"
+
+
+cd /Users/benhinton/Documents/Github/studentreports && TEST_EMAIL="jackson@tester.com" TEST_PASSWORD="testmyass9" bun run lighthouse:auth

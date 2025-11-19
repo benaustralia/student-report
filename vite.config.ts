@@ -96,21 +96,42 @@ export default defineConfig({
           
           // Utilities
           'utils': ['clsx', 'tailwind-merge', 'class-variance-authority', 'vaul']
-        }
+        },
+        // Optimize chunk file names for better caching
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     },
     // Increase chunk size warning limit to 1000kb temporarily
     chunkSizeWarningLimit: 1000,
-    // Use esbuild for faster builds and avoid Rollup issues
-    minify: 'esbuild',
+    // Use terser for better minification (smaller output than esbuild)
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false, // Keep console for debugging
+        drop_debugger: true,
+        pure_funcs: ['console.debug', 'console.trace'], // Remove debug logs
+        passes: 2, // Multiple passes for better compression
+      },
+      format: {
+        comments: false, // Remove all comments
+      },
+    },
     // Target modern browsers for smaller bundles
     target: 'esnext',
     // Enable CSS code splitting
     cssCodeSplit: true,
-    // Optimize module preload
+    // Minify CSS
+    cssMinify: true,
+    // Optimize module preload - disable automatic preloading to reduce critical path
     modulePreload: {
-      polyfill: false
-    }
+      polyfill: false,
+      // Don't preload modules - let them load on demand
+      resolveDependencies: () => []
+    },
+    // Enable source maps only in development
+    sourcemap: false
   },
   // Optimize dependencies to avoid Rollup issues
   optimizeDeps: {
