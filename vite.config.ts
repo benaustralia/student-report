@@ -81,13 +81,9 @@ export default defineConfig({
               id.endsWith('/react') ||
               id.endsWith('/react-dom');
             
-            // Check for next-themes using multiple patterns
-            const isNextThemes = 
-              id.includes('next-themes') || 
-              id.includes('node_modules/next-themes');
-            
-            // Put React and next-themes in the same chunk - this is critical!
-            if (isReact || isNextThemes) {
+            // Put React in react-vendor chunk
+            // (next-themes is already handled above as the first check)
+            if (isReact) {
               return 'react-vendor';
             }
             
