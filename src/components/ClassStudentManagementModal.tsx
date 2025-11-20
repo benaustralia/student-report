@@ -8,6 +8,7 @@ import { Plus, Trash2, Loader2, UserPlus, UserMinus, Clock } from 'lucide-react'
 import { getStudentsForClass, createRequest, getAllRequests } from '@/services/firebaseService-ultra-final';
 import { toast } from 'sonner';
 import type { Class, Student } from '@/types';
+import { formatStudentName } from '@/lib/utils';
 
 interface ClassStudentManagementModalProps {
   classData: Class | null;
@@ -120,7 +121,7 @@ export const ClassStudentManagementModal: React.FC<ClassStudentManagementModalPr
       // Add to pending requests to show visual feedback
       setPendingRequests(prev => new Set([...prev, student.id]));
       
-      toast.success(`Request to remove ${student.firstName} ${student.lastName} has been submitted`);
+      toast.success(`Request to remove ${formatStudentName(student.firstName, student.lastName)} has been submitted`);
       
       // Notify that a request was created
       window.dispatchEvent(new CustomEvent('dataChanged', { 
@@ -227,7 +228,7 @@ export const ClassStudentManagementModal: React.FC<ClassStudentManagementModalPr
                         <div className="flex items-center gap-3">
                           <div>
                             <div className="font-medium">
-                              {student.firstName} {student.lastName}
+                              {formatStudentName(student.firstName, student.lastName)}
                             </div>
                           </div>
                           {isPendingRemoval && (

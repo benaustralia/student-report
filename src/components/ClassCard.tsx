@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, Users, Download, UserPlus } from 'lucide-rea
 import { toast } from 'sonner';
 import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses, updateReport } from '@/services/firebaseService-ultra-final';
 import { refreshDownloadURL } from '@/services/storageService';
+import { formatStudentName } from '@/lib/utils';
 import type { Class, Student } from '@/types';
 import { StudentCard } from './StudentCard';
 import { ClassStudentManagementModal } from './ClassStudentManagementModal';
@@ -299,7 +300,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
       const classReports: ClassReport[] = reports.map(report => {
         const student = students.find(s => s.id === report.studentId);
         return {
-          studentName: student ? `${student.firstName} ${student.lastName}` : 'Unknown Student',
+          studentName: student ? formatStudentName(student.firstName, student.lastName) : 'Unknown Student',
           classLevel: classData.classLevel,
           classLocation: classData.classLocation,
           comments: report.reportText,

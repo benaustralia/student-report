@@ -16,6 +16,7 @@ import nsalogoPng from '@/assets/NSALogo.png?url';
 import { getTeacherByEmail } from '@/services/firebaseService-ultra-final';
 import { refreshDownloadURL } from '@/services/storageService';
 import { isReportReadyForPDF } from '@/services/pdfGenerationService';
+import { formatStudentName } from '@/lib/utils';
 import type { Student, Class, ReportData, Teacher } from '@/types';
 // PDF generation is now handled server-side via Netlify function
 
@@ -43,7 +44,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
   const [generatingPng, setGeneratingPng] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   
-  const studentName = `${student.firstName} ${student.lastName}`;
+  const studentName = formatStudentName(student.firstName, student.lastName);
   const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Loading...';
   
   // Download is always enabled

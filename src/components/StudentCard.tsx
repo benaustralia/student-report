@@ -13,6 +13,7 @@ import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { buildStudentFolderName } from '@/services/storageService';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { generatePDFInBackground } from '@/services/pdfGenerationService';
+import { formatStudentName } from '@/lib/utils';
 import type { Student, Class, ReportData } from '@/types';
 
 // Lazy load heavy components
@@ -48,7 +49,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         classId: classData.id,
         teacherEmail: classData.teacherEmail,
         reportText: state.reportText.trim(),
-        studentName: `${student.firstName} ${student.lastName}`,
+        studentName: formatStudentName(student.firstName, student.lastName),
         ...(imageUrl && { artworkUrl: imageUrl })
       };
       const reportId = await createOrUpdateReport(reportData);
@@ -304,7 +305,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
             role="button"
             tabIndex={0}
             aria-expanded={state.isOpen}
-            aria-label={`${state.isOpen ? 'Collapse' : 'Expand'} student details for ${student.firstName} ${student.lastName}`}
+            aria-label={`${state.isOpen ? 'Collapse' : 'Expand'} student details for ${formatStudentName(student.firstName, student.lastName)}`}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -318,7 +319,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {state.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <CardTitle>{student.firstName} {student.lastName}</CardTitle>
+                <CardTitle>{formatStudentName(student.firstName, student.lastName)}</CardTitle>
               </div>
             </div>
           </CardHeader>
