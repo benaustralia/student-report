@@ -7,6 +7,7 @@ interface UseImageUploadV2Options {
   onSuccess?: (imageUrl: string) => void;
   onError?: (error: string) => void;
   onRemove?: () => void;
+  onInvalidUrl?: (reportId: string) => void | Promise<void>;
 }
 
 interface UseImageUploadV2Return {
@@ -29,6 +30,7 @@ export const useImageUploadV2 = ({
   onSuccess,
   onError,
   onRemove,
+  onInvalidUrl,
 }: UseImageUploadV2Options): UseImageUploadV2Return => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -146,19 +148,50 @@ export const useImageUploadV2 = ({
     setUploading(false);
   }, [preview]);
 
-  // Initialize with existing image URL - this is the key fix
-  const initializeWithUrl = useCallback((imageUrl: string | null) => {
+  // Initialize with existing image URL - validate that the file actually exists
+  const initializeWithUrl = useCallback((imageUrl: string | null, reportId?: string) => {
     const resolve = async (raw: string) => {
       try {
-        const needsRefresh = !/^https?:\/\//i.test(raw) || (!raw.includes('token=') && !raw.includes('alt=media'));
-        // refreshDownloadURL is now statically imported
-        const url = needsRefresh ? (await refreshDownloadURL(raw)) || raw : raw;
-        setCurrentImageUrl(url);
-        setPreview(url);
-      } catch {
-        // Fall back to raw if refresh fails
-        setCurrentImageUrl(raw);
-        setPreview(raw);
+        // Always try to refresh the URL to validate the file exists
+        const refreshedUrl = await refreshDownloadURL(raw);
+        
+        if (!refreshedUrl) {
+          // File doesn't exist (object-not-found) - clear the preview and URL
+          console.warn('Image file not found in storage, clearing preview:', raw.substring(0, 100));
+          setCurrentImageUrl(null);
+          setPreview(null);
+          // Notify parent to clear invalid URL from database
+          if (reportId && onInvalidUrl) {
+            await onInvalidUrl(reportId);
+          }
+          return;
+        }
+        
+        // File exists - use the refreshed URL
+        setCurrentImageUrl(refreshedUrl);
+        setPreview(refreshedUrl);
+      } catch (error: any) {
+        // Only clear if it's an object-not-found error (file doesn't exist)
+        // Don't clear for network errors, timeouts, or other temporary issues
+        const isNotFound = error?.code === 'storage/object-not-found' || 
+                          error?.message?.includes('object-not-found') ||
+                          error?.message?.includes('404');
+        
+        if (isNotFound) {
+          console.warn('Image file not found in storage, clearing preview:', raw.substring(0, 100));
+          setCurrentImageUrl(null);
+          setPreview(null);
+          // Notify parent to clear invalid URL from database
+          if (reportId && onInvalidUrl) {
+            await onInvalidUrl(reportId);
+          }
+        } else {
+          // Network error or other temporary issue - keep the URL but log the error
+          console.warn('Temporary error validating image URL (keeping URL):', error);
+          // Still try to use the original URL - it might work despite the validation error
+          setCurrentImageUrl(raw);
+          setPreview(raw);
+        }
       }
     };
 
@@ -169,7 +202,7 @@ export const useImageUploadV2 = ({
       setCurrentImageUrl(null);
       setPreview(null);
     }
-  }, []); // Remove file dependency to prevent infinite loop
+  }, [onInvalidUrl]); // Include onInvalidUrl in dependencies
 
   return useMemo(() => ({
     file,

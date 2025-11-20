@@ -9,6 +9,7 @@ interface ImageUploadProps {
   value?: string | null;
   onChange: (file: File | null, preview: string | null) => void;
   onRemove?: () => void;
+  onInvalidImage?: () => void;
   disabled?: boolean;
   maxSize?: number; // in MB
   acceptedTypes?: string[];
@@ -19,6 +20,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   value,
   onChange,
   onRemove,
+  onInvalidImage,
   disabled = false,
   maxSize = 20,
   acceptedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
@@ -116,15 +118,48 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
               src={displaySrc}
               alt="Preview of uploaded image"
               className="mx-auto h-20 w-20 object-cover rounded"
-              onError={() => {
+              onError={(event) => {
                 if (!displaySrc) return;
-                if (triedAlt) return; // avoid loops
+                
+                // Check if it's a 404 (file not found) vs network error
+                const img = event.currentTarget as HTMLImageElement;
+                const isNetworkError = !img.complete || img.naturalWidth === 0;
+                
+                if (triedAlt) {
+                  // All paths failed - but only clear if it's a 404, not a network error
+                  // Network errors are temporary and shouldn't delete the image
+                  if (isNetworkError) {
+                    console.warn('Network error loading image (keeping URL):', displaySrc.substring(0, 100));
+                    // Don't clear - it might be a temporary network issue
+                    return;
+                  }
+                  // 404 - file doesn't exist, clear it
+                  console.warn('Image not found (404), clearing preview');
+                  setDisplaySrc(null);
+                  onChange(null, null);
+                  onInvalidImage?.();
+                  return;
+                }
+                
+                // Try alternate path format
                 let altUrl = displaySrc
                   .replace('%2Fstudents%2F', '%2Fstudent%2F')
                   .replace('/students/', '/student/');
                 if (altUrl !== displaySrc) {
                   setTriedAlt(true);
                   setDisplaySrc(altUrl);
+                } else {
+                  // No alternate path to try
+                  if (isNetworkError) {
+                    console.warn('Network error loading image (keeping URL):', displaySrc.substring(0, 100));
+                    // Don't clear - it might be a temporary network issue
+                    return;
+                  }
+                  // 404 - file doesn't exist, clear it
+                  console.warn('Image not found (404), clearing preview');
+                  setDisplaySrc(null);
+                  onChange(null, null);
+                  onInvalidImage?.();
                 }
               }}
             />

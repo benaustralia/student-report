@@ -8,7 +8,7 @@ import { TypographySmall } from '@/components/ui/typography';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports, getTeacherByEmail } from '@/services/firebaseService-ultra-final';
+import { getReportsForStudent, createOrUpdateReport, cleanupDuplicateReports, getTeacherByEmail, updateReport } from '@/services/firebaseService-ultra-final';
 import { useImageUploadV2 } from '@/hooks/useImageUploadV2';
 import { buildStudentFolderName } from '@/services/storageService';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -38,7 +38,7 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   });
   const hasLoadedRef = useRef(false);
   const lastSavedTextRef = useRef('');
-  const initializeWithUrlRef = useRef<(url: string | null) => void>(() => {});
+  const initializeWithUrlRef = useRef<(url: string | null, reportId?: string) => void>(() => {});
 
   const saveReport = useCallback(async (imageUrl?: string | null, isAutoSave: boolean = false) => {
     if (!state.reportText.trim() && !imageUrl) return;
@@ -98,6 +98,16 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     userId: `students/${folder}`,
     onError: (error) => console.error('Image upload error:', error),
     onRemove: () => saveReport(null),
+    onInvalidUrl: async (reportId: string) => {
+      // Clear invalid artworkUrl from report when image doesn't exist
+      if (reportId) {
+        try {
+          await updateReport(reportId, { artworkUrl: undefined });
+        } catch (error) {
+          console.error('Failed to clear invalid artworkUrl:', error);
+        }
+      }
+    },
   });
 
   // Store the latest initializeWithUrl function in a ref
@@ -123,7 +133,8 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
         const reportText = latestReport.reportText || '';
         setState(prev => ({ ...prev, reportText, hasUnsavedChanges: false }));
         lastSavedTextRef.current = reportText;
-        initializeWithUrlRef.current(latestReport.artworkUrl || null);
+        // Pass report ID so we can clear invalid artworkUrl if image doesn't exist
+        initializeWithUrlRef.current(latestReport.artworkUrl || null, latestReport.id);
       } else {
         setState(prev => ({ ...prev, reportText: '', hasUnsavedChanges: false }));
         lastSavedTextRef.current = '';
@@ -246,7 +257,14 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     if (!hasChanges) return;
     
     const timeoutId = setTimeout(() => {
-      if (!imageUpload.uploading) saveReport(imageUpload.currentImageUrl, true);
+      // Only auto-save image URL if upload is not in progress
+      // This prevents saving stale/invalid URLs
+      if (!imageUpload.uploading) {
+        // Only save imageUrl if it's actually set (not null/undefined)
+        // This prevents clearing valid URLs during auto-save
+        const imageUrlToSave = imageUpload.currentImageUrl || undefined;
+        saveReport(imageUrlToSave, true);
+      }
     }, 2000);
     return () => clearTimeout(timeoutId);
   }, [state.reportText, state.hasUnsavedChanges, imageUpload.uploading, imageUpload.currentImageUrl, saveReport]);
@@ -328,6 +346,19 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
                       }
                     }}
                     onRemove={() => imageUpload.remove()}
+                    onInvalidImage={async () => {
+                      // Clear invalid image from state and database
+                      imageUpload.setPreview(null);
+                      // Clear the image URL by calling remove (which clears currentImageUrl internally)
+                      await imageUpload.remove();
+                      if (state.reports.length > 0 && state.reports[0].id) {
+                        try {
+                          await updateReport(state.reports[0].id, { artworkUrl: undefined });
+                        } catch (error) {
+                          console.error('Failed to clear invalid artworkUrl:', error);
+                        }
+                      }
+                    }}
                     disabled={imageUpload.uploading}
                     maxSize={20}
                     acceptedTypes={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
