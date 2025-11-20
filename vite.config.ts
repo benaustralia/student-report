@@ -62,9 +62,6 @@ export default defineConfig({
         // Ensure react-vendor loads before other chunks by making it a dependency
         // This prevents "React is undefined" errors in vendor chunk
         manualChunks: (id) => {
-          // next-themes is lazy-loaded, so it will be in its own chunk automatically
-          // Don't force it into react-vendor to allow better code splitting
-          
           // CRITICAL: Check source files FIRST before node_modules
           // This ensures React-dependent source code goes to react-vendor
           // Must check for exact paths to ensure contexts are in react-vendor
@@ -77,6 +74,12 @@ export default defineConfig({
           
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
+            // CRITICAL: next-themes calls createContext at module load time
+            // It MUST be in react-vendor so React is available
+            // Even though ThemeProvider is lazy-loaded, next-themes still needs React
+            if (id.includes('next-themes')) {
+              return 'react-vendor';
+            }
             // React core - MUST stay together with next-themes
             const isReact = 
               id.includes('/react/') || 
