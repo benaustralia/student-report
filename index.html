@@ -19,44 +19,8 @@
     <!-- Noto Sans SC Font - Load only when Chinese text is detected (lazy load) -->
     <!-- Removed from initial load to save 60+ KiB - will be loaded dynamically if needed -->
     
-    <!-- Preconnect to Firebase - deferred until after initial load to avoid blocking -->
-    <!-- These will be added dynamically after page is interactive -->
-    <script>
-      // Defer third-party preconnects until after initial load
-      // This prevents blocking the critical rendering path
-      (function() {
-        const addPreconnects = () => {
-          const preconnects = [
-            { href: 'https://student-reports-final.firebaseapp.com', crossorigin: true },
-            { href: 'https://firestore.googleapis.com', crossorigin: true },
-            { href: 'https://firebasestorage.googleapis.com', crossorigin: true }
-          ];
-          
-          preconnects.forEach(({ href, crossorigin }) => {
-            const link = document.createElement('link');
-            link.rel = 'preconnect';
-            link.href = href;
-            if (crossorigin) link.crossOrigin = 'anonymous';
-            document.head.appendChild(link);
-          });
-          
-          // DNS prefetch for gstatic (Firebase)
-          const dnsPrefetch = document.createElement('link');
-          dnsPrefetch.rel = 'dns-prefetch';
-          dnsPrefetch.href = 'https://www.gstatic.com';
-          document.head.appendChild(dnsPrefetch);
-        };
-        
-        // Add preconnects after page is interactive
-        if (document.readyState === 'complete') {
-          setTimeout(addPreconnects, 100);
-        } else {
-          window.addEventListener('load', () => {
-            setTimeout(addPreconnects, 100);
-          }, { once: true });
-        }
-      })();
-    </script>
+    <!-- Preconnects removed - they're unused and add overhead -->
+    <!-- Only add preconnects when actually needed (after user interaction) -->
     
     <!-- CSS will be loaded by Vite - don't block here -->
     
@@ -66,23 +30,45 @@
       body { margin: 0; background: #ffffff; font-family: system-ui, -apple-system, sans-serif; }
       #root { min-height: 100vh; }
       
-      /* Critical: Inline styles for LCP element (H1) - matches React's text-2xl font-bold exactly */
-      .text-2xl {
-        font-size: 1.5rem; /* 24px - matches Tailwind text-2xl */
-        line-height: 1.5rem; /* matches Tailwind */
+      /* Critical: Inline styles for LCP element (H1) - matches React's TypographyH1 exactly */
+      /* TypographyH1 uses: scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl */
+      h1.scroll-m-20,
+      .scroll-m-20 {
+        scroll-margin-top: 5rem; /* 80px */
       }
-      .font-bold {
-        font-weight: 700; /* matches Tailwind font-bold */
+      .text-4xl {
+        font-size: 2.25rem; /* 36px */
+        line-height: 2.5rem; /* 40px */
       }
-      /* Critical H1 styles - must match React version exactly */
-      .critical-h1 {
-        font-size: 1.5rem;
-        line-height: 1.5rem;
-        font-weight: 700;
-        text-align: center;
+      .font-extrabold {
+        font-weight: 800; /* matches Tailwind font-extrabold */
+      }
+      .tracking-tight {
+        letter-spacing: -0.025em;
+      }
+      @media (min-width: 1024px) {
+        .lg\:text-5xl {
+          font-size: 3rem; /* 48px */
+          line-height: 1;
+        }
+      }
+      /* Critical H1 styles - must match React TypographyH1 exactly */
+      .critical-h1,
+      h1.critical-h1 {
+        font-size: 2.25rem;
+        line-height: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
         margin: 0;
         padding: 0;
         color: inherit;
+      }
+      @media (min-width: 1024px) {
+        .critical-h1,
+        h1.critical-h1 {
+          font-size: 3rem;
+          line-height: 1;
+        }
       }
       
       /* Login form critical styles */
@@ -137,8 +123,9 @@
     
     <!-- Critical LCP content - renders immediately before React loads -->
     <!-- Optimized: Minimal DOM, inline styles, no nested divs for faster paint -->
+    <!-- This h1 matches the React TypographyH1 exactly for seamless transition -->
     <div class="critical-content login-container">
-      <h1 class="text-2xl font-bold" style="margin: 0; padding: 0; text-align: center;">NSA Student Reports</h1>
+      <h1 class="critical-h1 scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl" style="margin: 0; padding: 0;">Report-o-matic</h1>
     </div>
     
     <!-- Minimal loading indicator - fades out without layout shift -->
@@ -155,35 +142,152 @@
       </svg>
     </div>
     
-    <!-- Make CSS non-blocking by converting link to async load -->
+    <!-- Make CSS non-blocking using media="print" trick -->
+    <!-- This script must run BEFORE any CSS links are processed -->
     <script>
-      // Make CSS load asynchronously to avoid blocking LCP
-      // This runs immediately before any CSS links are processed
+      // CRITICAL: Make CSS non-blocking to prevent render blocking
+      // This intercepts CSS links as they're added to the DOM
       (function() {
-        // Find and defer CSS links that Vite injects
-        const deferCSS = () => {
-          const links = document.querySelectorAll('link[rel="stylesheet"]:not([data-deferred])');
-          links.forEach(link => {
-            link.setAttribute('data-deferred', 'true');
-            // Use media="print" trick to load CSS asynchronously
+        // Method 1: Intercept MutationObserver to catch CSS links immediately
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+              if (node.nodeName === 'LINK' && node.rel === 'stylesheet') {
+                node.media = 'print';
+                node.setAttribute('data-non-blocking', 'true');
+                node.onload = function() {
+                  this.media = 'all';
+                };
+                setTimeout(() => {
+                  if (node.media === 'print') {
+                    node.media = 'all';
+                  }
+                }, 200);
+              }
+            });
+          });
+        });
+        
+        // Start observing immediately
+        observer.observe(document.head, { childList: true, subtree: true });
+        
+        // Method 2: Intercept createElement for future links
+        const originalCreateElement = document.createElement;
+        document.createElement = function(tagName, options) {
+          const element = originalCreateElement.call(document, tagName, options);
+          if (tagName.toLowerCase() === 'link') {
+            const originalSetAttribute = element.setAttribute;
+            element.setAttribute = function(name, value) {
+              originalSetAttribute.call(this, name, value);
+              if (name === 'rel' && value === 'stylesheet') {
+                this.media = 'print';
+                this.setAttribute('data-non-blocking', 'true');
+                this.onload = function() {
+                  this.media = 'all';
+                };
+                setTimeout(() => {
+                  if (this.media === 'print') {
+                    this.media = 'all';
+                  }
+                }, 200);
+              }
+            };
+          }
+          return element;
+        };
+        
+        // Method 3: Process any existing CSS links immediately
+        const processCSS = () => {
+          document.querySelectorAll('link[rel="stylesheet"]:not([data-non-blocking])').forEach(link => {
+            link.setAttribute('data-non-blocking', 'true');
             link.media = 'print';
             link.onload = function() {
               this.media = 'all';
             };
+            setTimeout(() => {
+              if (link.media === 'print') {
+                link.media = 'all';
+              }
+            }, 200);
           });
         };
         
-        // Run immediately and also after a short delay to catch Vite-injected CSS
-        deferCSS();
-        setTimeout(deferCSS, 0);
-        setTimeout(deferCSS, 10);
+        // Process immediately and on DOM ready
+        processCSS();
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', processCSS, { once: true });
+        }
       })();
     </script>
     
-    <!-- Load script with defer to delay execution until after HTML parsing -->
-    <!-- This ensures static HTML paints first, then scripts execute -->
-    <!-- Using defer instead of async ensures scripts execute in order -->
+    <!-- Load ONLY critical scripts - defer all non-critical chunks -->
+    <!-- This ensures static HTML paints first, then only critical JS executes -->
     <script type="module" src="/src/main.tsx" defer></script>
+    <script>
+      // Defer all non-critical JS chunks until after LCP
+      // Only react-vendor and index chunks are critical - everything else waits
+      (function() {
+        const CRITICAL_CHUNKS = ['main.tsx', 'react-vendor', 'index'];
+        
+        const isCritical = (src) => {
+          return CRITICAL_CHUNKS.some(chunk => src.includes(chunk));
+        };
+        
+        const deferNonCriticalChunks = () => {
+          // Find all module scripts
+          const scripts = Array.from(document.querySelectorAll('script[type="module"]'));
+          scripts.forEach(script => {
+            const src = script.src || script.getAttribute('src');
+            if (src && !isCritical(src) && !script.hasAttribute('data-critical')) {
+              // Mark and defer non-critical chunks
+              script.setAttribute('data-non-critical', 'true');
+              script.remove();
+              // Load after LCP completes (3 seconds)
+              setTimeout(() => {
+                const newScript = document.createElement('script');
+                newScript.type = 'module';
+                newScript.src = src;
+                newScript.defer = true;
+                document.head.appendChild(newScript);
+              }, 3000);
+            }
+          });
+        };
+        
+        // Intercept dynamically added scripts from Vite
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+              if (node.nodeName === 'SCRIPT') {
+                const script = node as HTMLScriptElement;
+                if (script.type === 'module') {
+                  const src = script.src || script.getAttribute('src');
+                  if (src && !isCritical(src) && !script.hasAttribute('data-critical')) {
+                    script.setAttribute('data-non-critical', 'true');
+                    const scriptSrc = src;
+                    script.remove();
+                    setTimeout(() => {
+                      const newScript = document.createElement('script');
+                      newScript.type = 'module';
+                      newScript.src = scriptSrc;
+                      newScript.defer = true;
+                      document.head.appendChild(newScript);
+                    }, 3000);
+                  }
+                }
+              }
+            });
+          });
+        });
+        
+        observer.observe(document.head, { childList: true, subtree: true });
+        
+        // Run after delays to catch Vite-injected scripts
+        setTimeout(deferNonCriticalChunks, 50);
+        setTimeout(deferNonCriticalChunks, 200);
+        setTimeout(deferNonCriticalChunks, 500);
+      })();
+    </script>
     <script>
       // Hide critical content once React hydrates (prevents duplicate content)
       // This ensures smooth transition from static HTML to React

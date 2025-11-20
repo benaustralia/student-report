@@ -121,11 +121,18 @@ export const DataBuilderUI: React.FC<DataBuilderUIProps> = ({ userEmail }) => {
         return { ...groups, [className]: [...(groups[className] || []), item] };
       }, {} as Record<string, ItemType[]>) : { [teacher]: groupItems };
 
+      // Find teacher by email (case-insensitive) and cache the result
+      const teacherEmailLower = teacher.toLowerCase();
+      const foundTeacher = teachers.find(t => (t as Teacher).email?.toLowerCase() === teacherEmailLower) as Teacher | undefined;
+      const teacherDisplayName = foundTeacher 
+        ? `${foundTeacher.firstName} ${foundTeacher.lastName}` 
+        : teacher;
+
       return (
         <div key={teacher} className="mb-4">
           <div className="flex items-center cursor-pointer p-2 bg-muted rounded-md mb-2" onClick={() => setOpenGroups(prev => ({ ...prev, [`${type}-${teacher}`]: !prev[`${type}-${teacher}`] }))}>
             {openGroups[`${type}-${teacher}`] ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
-            <span className="font-medium">{teachers.find(t => (t as Teacher).email === teacher) ? `${(teachers.find(t => (t as Teacher).email === teacher) as Teacher).firstName} ${(teachers.find(t => (t as Teacher).email === teacher) as Teacher).lastName}` : teacher}</span>
+            <span className="font-medium">{teacherDisplayName}</span>
             <span className="ml-2 text-sm text-muted-foreground">({groupItems.length})</span>
           </div>
           {openGroups[`${type}-${teacher}`] && (

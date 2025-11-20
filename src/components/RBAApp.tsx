@@ -26,13 +26,12 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   
   // Split large state into focused pieces
   const [classes, setClasses] = useState<Class[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [teacherDisplayNames, setTeacherDisplayNames] = useState<Record<string, string>>({});
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [openSections, setOpenSections] = useState({ adminPanel: false, allClasses: false });
+  const [openSections, setOpenSections] = useState({ adminPanel: false, allClasses: true }); // Start with allClasses open
   const [activeAdminTab, setActiveAdminTab] = useState('browse');
   const [openClassCardId, setOpenClassCardId] = useState<string | null>(null);
   
@@ -114,6 +113,8 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     }
   };
 
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Track if this is the first load
+  
   const loadData = React.useCallback(async () => {
     // Prevent duplicate loading in React strict mode
     if (isLoadingRef.current) {
@@ -123,7 +124,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     isLoadingRef.current = true;
     
     try {
-      setLoading(true);
       setError(null);
       
       // Load critical data first (admin check and classes)
@@ -137,9 +137,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       if (adminStatus) {
         // For all admin users, use all classes
         setClasses(allClasses);
-        
-        // Set loading to false immediately after classes are loaded
-        setLoading(false);
         
         // Load teacher names in background (non-blocking)
         const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
@@ -164,11 +161,13 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
           (cls.teacherEmail || '').toLowerCase().trim() === normalizedUserEmail
         );
         setClasses(teacherClasses);
-        setLoading(false);
       }
+      
+      // Mark initial load as complete
+      setIsInitialLoad(false);
     } catch (err) {
       setError('Failed to load data');
-      setLoading(false);
+      setIsInitialLoad(false);
     } finally {
       isLoadingRef.current = false;
     }
@@ -182,8 +181,27 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
       // Silently fail - Firestore will load when needed anyway
     });
     
-    // Force refresh data when user logs in to get latest student counts
-    loadData();
+    // Defer data loading to allow initial render to complete first
+    // This improves FCP by showing skeleton/UI structure immediately
+    // Use scheduler.postTask if available for better task scheduling
+    const deferLoadData = () => {
+      if ('scheduler' in window && 'postTask' in (window as any).scheduler) {
+        ((window as any).scheduler as any).postTask(() => {
+          loadData();
+        }, { priority: 'user-blocking' });
+      } else if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          loadData();
+        }, { timeout: 100 });
+      } else {
+        // Fallback: small delay to allow initial paint
+        setTimeout(() => {
+          loadData();
+        }, 50);
+      }
+    };
+    
+    deferLoadData();
     
     // Start background prefetching after initial load
     const prefetchTimer = setTimeout(() => {
@@ -243,62 +261,81 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
     }
   };
 
-  if (loading) return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6" style={{minHeight: '100vh'}}>
-    {/* BuzzingBee is position:fixed - no space needed */}
-    
-    {/* Header - SHOW REAL CONTENT (doesn't depend on data loading) */}
-    <div className="flex items-center justify-between">
-      <div>
-        <TypographyH1>Report-o-matic</TypographyH1>
-        <Skeleton className="h-4 w-48" />
-      </div>
-      <div className="flex flex-col items-end gap-2">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-10" />
-          <Skeleton className="h-10 w-24" />
-        </div>
-        <Skeleton className="h-3 w-40" />
-        <Skeleton className="h-4 w-20" />
-      </div>
-    </div>
-    
-    {/* Admin Panel placeholder - COLLAPSED state (matches initial openSections.adminPanel: false) */}
-    <Card className="min-h-[74px]">
-      <CardHeader className="py-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-5 w-5" />
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-5 w-12 rounded-full" />
-          </div>
-          <Skeleton className="h-4 w-4" />
-        </div>
-      </CardHeader>
-    </Card>
-    
-    {/* All Classes placeholder - collapsed state (matches initial openSections.allClasses: false) */}
-    <Card className="min-h-[74px]">
-      <CardHeader className="py-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-5 w-5" />
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-5 w-8 rounded-full" />
-          </div>
-          <Skeleton className="h-4 w-4" />
-        </div>
-      </CardHeader>
-    </Card>
-  </div>;
   if (error) return <div className="max-w-6xl mx-auto p-4 sm:p-6"><Card className="border-destructive"><CardContent className="text-destructive py-4">{error}</CardContent></Card></div>;
+
+  // Show skeleton while initial load is in progress
+  if (isInitialLoad && classes.length === 0) {
+    return (
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+        {/* Header - Show immediately - matches critical HTML h1 */}
+        <div className="flex items-center justify-between">
+          <div>
+            <TypographyH1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">Report-o-matic</TypographyH1>
+            <TypographyMuted>
+              {isAdmin ? '' : 'Teacher View - Your Classes'}
+            </TypographyMuted>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-md" />
+              <Skeleton className="h-10 w-24 rounded-md" />
+            </div>
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+        </div>
+        
+        {/* Admin Panel placeholder - COLLAPSED state (matches initial openSections.adminPanel: false) */}
+        {isAdmin && (
+          <Card className="min-h-[74px]">
+            <CardHeader className="py-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5" />
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-4" />
+              </div>
+            </CardHeader>
+          </Card>
+        )}
+        
+        {/* All Classes / Your Classes placeholder - OPEN state (matches initial openSections.allClasses: true) */}
+        <Card>
+          <CardHeader className="py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5" />
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-5 w-8 rounded-full" />
+              </div>
+              <ChevronDown className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
     <Suspense fallback={null}>
       <BuzzingBee />
     </Suspense>
     
+    {/* Header - Show immediately, doesn't depend on data - matches critical HTML h1 */}
     <div className="flex items-center justify-between">
-      <div><TypographyH1>Report-o-matic</TypographyH1><TypographyMuted>{isAdmin ? '' : 'Teacher View - Your Classes'}</TypographyMuted></div>
+      <div>
+        <TypographyH1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">Report-o-matic</TypographyH1>
+        <TypographyMuted>
+          {isAdmin ? '' : 'Teacher View - Your Classes'}
+        </TypographyMuted>
+      </div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -369,7 +406,13 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-4">
-            {classes.length === 0 ? (
+            {isLoadingRef.current && classes.length === 0 ? (
+              <div className="space-y-3">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : classes.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground mb-4">

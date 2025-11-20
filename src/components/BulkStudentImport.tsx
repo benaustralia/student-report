@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Loader2, Upload, CheckCircle, XCircle, AlertCircle, Users } from 'lucide-react';
+import { Loader2, Upload, CheckCircle, XCircle, Users } from 'lucide-react';
 import { importStudents, getStudentsForClass } from '@/services/firebaseService-ultra-final';
+import { toast } from 'sonner';
 import type { Class, Student } from '@/types';
 
 interface BulkStudentImportProps {
@@ -32,8 +32,6 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
   const [csvData, setCsvData] = useState('');
   const [parsedStudents, setParsedStudents] = useState<ParsedStudent[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [existingStudents, setExistingStudents] = useState<Student[]>([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
 
@@ -129,8 +127,6 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
 
   const handleCSVChange = (value: string) => {
     setCsvData(value);
-    setError(null);
-    setSuccess(null);
     
     if (value.trim()) {
       const parsed = parseCSV(value);
@@ -145,13 +141,11 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
     
     const validStudents = parsedStudents.filter(s => s.isValid);
     if (validStudents.length === 0) {
-      setError('No valid students to import');
+      toast.error('No valid students to import');
       return;
     }
     
     setIsProcessing(true);
-    setError(null);
-    setSuccess(null);
     
     try {
       const studentsToImport: Student[] = validStudents.map(student => ({
@@ -166,7 +160,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
       
       await importStudents(studentsToImport);
       
-      setSuccess(`Successfully imported ${validStudents.length} students`);
+      toast.success(`Successfully imported ${validStudents.length} students`);
       setCsvData('');
       setParsedStudents([]);
       
@@ -179,7 +173,7 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
       }, 2000);
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to import students');
+      toast.error(err instanceof Error ? err.message : 'Failed to import students');
     } finally {
       setIsProcessing(false);
     }
@@ -282,23 +276,6 @@ export const BulkStudentImport: React.FC<BulkStudentImportProps> = ({
                 </div>
               </CardContent>
             </Card>
-          )}
-
-          {/* Error/Success Messages */}
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          
-          {success && (
-            <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                {success}
-              </AlertDescription>
-            </Alert>
           )}
 
           {/* Actions */}

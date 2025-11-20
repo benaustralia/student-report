@@ -75,18 +75,20 @@ export const useAuth = () => {
       }
     };
 
-    // Defer auth initialization until user interaction or after a delay
-    // This prevents auth iframe from loading immediately
+    // Defer auth initialization until user interaction or after LCP
+    // This prevents auth iframe from loading immediately and blocking LCP
     const initOnInteraction = () => {
+      // Wait for LCP to complete (typically 2.5s) before initializing auth
+      // This ensures auth iframe doesn't block the critical rendering path
       if ('requestIdleCallback' in window) {
-        requestIdleCallback(initAuth, { timeout: 2000 });
+        requestIdleCallback(initAuth, { timeout: 3000 });
       } else {
-        setTimeout(initAuth, 100);
+        setTimeout(initAuth, 3000); // Wait 3s to ensure LCP has completed
       }
     };
 
-    // Only initialize after user interaction or after 2 seconds
-    let initTimer = setTimeout(initOnInteraction, 2000);
+    // Only initialize after user interaction or after LCP completes (3 seconds)
+    let initTimer = setTimeout(initOnInteraction, 3000);
     
     // Initialize on any user interaction (click, touch, keypress)
     const handleInteraction = () => {

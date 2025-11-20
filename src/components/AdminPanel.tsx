@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle, Users, ChevronDown, ChevronRight, GraduationCap } from 'lucide-react';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
-import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports, getUserDisplayName } from '@/services/firebaseService-ultra-final';
+import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports, getUserDisplayName, getAllReports } from '@/services/firebaseService-ultra-final';
 import type { User } from 'firebase/auth';
 import type { Class, Student, AdminUser, Teacher, ReportData } from '@/types';
 
@@ -17,7 +17,31 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => {
-  const [state, setState] = useState({ isAdmin: false, loading: true, showDataBuilder: false, error: null as string | null, data: { users: [] as AdminUser[], classes: [] as Class[], students: [] as Student[], teachers: [] as Teacher[], teacherCount: 0, adminCount: 0 }, openSections: { users: false, classes: true, students: true, incompleteReports: false }, teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, incompleteReports: [] as ReportData[], teacherDisplayNames: {} as Record<string, string> });
+  const [state, setState] = useState({ 
+    isAdmin: false, 
+    loading: true, 
+    showDataBuilder: false, 
+    error: null as string | null, 
+    data: { 
+      users: [] as AdminUser[], 
+      classes: [] as Class[], 
+      students: [] as Student[], 
+      teachers: [] as Teacher[], 
+      teacherCount: 0, 
+      adminCount: 0,
+      reports: [] as ReportData[]
+    }, 
+    openSections: { 
+      users: false, 
+      classes: true, 
+      students: true, 
+      incompleteReports: false 
+    }, 
+    teacherReportStats: {} as Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>, 
+    incompleteReports: [] as ReportData[], 
+    teacherDisplayNames: {} as Record<string, string>,
+    openClassId: null as string | null
+  });
 
   // Handle accordion state changes with auto-close functionality for Users and Classes
   const handleBrowseAccordionChange = (section: 'users' | 'classes', isOpen: boolean) => {
@@ -47,13 +71,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
   const loadData = async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      const [adminUsers, teachers, classes, students, teacherReportStats, incompleteReports] = await Promise.all([
+      const [adminUsers, teachers, classes, students, teacherReportStats, incompleteReports, allReports] = await Promise.all([
         getAllUsers().catch(() => []), 
         getAllTeachers().catch(() => []), 
         getAllClasses().catch(() => []), 
         getAllStudents().catch(() => []),
         getTeacherReportCounts().catch(() => ({})),
-        getIncompleteReports().catch(() => [])
+        getIncompleteReports().catch(() => []),
+        getAllReports().catch(() => [])
       ]);
       
       // Load teacher display names
@@ -75,9 +100,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
       const teacherMap = new Map();
       teachers.forEach(t => t.email && teacherMap.set(t.email, t));
       const uniqueTeachers = Array.from(teacherMap.values());
+
       setState(prev => ({ 
         ...prev, 
-        data: { users: allUsers, classes, students, teachers: uniqueTeachers, teacherCount: uniqueTeachers.length, adminCount: allUsers.filter(u => u.isAdmin).length }, 
+        data: { 
+          users: allUsers, 
+          classes, 
+          students, 
+          teachers: uniqueTeachers, 
+          teacherCount: uniqueTeachers.length, 
+          adminCount: allUsers.filter(u => u.isAdmin).length,
+          reports: allReports
+        }, 
         teacherReportStats,
         incompleteReports,
         teacherDisplayNames,
@@ -168,19 +202,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
               </div>
             </CardHeader></CollapsibleTrigger>
             <CollapsibleContent><CardContent className="space-y-2">
-              {state.data.users.filter(u => u.isAdmin).map((u, i) => {
+              {state.data.users.map((u, i) => {
+                // Check if user is also a teacher (exists in teachers list)
+                const isTeacher = state.data.teachers.some(t => t.email === u.email);
+                // Exceptions: Ben Hinton and Jackson Tester should only show Admin badge
+                const email = u.email?.toLowerCase() || '';
+                const isException = email === 'bahinton@gmail.com' || email === 'jackson@tester.com';
+                
                 return <div key={u.id || i} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-medium truncate">{u.firstName} {u.lastName}</span>
-                  </div>
-                  <span className="text-sm text-muted-foreground truncate">{u.email}</span>
-                </div>
-              })}
-              {state.data.users.filter(u => !u.isAdmin).map((u, i) => {
-                return <div key={u.id || i} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium truncate">{u.firstName} {u.lastName}</span>
-                    <Badge variant="secondary" className="text-xs flex-shrink-0">Teacher</Badge>
+                    {u.isAdmin && (
+                      <Badge variant="default" className="text-xs flex-shrink-0">Admin</Badge>
+                    )}
+                    {isTeacher && !isException && (
+                      <Badge variant="secondary" className="text-xs flex-shrink-0">Teacher</Badge>
+                    )}
                   </div>
                   <span className="text-sm text-muted-foreground truncate">{u.email}</span>
                 </div>
@@ -194,7 +231,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="flex items-center gap-2">
                   <GraduationCap className="h-5 w-5 flex-shrink-0" />
-                  <span>Classes</span>
+                  <span>Classes & Reports</span>
                   <Badge variant="secondary" className="text-xs">{state.data.classes.length}</Badge>
                 </CardTitle>
                 {state.openSections.classes ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
@@ -210,26 +247,93 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, onTabChange }) => 
                 };
                 acc[teacherKey].classes.push(classData);
                 return acc;
-              }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => (
-                <Card key={teacherData.teacherEmail} className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{teacherData.teacherName}</span>
+              }, {} as Record<string, { teacherName: string; teacherEmail: string; classes: Class[] }>)).map((teacherData) => {
+                // Calculate teacher report counts - get all students for this teacher's classes
+                const teacherClassIds = teacherData.classes.map(c => c.id);
+                const teacherStudents = state.data.students.filter(s => {
+                  const studentClassId = typeof s.classId === 'string' ? s.classId : String(s.classId);
+                  return teacherClassIds.some(cid => {
+                    const classId = typeof cid === 'string' ? cid : String(cid);
+                    return studentClassId === classId;
+                  });
+                });
+                const teacherStudentIds = teacherStudents.map(s => s.id);
+                const teacherReports = state.data.reports.filter(r => teacherStudentIds.includes(r.studentId));
+                const teacherComplete = teacherReports.filter(r => r.reportText?.trim() && r.artworkUrl?.trim()).length;
+                const teacherTotal = teacherStudents.length; // Total students, not total reports
+
+                return (
+                  <Card key={teacherData.teacherEmail} className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{teacherData.teacherName}</span>
+                        <Badge variant="default" className="text-xs">
+                          {teacherComplete}/{teacherTotal}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {teacherData.classes.map((classData) => {
+                          // Calculate class report counts
+                          // Get all students in this class
+                          const classStudents = state.data.students.filter(s => {
+                            const studentClassId = typeof s.classId === 'string' ? s.classId : String(s.classId);
+                            const classId = typeof classData.id === 'string' ? classData.id : String(classData.id);
+                            return studentClassId === classId;
+                          });
+                          const classStudentIds = classStudents.map(s => s.id);
+                          const classTotal = classStudents.length; // Total students in class
+                          
+                          // Get all reports for students in this class
+                          const classReports = state.data.reports.filter(r => classStudentIds.includes(r.studentId));
+                          
+                          // Count complete reports (text + image)
+                          const classComplete = classReports.filter(r => {
+                            const hasText = r.reportText && r.reportText.trim().length > 0;
+                            const hasImage = r.artworkUrl && r.artworkUrl.trim().length > 0;
+                            return hasText && hasImage;
+                          }).length;
+                          
+                          const isOpen = state.openClassId === classData.id;
+
+                          // Calculate breakdown
+                          const textAndImage = classReports.filter(r => r.reportText?.trim() && r.artworkUrl?.trim()).length;
+                          const textOnly = classReports.filter(r => r.reportText?.trim() && !r.artworkUrl?.trim()).length;
+                          const imageOnly = classReports.filter(r => !r.reportText?.trim() && r.artworkUrl?.trim()).length;
+
+                          return (
+                            <div key={classData.id} className="border rounded">
+                              <Collapsible open={isOpen} onOpenChange={(open) => {
+                                setState(prev => ({ ...prev, openClassId: open ? classData.id : null }));
+                              }}>
+                                <CollapsibleTrigger asChild>
+                                  <div className="flex items-center justify-between gap-2 p-2 cursor-pointer hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium">{classData.classDay} at {classData.classTime}</span>
+                                      <Badge variant="secondary" className="text-xs">{classData.classLevel}</Badge>
+                                      <Badge variant="default" className="text-xs">
+                                        {classComplete}/{classTotal}
+                                      </Badge>
+                                    </div>
+                                    {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                  </div>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <div className="px-2 pb-2 space-y-1 text-sm">
+                                    <div className="text-muted-foreground">Text + picture: {textAndImage}</div>
+                                    <div className="text-muted-foreground">Text only: {textOnly}</div>
+                                    <div className="text-muted-foreground">Image only: {imageOnly}</div>
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      {teacherData.classes.map((classData) => (
-                        <div key={classData.id} className="flex items-center justify-between gap-2 p-2 border rounded">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{classData.classDay} at {classData.classTime}</span>
-                            <Badge variant="secondary" className="text-xs">{classData.classLevel}</Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </CardContent></CollapsibleContent>
           </Collapsible></Card>)}
             </TabsContent>

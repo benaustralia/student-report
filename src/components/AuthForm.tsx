@@ -42,7 +42,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSignIn, isSigningIn, setIs
 
     try {
       await signInWithEmail(email, password);
-      toast.success('Signed in successfully!');
       onSignIn();
     } catch (error: any) {
       console.error('🔴 Email Sign-In error:', error);

@@ -11,7 +11,8 @@ const hideCriticalContent = () => {
 };
 
 // Load CSS - will be extracted by Vite to separate file
-// We'll make it non-blocking via script in index.html
+// CSS is made non-blocking via script in index.html (media="print" trick)
+// This prevents CSS from blocking LCP
 import './index.css';
 
 // Defer non-critical resources - load ONLY after page is fully interactive

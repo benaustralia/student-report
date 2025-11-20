@@ -7,10 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "lighthouse": "bun lighthouse-local.js",
-    "lighthouse:auth": "node lighthouse-auth.js",
-    "debug:auth": "node playwright-debug.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

@@ -163,18 +163,16 @@ function ThemedAppContent() {
 }
 
 export default function TeacherReports() {
-  // Load Toaster only after initial render to avoid blocking critical path
+  // Load Toaster immediately - needed for login page toasts (password reset, etc.)
+  // Sonner toasts won't display properly without the Toaster component
   const [showToaster, setShowToaster] = useState(false);
   
   useEffect(() => {
-    // Load Toaster after page is interactive
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => {
-        setShowToaster(true);
-      }, { timeout: 2000 });
-    } else {
-      setTimeout(() => setShowToaster(true), 2000);
-    }
+    // Load Toaster as soon as possible so login page toasts work
+    // Use a short timeout to avoid blocking initial render
+    setTimeout(() => {
+      setShowToaster(true);
+    }, 100);
   }, []);
   
   return (
