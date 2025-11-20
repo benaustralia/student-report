@@ -258,7 +258,7 @@
           mutations.forEach((mutation) => {
             mutation.addedNodes.forEach((node) => {
               if (node.nodeName === 'SCRIPT') {
-                const script = node as HTMLScriptElement;
+                const script = /** @type {HTMLScriptElement} */ (node);
                 if (script.type === 'module') {
                   const src = script.src || script.getAttribute('src');
                   if (src && !isCritical(src) && !script.hasAttribute('data-critical')) {
