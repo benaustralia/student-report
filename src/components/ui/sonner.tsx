@@ -18,7 +18,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       position="top-right"
-      richColors
       closeButton
       // Prevent scroll disruption by avoiding expand on hover/focus
       expand={false}
@@ -33,6 +32,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
         classNames: {
           toast:
             "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+          success:
+            "group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border",
+          error:
+            "group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border",
+          info:
+            "group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border",
+          warning:
+            "group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",

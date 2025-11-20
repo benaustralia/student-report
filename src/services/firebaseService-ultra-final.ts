@@ -163,23 +163,49 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
 
 // Ultra-compact display name lookup with monadic composition + function merging
 export const getUserDisplayName = async (email: string): Promise<string | null> => {
+  if (!email || !email.trim()) {
+    return null;
+  }
   
-  const cached = displayNameCache.get(email);
+  // Normalize email for lookup (lowercase, trim)
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  const cached = displayNameCache.get(normalizedEmail);
   if (cached && Date.now() - cached.timestamp < DISPLAY_NAME_CACHE_TTL) {
     return cached.displayName;
   }
   
-  const [adminUsers, teachers] = await Promise.all([
-    getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]),
-    getDocsByQuery<Teacher>('teachers', [['email', '==', email]])
-  ]);
-  
-  const displayName = adminUsers.length > 0 ? 
-    `${adminUsers[0].firstName} ${adminUsers[0].lastName}`.trim() :
-    teachers.length > 0 ? `${teachers[0].firstName} ${teachers[0].lastName}`.trim() : null;
-  
-  displayNameCache.set(email, { displayName, timestamp: Date.now() });
-  return displayName;
+  try {
+    // Try exact match first
+    let [adminUsers, teachers] = await Promise.all([
+      getDocsByQuery<AdminUser>('adminUsers', [['email', '==', email]]),
+      getDocsByQuery<Teacher>('teachers', [['email', '==', email]])
+    ]);
+    
+    // If no exact match, try case-insensitive lookup by fetching all and filtering
+    if (adminUsers.length === 0 && teachers.length === 0) {
+      const [allAdminUsers, allTeachers] = await Promise.all([
+        getDocsByQuery<AdminUser>('adminUsers', []),
+        getDocsByQuery<Teacher>('teachers', [])
+      ]);
+      
+      adminUsers = allAdminUsers.filter(u => u.email?.toLowerCase().trim() === normalizedEmail);
+      teachers = allTeachers.filter(t => t.email?.toLowerCase().trim() === normalizedEmail);
+    }
+    
+    const displayName = adminUsers.length > 0 ? 
+      `${adminUsers[0].firstName} ${adminUsers[0].lastName}`.trim() :
+      teachers.length > 0 ? `${teachers[0].firstName} ${teachers[0].lastName}`.trim() : null;
+    
+    if (displayName) {
+      displayNameCache.set(normalizedEmail, { displayName, timestamp: Date.now() });
+    }
+    
+    return displayName;
+  } catch (error) {
+    console.error(`Error getting display name for ${email}:`, error);
+    return null;
+  }
 };
 
 // Ultra-compact exports using composition + function merging

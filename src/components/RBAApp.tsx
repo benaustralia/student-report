@@ -139,19 +139,35 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
         setClasses(allClasses);
         
         // Load teacher names in background (non-blocking)
-        const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail))];
+        const uniqueTeacherEmails = [...new Set(allClasses.map(cls => cls.teacherEmail).filter(Boolean))];
         
         Promise.all(
-          uniqueTeacherEmails.map(async (email) => ({ 
-            email, 
-            displayName: (await getUserDisplayName(email)) || 'Unknown Teacher' 
-          }))
+          uniqueTeacherEmails.map(async (email) => {
+            try {
+              const displayName = await getUserDisplayName(email);
+              if (!displayName) {
+                console.warn(`No display name found for teacher email: ${email}`);
+              }
+              return { 
+                email, 
+                displayName: displayName || 'Unknown Teacher' 
+              };
+            } catch (error) {
+              console.error(`Failed to get display name for ${email}:`, error);
+              return { 
+                email, 
+                displayName: 'Unknown Teacher' 
+              };
+            }
+          })
         ).then(displayNames => {
           const displayNameMap = displayNames.reduce((acc, { email, displayName }) => ({ 
             ...acc, 
             [email]: displayName 
           }), {} as Record<string, string>);
           setTeacherDisplayNames(displayNameMap);
+        }).catch(error => {
+          console.error('Failed to load teacher display names:', error);
         });
       } else {
         // For teacher-only users, filter classes by their email
