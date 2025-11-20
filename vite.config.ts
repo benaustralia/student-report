@@ -119,9 +119,9 @@ export default defineConfig({
               return 'react-vendor';
             }
             
-            // Icons
+            // Icons - lucide-react needs React, put in react-vendor
             if (id.includes('lucide-react')) {
-              return 'icons';
+              return 'react-vendor';
             }
             
             // Utilities - split further
@@ -135,16 +135,6 @@ export default defineConfig({
             
             // Sonner (toast notifications) - lazy loaded, but needs React
             if (id.includes('sonner')) {
-              return 'react-vendor';
-            }
-            
-            // CRITICAL: Double-check that next-themes didn't slip through
-            if (id.includes('next-themes')) {
-              return 'react-vendor';
-            }
-            
-            // Icons - lucide-react might use React, put in react-vendor to be safe
-            if (id.includes('lucide-react')) {
               return 'react-vendor';
             }
             
