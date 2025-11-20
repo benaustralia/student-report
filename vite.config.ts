@@ -67,7 +67,11 @@ export default defineConfig({
           
           // CRITICAL: Check source files FIRST before node_modules
           // This ensures React-dependent source code goes to react-vendor
-          if (id.includes('src/contexts') || id.includes('src/hooks/useAuth')) {
+          // Must check for exact paths to ensure contexts are in react-vendor
+          if (id.includes('src/contexts') || 
+              id.includes('src/hooks/useAuth') ||
+              id.includes('AuthContextType') ||
+              id.includes('AuthContext.tsx')) {
             return 'react-vendor'; // Put auth-core in react-vendor so React is available
           }
           
