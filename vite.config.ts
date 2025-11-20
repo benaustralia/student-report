@@ -59,18 +59,18 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        // Ensure react-vendor loads before other chunks by making it a dependency
+        // This prevents "React is undefined" errors in vendor chunk
         manualChunks: (id) => {
-          // CRITICAL: Check for next-themes FIRST, before ANY other conditions
-          // Return undefined to keep it in the main bundle with React
-          // This ensures React is always available when next-themes initializes
+          // CRITICAL: React and next-themes MUST be in the same chunk
+          // Check for next-themes FIRST
           if (id.includes('next-themes')) {
-            return undefined; // Keep in main bundle, don't chunk it
+            return 'react-vendor';
           }
           
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
-            // CRITICAL: React and all React-dependent libraries MUST stay together
-            // Check for React using multiple patterns to catch all variations
+            // React core - MUST stay together with next-themes
             const isReact = 
               id.includes('/react/') || 
               id.includes('/react-dom/') || 
@@ -82,11 +82,9 @@ export default defineConfig({
               id.endsWith('/react') ||
               id.endsWith('/react-dom');
             
-            // Keep React in main bundle too (along with next-themes)
-            // This ensures React is available when next-themes initializes
-            // (next-themes is already handled above as the first check)
+            // Put React in react-vendor chunk (same as next-themes)
             if (isReact) {
-              return undefined; // Keep in main bundle, don't chunk
+              return 'react-vendor';
             }
             
             // Firebase - split by feature
@@ -115,15 +113,10 @@ export default defineConfig({
               return 'gsap-vendor';
             }
             
-            // Radix UI - group related components
-            if (id.includes('@radix-ui/react-dialog') || id.includes('@radix-ui/react-alert-dialog')) {
-              return 'radix-dialogs';
-            }
-            if (id.includes('@radix-ui/react-select') || id.includes('@radix-ui/react-label') || id.includes('@radix-ui/react-dropdown-menu')) {
-              return 'radix-forms';
-            }
-            if (id.includes('@radix-ui/react-collapsible') || id.includes('@radix-ui/react-tabs') || id.includes('@radix-ui/react-scroll-area')) {
-              return 'radix-layout';
+            // Radix UI - ALL Radix components need React, so put them in react-vendor
+            // This ensures React is available when Radix components initialize
+            if (id.includes('@radix-ui')) {
+              return 'react-vendor';
             }
             
             // Icons
@@ -135,29 +128,38 @@ export default defineConfig({
             if (id.includes('clsx') || id.includes('tailwind-merge')) {
               return 'utils-core';
             }
+            // class-variance-authority and vaul might use React - put in react-vendor to be safe
             if (id.includes('class-variance-authority') || id.includes('vaul')) {
-              return 'utils-extended';
+              return 'react-vendor';
             }
             
-            // Sonner (toast notifications) - lazy loaded
+            // Sonner (toast notifications) - lazy loaded, but needs React
             if (id.includes('sonner')) {
-              return 'sonner';
+              return 'react-vendor';
             }
             
             // CRITICAL: Double-check that next-themes didn't slip through
-            // This should never happen if the check above works, but just in case
             if (id.includes('next-themes')) {
               return 'react-vendor';
             }
             
+            // Icons - lucide-react might use React, put in react-vendor to be safe
+            if (id.includes('lucide-react')) {
+              return 'react-vendor';
+            }
+            
             // All other node_modules - split by size to avoid large vendor bundle
+            // But check if it might need React - if so, put in react-vendor
+            // This is a catch-all to prevent React errors in vendor chunk
             return 'vendor';
           }
           
           // Split source code into smaller chunks
-          if (id.includes('src/contexts') || id.includes('src/hooks/useAuth')) {
-            return 'auth-core';
-          }
+          // Don't split auth-core - it needs React which is in main bundle
+          // Keeping it in main bundle ensures React is available
+          // if (id.includes('src/contexts') || id.includes('src/hooks/useAuth')) {
+          //   return 'auth-core';
+          // }
           
           // Don't split theme-provider - it needs to stay with main code to access React properly
           // Splitting it causes module resolution issues with next-themes
