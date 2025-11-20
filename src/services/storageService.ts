@@ -17,11 +17,16 @@ export const uploadImageToStorage = async (
     // Create a reference to the file location
     const storageRef = ref(storage, path);
     
-    // Upload the file
+    // Upload the file - this is atomic (either succeeds or fails)
     await uploadBytes(storageRef, file);
     
-    // Get the download URL
+    // Get the download URL - verify it's valid before returning
     const downloadURL = await getDownloadURL(storageRef);
+    
+    // Validate the URL format
+    if (!downloadURL || (!downloadURL.includes('firebasestorage.googleapis.com') && !downloadURL.includes('firebasestorage.app'))) {
+      throw new Error('Invalid download URL returned from Firebase Storage');
+    }
     
     return downloadURL;
   } catch (error) {

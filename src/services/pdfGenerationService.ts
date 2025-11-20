@@ -244,15 +244,32 @@ const generateSVGFromReport = async (
   );
   svgClone.appendChild(styleEl);
   
+  // Only add artwork if URL exists and is valid
+  // Note: This function should only be called if isReportReadyForPDF returns true (which requires artworkUrl)
   if (report.artworkUrl?.trim()) {
     try {
+      // Validate the artwork URL exists before trying to use it
+      const { refreshDownloadURL } = await import('@/services/storageService');
+      const validatedUrl = await refreshDownloadURL(report.artworkUrl);
+      
+      if (!validatedUrl) {
+        // Artwork doesn't exist - this shouldn't happen if isReportReadyForPDF was checked
+        // But if it does, throw an error to prevent PDF generation without artwork
+        throw new Error(`Artwork image not found: ${report.artworkUrl.substring(0, 80)}`);
+      }
+      
+      // Artwork exists - add it to the SVG
       const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-      Object.entries({ href: await convertArtworkToDataUrl(report.artworkUrl), x: '97.64', y: '308.45', width: '400', height: '250', preserveAspectRatio: 'xMidYMid meet' }).forEach(([k, v]) => imageElement.setAttribute(k, v));
+      Object.entries({ href: await convertArtworkToDataUrl(validatedUrl), x: '97.64', y: '308.45', width: '400', height: '250', preserveAspectRatio: 'xMidYMid meet' }).forEach(([k, v]) => imageElement.setAttribute(k, v));
       svgClone.appendChild(imageElement);
     } catch (error) {
+      // If artwork fails to load, don't generate PDF - throw error
       if (DEBUG) console.error('[pdf] generateSVGFromReport:artwork-fail', error);
       throw new Error(`Failed to load artwork: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  } else {
+    // No artwork URL - this shouldn't happen if isReportReadyForPDF was checked
+    throw new Error('Report has no artwork URL - PDF generation requires both text and artwork');
   }
   
   return new XMLSerializer().serializeToString(svgClone);
@@ -380,16 +397,20 @@ export const generatePDFInBackground = async (
   classData: Class,
   teacher: Teacher
 ): Promise<void> => {
+  // Only generate PDF if report has both text and artwork
   if (!isReportReadyForPDF(report)) {
+    // If report no longer meets criteria (e.g., artwork was deleted), clean up old PDF
     if (report.pdfUrl) {
       try {
         await deletePDFFromStorage(report.pdfUrl);
         await updateReportPDFUrl(report.id, undefined);
-        if (DEBUG) console.log('[pdf] bg:cleanup-old-pdf', { reportId: report.id });
+        if (DEBUG) console.log('[pdf] bg:cleanup-old-pdf', { reportId: report.id, reason: 'report no longer ready' });
       } catch (error) {
         console.error(`Failed to clean up old PDF for report ${report.id}:`, error);
       }
     }
+    // Silently return - no PDF generation needed if artwork is missing
+    if (DEBUG) console.log('[pdf] bg:skip-no-artwork', { reportId: report.id, hasText: !!report.reportText?.trim(), hasArtwork: !!report.artworkUrl?.trim() });
     return;
   }
 

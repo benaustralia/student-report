@@ -191,6 +191,16 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                 // This prevents future 404 errors on next load
                 await updateReport(r.id, { artworkUrl: undefined });
                 if (DEBUG) console.log('[class] maybePrepare:cleared-invalid-artwork', { reportId: r.id });
+                // Trigger PDF cleanup since report no longer has artwork
+                const updatedReport = { ...r, artworkUrl: undefined };
+                if (effectiveTeacher) {
+                  const student = students.find(s => s.id === r.studentId);
+                  if (student) {
+                    generatePDFInBackground(updatedReport, student, classData, effectiveTeacher).catch(err => {
+                      if (DEBUG) console.warn('[class] maybePrepare:pdf-cleanup-failed', { reportId: r.id, error: err });
+                    });
+                  }
+                }
               }
             } catch (error: any) {
               // If refresh fails with object-not-found or 404, clear the URL
@@ -199,6 +209,16 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                   error?.message?.includes('404')) {
                 await updateReport(r.id, { artworkUrl: undefined });
                 if (DEBUG) console.log('[class] maybePrepare:cleared-invalid-artwork-error', { reportId: r.id });
+                // Trigger PDF cleanup since report no longer has artwork
+                const updatedReport = { ...r, artworkUrl: undefined };
+                if (effectiveTeacher) {
+                  const student = students.find(s => s.id === r.studentId);
+                  if (student) {
+                    generatePDFInBackground(updatedReport, student, classData, effectiveTeacher).catch(err => {
+                      if (DEBUG) console.warn('[class] maybePrepare:pdf-cleanup-failed', { reportId: r.id, error: err });
+                    });
+                  }
+                }
               } else if (DEBUG) {
                 // Only log unexpected errors
                 console.warn('[class] maybePrepare:artwork-refresh-error', { reportId: r.id, error });

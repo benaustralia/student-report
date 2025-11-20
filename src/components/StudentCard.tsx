@@ -44,15 +44,32 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
   const saveReport = useCallback(async (imageUrl?: string | null, isAutoSave: boolean = false) => {
     if (!state.reportText.trim() && !imageUrl) return;
     try {
+      // Validate imageUrl if provided - ensure it's a valid Firebase Storage URL
+      if (imageUrl && !imageUrl.includes('firebasestorage.googleapis.com') && !imageUrl.includes('firebasestorage.app')) {
+        console.error('Invalid image URL format:', imageUrl);
+        toast.error('Invalid image URL. Please re-upload the image.');
+        return;
+      }
+      
       const reportData = {
         studentId: student.id,
         classId: classData.id,
         teacherEmail: classData.teacherEmail,
         reportText: state.reportText.trim(),
         studentName: formatStudentName(student.firstName, student.lastName),
-        ...(imageUrl && { artworkUrl: imageUrl })
+        // Only include artworkUrl if imageUrl is provided and valid
+        ...(imageUrl && imageUrl.trim() && { artworkUrl: imageUrl.trim() })
       };
       const reportId = await createOrUpdateReport(reportData);
+      
+      // Verify the save was successful by checking the saved report
+      const savedReports = await getReportsForStudent(student.id);
+      const savedReport = savedReports.find(r => r.id === reportId);
+      if (savedReport && imageUrl && savedReport.artworkUrl !== imageUrl) {
+        console.error('Artwork URL mismatch after save:', { expected: imageUrl, saved: savedReport.artworkUrl });
+        // Try to fix it - this shouldn't happen but let's be safe
+        await updateReport(reportId, { artworkUrl: imageUrl });
+      }
       
       // Update the last saved text and clear unsaved changes flag
       lastSavedTextRef.current = state.reportText.trim();
@@ -69,24 +86,28 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
       }
       // Auto-save is silent - no toast, no dataChanged event to prevent scroll disruption
       
-      // Trigger background PDF generation (fire-and-forget)
-      // Fetch the saved report and get teacher data, then generate PDF
+      // Trigger background PDF generation or cleanup (fire-and-forget)
+      // Always call generatePDFInBackground - it will:
+      // - Generate PDF if report has both text and artwork
+      // - Delete old PDF if artwork was removed (report no longer ready)
+      // Fetch the saved report to ensure we have the latest data (including cleared artworkUrl)
       try {
         const savedReports = await getReportsForStudent(student.id);
         const savedReport = savedReports.find(r => r.id === reportId) || savedReports[0];
         if (savedReport) {
           const teacher = await getTeacherByEmail(classData.teacherEmail);
           if (teacher) {
-            // Generate PDF in background (non-blocking)
+            // Always call generatePDFInBackground - it handles both generation and cleanup
+            // If artwork is missing, it will delete the old PDF and skip generation
             generatePDFInBackground(savedReport, student, classData, teacher).catch(error => {
-              console.error('Background PDF generation failed:', error);
-              // Silent failure - user doesn't need to know about background generation
+              console.error('Background PDF generation/cleanup failed:', error);
+              // Silent failure - user doesn't need to know about background operations
             });
           }
         }
       } catch (pdfError) {
-        // Silent failure for background PDF generation
-        console.error('Failed to trigger PDF generation:', pdfError);
+        // Silent failure for background PDF generation/cleanup
+        console.error('Failed to trigger PDF generation/cleanup:', pdfError);
       }
     } catch (error) {
       console.error('Error saving report:', error);
@@ -101,9 +122,22 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
     onRemove: () => saveReport(null),
     onInvalidUrl: async (reportId: string) => {
       // Clear invalid artworkUrl from report when image doesn't exist
+      // Also trigger PDF cleanup since report no longer has artwork
       if (reportId) {
         try {
           await updateReport(reportId, { artworkUrl: undefined });
+          // Trigger PDF cleanup - fetch the updated report and clean up PDF if needed
+          const updatedReports = await getReportsForStudent(student.id);
+          const updatedReport = updatedReports.find(r => r.id === reportId);
+          if (updatedReport) {
+            const teacher = await getTeacherByEmail(classData.teacherEmail);
+            if (teacher) {
+              // This will delete the PDF if artwork is missing
+              generatePDFInBackground(updatedReport, student, classData, teacher).catch(error => {
+                console.error('PDF cleanup after invalid artwork URL failed:', error);
+              });
+            }
+          }
         } catch (error) {
           console.error('Failed to clear invalid artworkUrl:', error);
         }
@@ -150,9 +184,22 @@ export const StudentCard: React.FC<StudentCardProps> = React.memo(({ student, cl
 
   useEffect(() => {
     if (imageUpload.file) {
-      imageUpload.upload().then((imageUrl) => {
-        if (imageUrl) saveReport(imageUrl);
-      });
+      // Upload image to Firebase Storage first
+      imageUpload.upload()
+        .then((imageUrl) => {
+          if (imageUrl) {
+            // Only save to database after successful upload
+            // This ensures the image exists in storage before we save the URL
+            return saveReport(imageUrl);
+          } else {
+            console.error('Image upload completed but no URL returned');
+            toast.error('Image upload failed. Please try again.');
+          }
+        })
+        .catch((error) => {
+          console.error('Image upload failed:', error);
+          toast.error('Failed to upload image. Please try again.');
+        });
     }
   }, [imageUpload.file, saveReport]);
 
