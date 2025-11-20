@@ -61,9 +61,10 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           // CRITICAL: Check for next-themes FIRST, before ANY other conditions
-          // This must be the very first check to ensure it's always caught
+          // Return undefined to keep it in the main bundle with React
+          // This ensures React is always available when next-themes initializes
           if (id.includes('next-themes')) {
-            return 'react-vendor';
+            return undefined; // Keep in main bundle, don't chunk it
           }
           
           // Split node_modules into smaller chunks
