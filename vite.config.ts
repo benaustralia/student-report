@@ -148,9 +148,13 @@ export default defineConfig({
               return 'react-vendor';
             }
             
+            // Check for other React-dependent libraries that might slip through
+            // react-dropzone and other react-* packages need React
+            if (id.includes('react-dropzone') || id.includes('react-') && !id.includes('react/') && !id.includes('react-dom/')) {
+              return 'react-vendor';
+            }
+            
             // All other node_modules - split by size to avoid large vendor bundle
-            // But check if it might need React - if so, put in react-vendor
-            // This is a catch-all to prevent React errors in vendor chunk
             return 'vendor';
           }
           
