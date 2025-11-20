@@ -160,6 +160,20 @@ export default defineConfig({
               return 'react-vendor';
             }
             
+            // CRITICAL: Check for other React-dependent packages that don't have 'react-' prefix
+            // These are dependencies of React libraries (use-sidecar, react-remove-scroll, etc.)
+            const reactDependentPackages = [
+              'use-sidecar',
+              'react-remove-scroll',
+              'react-remove-scroll-bar',
+              'use-callback-ref',
+              'use-constant'
+            ];
+            
+            if (reactDependentPackages.some(pkg => id.includes(pkg))) {
+              return 'react-vendor';
+            }
+            
             // All other node_modules - split by size to avoid large vendor bundle
             return 'vendor';
           }
