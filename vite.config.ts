@@ -108,7 +108,10 @@ export default defineConfig({
               return 'zip-vendor';
             }
             
-            // GSAP animations
+            // GSAP animations - @gsap/react needs React, put in react-vendor
+            if (id.includes('@gsap/react')) {
+              return 'react-vendor';
+            }
             if (id.includes('gsap')) {
               return 'gsap-vendor';
             }
