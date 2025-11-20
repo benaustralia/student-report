@@ -121,9 +121,6 @@ export const refreshDownloadURL = async (urlOrPath: string): Promise<string | nu
       throw new Error('Invalid storage URL');
     }
     
-    // Log the extracted path for debugging
-    console.log('Refreshing download URL - extracted path:', path, 'from URL:', urlOrPath.substring(0, 100));
-    
     // Create reference and get fresh download URL
     const storageRef = ref(storage, path);
     const freshURL = await getDownloadURL(storageRef);
@@ -132,9 +129,10 @@ export const refreshDownloadURL = async (urlOrPath: string): Promise<string | nu
   } catch (error: any) {
     // Handle object-not-found gracefully - file doesn't exist
     if (error?.code === 'storage/object-not-found' || error?.message?.includes('object-not-found')) {
-      console.warn(`Storage object not found. Original URL: ${urlOrPath.substring(0, 100)}... Error:`, error);
       // Try to find the file with alternative path formats
-      // Sometimes the path might be stored differently (e.g., with/without 'students/' prefix)
+      // Only try valid alternatives based on storage rules:
+      // - student-reports/students/ (public read)
+      // - student-reports/student/ (auth required, legacy)
       if (/^https?:\/\//i.test(urlOrPath)) {
         const urlObj = new URL(urlOrPath);
         let extractedPath = '';
@@ -144,41 +142,37 @@ export const refreshDownloadURL = async (urlOrPath: string): Promise<string | nu
         }
         
         // Try alternative paths if the original doesn't work
-        if (extractedPath) {
-          // If path starts with 'student-reports/students/', try without 'students/'
+        if (extractedPath && extractedPath.startsWith('student-reports/')) {
+          // Try swapping students/ <-> student/ (both are valid paths in storage rules)
           if (extractedPath.startsWith('student-reports/students/')) {
-            const altPath = extractedPath.replace('student-reports/students/', 'student-reports/');
-            console.log('Trying alternative path (without students/):', altPath);
+            const altPath = extractedPath.replace('student-reports/students/', 'student-reports/student/');
             try {
               const { ref, getDownloadURL } = await import('firebase/storage');
               const { getStorageInstance } = await import('../config/firebaseStorage');
               const storage = await getStorageInstance();
               const altRef = ref(storage, altPath);
               const altURL = await getDownloadURL(altRef);
-              console.log('Found file with alternative path!');
               return altURL;
-            } catch (altError) {
-              console.warn('Alternative path also failed:', altError);
+            } catch (altError: any) {
+              // Silently fail - file doesn't exist at alternative path either
             }
-          }
-          // If path doesn't start with 'student-reports/students/', try adding it
-          else if (extractedPath.startsWith('student-reports/') && !extractedPath.startsWith('student-reports/students/')) {
-            const altPath = extractedPath.replace('student-reports/', 'student-reports/students/');
-            console.log('Trying alternative path (with students/):', altPath);
+          } else if (extractedPath.startsWith('student-reports/student/')) {
+            const altPath = extractedPath.replace('student-reports/student/', 'student-reports/students/');
             try {
               const { ref, getDownloadURL } = await import('firebase/storage');
               const { getStorageInstance } = await import('../config/firebaseStorage');
               const storage = await getStorageInstance();
               const altRef = ref(storage, altPath);
               const altURL = await getDownloadURL(altRef);
-              console.log('Found file with alternative path!');
               return altURL;
-            } catch (altError) {
-              console.warn('Alternative path also failed:', altError);
+            } catch (altError: any) {
+              // Silently fail - file doesn't exist at alternative path either
             }
           }
         }
       }
+      // File doesn't exist - this is expected for missing files
+      // Don't log warnings for expected 404s to reduce console noise
       return null;
     }
     
