@@ -148,6 +148,18 @@ export default defineConfig({
               return 'react-vendor';
             }
             
+            // CRITICAL: Check for Radix UI dependencies that need React
+            // @radix-ui/react-use-layout-effect is a dependency of Radix components
+            if (id.includes('@radix-ui/react-use-layout-effect')) {
+              return 'react-vendor';
+            }
+            
+            // CRITICAL: prop-types is used by react-dropzone and other React libraries
+            // It doesn't have 'react-' in the name but is React-dependent
+            if (id.includes('prop-types') && id.includes('node_modules')) {
+              return 'react-vendor';
+            }
+            
             // All other node_modules - split by size to avoid large vendor bundle
             return 'vendor';
           }
