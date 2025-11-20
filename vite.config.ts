@@ -155,11 +155,10 @@ export default defineConfig({
           }
           
           // Split source code into smaller chunks
-          // Don't split auth-core - it needs React which is in main bundle
-          // Keeping it in main bundle ensures React is available
-          // if (id.includes('src/contexts') || id.includes('src/hooks/useAuth')) {
-          //   return 'auth-core';
-          // }
+          // CRITICAL: Put auth-core in react-vendor so React is available
+          if (id.includes('src/contexts') || id.includes('src/hooks/useAuth')) {
+            return 'react-vendor'; // Put auth-core in react-vendor so React is available
+          }
           
           // Don't split theme-provider - it needs to stay with main code to access React properly
           // Splitting it causes module resolution issues with next-themes
