@@ -148,9 +148,10 @@ export default defineConfig({
               return 'react-vendor';
             }
             
-            // Check for other React-dependent libraries that might slip through
-            // react-dropzone and other react-* packages need React
-            if (id.includes('react-dropzone') || id.includes('react-') && !id.includes('react/') && !id.includes('react-dom/')) {
+            // CRITICAL: Check for ANY react-* packages (except react/react-dom which are handled above)
+            // This must catch react-dropzone, react-query, react-hook-form, etc.
+            // The check must exclude react/ and react-dom/ paths to avoid false positives
+            if (id.includes('react-') && !id.includes('/react/') && !id.includes('/react-dom/') && !id.includes('react/jsx-runtime')) {
               return 'react-vendor';
             }
             
