@@ -1,3 +1,6 @@
+// CRITICAL: Import React first to ensure react-vendor chunk loads before vendor chunk
+// This prevents "React is undefined" errors when vendor chunk code calls createContext
+import 'react';
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 

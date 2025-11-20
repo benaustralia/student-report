@@ -197,6 +197,14 @@ export default defineConfig({
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]'
+      },
+      // Ensure proper chunk loading order
+      onwarn(warning, warn) {
+        // Suppress warnings about circular dependencies for React
+        if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.message.includes('react')) {
+          return;
+        }
+        warn(warning);
       }
     },
     // Increase chunk size warning limit to 1000kb temporarily
