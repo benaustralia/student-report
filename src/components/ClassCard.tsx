@@ -171,25 +171,36 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           getReportsForClass(classData.id),
           getTeacherByEmail(classData.teacherEmail)
         ]);
-        // Heal artworkUrl fields to tokened URLs to avoid raw unauthenticated GETs
-        // Suppress 404 errors - they're expected for missing files
+        // Clean up invalid artworkUrl fields - aggressively clean up invalid URLs
+        // This prevents 404 errors on subsequent loads by removing invalid URLs from database
         await Promise.all(
           reports.map(async (r) => {
+            if (!r.artworkUrl) return;
+            
+            // Skip if URL already has a token (it's valid and fresh)
+            if (r.artworkUrl.includes('token=')) return;
+            
             try {
-              if (r.artworkUrl && !r.artworkUrl.includes('token=')) {
-                // refreshDownloadURL is now statically imported
-                const fresh = await refreshDownloadURL(r.artworkUrl);
-                if (fresh && fresh !== r.artworkUrl) {
-                  await updateReport(r.id, { artworkUrl: fresh });
-                } else if (!fresh) {
-                  // File doesn't exist - clear the invalid URL (updateDocById will handle undefined -> deleteField)
-                  await updateReport(r.id, { artworkUrl: undefined });
-                }
+              // Try to refresh - if it returns null, the file doesn't exist
+              const fresh = await refreshDownloadURL(r.artworkUrl);
+              if (fresh && fresh !== r.artworkUrl) {
+                // URL refreshed successfully - update it
+                await updateReport(r.id, { artworkUrl: fresh });
+              } else if (!fresh) {
+                // File doesn't exist - immediately clear the invalid URL from database
+                // This prevents future 404 errors on next load
+                await updateReport(r.id, { artworkUrl: undefined });
+                if (DEBUG) console.log('[class] maybePrepare:cleared-invalid-artwork', { reportId: r.id });
               }
             } catch (error: any) {
-              // Silently handle expected errors (404s, object-not-found)
-              // Only log unexpected errors in debug mode
-              if (DEBUG && error?.code !== 'storage/object-not-found' && !error?.message?.includes('404')) {
+              // If refresh fails with object-not-found or 404, clear the URL
+              if (error?.code === 'storage/object-not-found' || 
+                  error?.message?.includes('object-not-found') || 
+                  error?.message?.includes('404')) {
+                await updateReport(r.id, { artworkUrl: undefined });
+                if (DEBUG) console.log('[class] maybePrepare:cleared-invalid-artwork-error', { reportId: r.id });
+              } else if (DEBUG) {
+                // Only log unexpected errors
                 console.warn('[class] maybePrepare:artwork-refresh-error', { reportId: r.id, error });
               }
             }
