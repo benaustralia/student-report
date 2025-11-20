@@ -196,13 +196,14 @@ export function LoginForm({
               </div>
               
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between gap-4">
+                  <Label htmlFor="password" className="flex-shrink-0">Password</Label>
                   <button
                     type="button"
                     onClick={handlePasswordReset}
                     disabled={isResettingPassword || !email}
-                    className="ml-auto text-sm underline-offset-2 hover:underline disabled:opacity-50"
+                    className="text-sm underline-offset-2 hover:underline disabled:opacity-50 min-h-[48px] min-w-[48px] px-4 py-2 flex items-center justify-center touch-manipulation"
+                    aria-label="Forgot your password?"
                   >
                     {isResettingPassword ? 'Sending...' : 'Forgot your password?'}
                   </button>
