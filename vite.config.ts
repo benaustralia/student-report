@@ -65,6 +65,12 @@ export default defineConfig({
           // next-themes is lazy-loaded, so it will be in its own chunk automatically
           // Don't force it into react-vendor to allow better code splitting
           
+          // CRITICAL: Check source files FIRST before node_modules
+          // This ensures React-dependent source code goes to react-vendor
+          if (id.includes('src/contexts') || id.includes('src/hooks/useAuth')) {
+            return 'react-vendor'; // Put auth-core in react-vendor so React is available
+          }
+          
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
             // React core - MUST stay together with next-themes
@@ -178,12 +184,6 @@ export default defineConfig({
             
             // All other node_modules - split by size to avoid large vendor bundle
             return 'vendor';
-          }
-          
-          // Split source code into smaller chunks
-          // CRITICAL: Put auth-core in react-vendor so React is available
-          if (id.includes('src/contexts') || id.includes('src/hooks/useAuth')) {
-            return 'react-vendor'; // Put auth-core in react-vendor so React is available
           }
           
           // Don't split theme-provider - it needs to stay with main code to access React properly
