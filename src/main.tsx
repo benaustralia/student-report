@@ -57,8 +57,12 @@ const hydrateApp = () => {
 
 // Defer hydration slightly to let initial paint complete
 // Use scheduler.postTask if available for better task scheduling
-if ('scheduler' in window && 'postTask' in window.scheduler) {
-  (window.scheduler as any).postTask(hydrateApp, { priority: 'user-blocking' });
+interface Scheduler {
+  postTask(callback: () => void, options?: { priority?: string }): void;
+}
+
+if ('scheduler' in window && 'postTask' in (window as any).scheduler) {
+  ((window as any).scheduler as Scheduler).postTask(hydrateApp, { priority: 'user-blocking' });
 } else if ('requestIdleCallback' in window) {
   requestIdleCallback(hydrateApp, { timeout: 100 });
 } else {
