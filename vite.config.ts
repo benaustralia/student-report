@@ -82,10 +82,11 @@ export default defineConfig({
               id.endsWith('/react') ||
               id.endsWith('/react-dom');
             
-            // Put React in react-vendor chunk
+            // Keep React in main bundle too (along with next-themes)
+            // This ensures React is available when next-themes initializes
             // (next-themes is already handled above as the first check)
             if (isReact) {
-              return 'react-vendor';
+              return undefined; // Keep in main bundle, don't chunk
             }
             
             // Firebase - split by feature
