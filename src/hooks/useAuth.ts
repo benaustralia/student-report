@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { auth } from '@/config/firebase';
+import { getAuthInstance } from '@/config/firebase';
 
 // Lazy-load signOut - only needed after login
 let firebaseSignOut: any = null;
@@ -34,42 +33,80 @@ export const useAuth = () => {
     let unsubscribe: (() => void) | null = null;
     let mounted = true;
 
-    const initAuth = () => {
+    const initAuth = async () => {
       if (!mounted) return;
       
-      unsubscribe = onAuthStateChanged(
-        auth,
-        (user) => {
-          if (!mounted) return;
-          setAuthState({
-            user,
-            loading: false,
-            error: null,
-          });
-        },
-        (error) => {
-          if (!mounted) return;
-          console.error('🔴 Firebase Auth Error:', error);
-          setAuthState({
-            user: null,
-            loading: false,
-            error: error.message,
-          });
-        }
-      );
+      try {
+        // Lazy load Firebase Auth - only loads when actually needed
+        // This prevents auth iframe from loading on login page
+        const auth = await getAuthInstance();
+        const { onAuthStateChanged } = await import('firebase/auth');
+        
+        if (!mounted) return;
+        
+        unsubscribe = onAuthStateChanged(
+          auth,
+          (user) => {
+            if (!mounted) return;
+            setAuthState({
+              user,
+              loading: false,
+              error: null,
+            });
+          },
+          (error) => {
+            if (!mounted) return;
+            console.error('🔴 Firebase Auth Error:', error);
+            setAuthState({
+              user: null,
+              loading: false,
+              error: error.message,
+            });
+          }
+        );
+      } catch (error) {
+        if (!mounted) return;
+        console.error('🔴 Firebase Auth initialization error:', error);
+        setAuthState({
+          user: null,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Auth initialization failed',
+        });
+      }
     };
 
-    // Defer auth initialization to reduce TBT
-    // Use requestIdleCallback if available, otherwise small delay
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(initAuth, { timeout: 100 });
-    } else {
-      // Fallback: very small delay to let initial render complete
-      setTimeout(initAuth, 0);
-    }
+    // Defer auth initialization until user interaction or after a delay
+    // This prevents auth iframe from loading immediately
+    const initOnInteraction = () => {
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(initAuth, { timeout: 2000 });
+      } else {
+        setTimeout(initAuth, 100);
+      }
+    };
+
+    // Only initialize after user interaction or after 2 seconds
+    let initTimer = setTimeout(initOnInteraction, 2000);
+    
+    // Initialize on any user interaction (click, touch, keypress)
+    const handleInteraction = () => {
+      clearTimeout(initTimer);
+      initOnInteraction();
+      document.removeEventListener('click', handleInteraction, true);
+      document.removeEventListener('touchstart', handleInteraction, true);
+      document.removeEventListener('keydown', handleInteraction, true);
+    };
+    
+    document.addEventListener('click', handleInteraction, true);
+    document.addEventListener('touchstart', handleInteraction, true);
+    document.addEventListener('keydown', handleInteraction, true);
 
     return () => {
       mounted = false;
+      clearTimeout(initTimer);
+      document.removeEventListener('click', handleInteraction, true);
+      document.removeEventListener('touchstart', handleInteraction, true);
+      document.removeEventListener('keydown', handleInteraction, true);
       if (unsubscribe) {
         unsubscribe();
       }
@@ -79,6 +116,7 @@ export const useAuth = () => {
   const signOut = async () => {
     try {
       setAuthState(prev => ({ ...prev, loading: true, error: null }));
+      const auth = await getAuthInstance();
       const signOutFn = await getSignOut();
       await signOutFn(auth);
     } catch (error) {

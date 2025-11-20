@@ -62,11 +62,8 @@ export default defineConfig({
         // Ensure react-vendor loads before other chunks by making it a dependency
         // This prevents "React is undefined" errors in vendor chunk
         manualChunks: (id) => {
-          // CRITICAL: React and next-themes MUST be in the same chunk
-          // Check for next-themes FIRST
-          if (id.includes('next-themes')) {
-            return 'react-vendor';
-          }
+          // next-themes is lazy-loaded, so it will be in its own chunk automatically
+          // Don't force it into react-vendor to allow better code splitting
           
           // Split node_modules into smaller chunks
           if (id.includes('node_modules')) {
@@ -88,7 +85,12 @@ export default defineConfig({
             }
             
             // Firebase - split by feature
-            if (id.includes('firebase/app') || id.includes('firebase/auth')) {
+            // firebase/app is small and needed early, keep it separate
+            if (id.includes('firebase/app')) {
+              return 'firebase-core';
+            }
+            // firebase/auth is lazy-loaded, keep it separate to avoid loading iframe
+            if (id.includes('firebase/auth')) {
               return 'firebase-auth';
             }
             if (id.includes('firebase/firestore')) {
@@ -198,8 +200,9 @@ export default defineConfig({
     // Use esbuild for minification - more reliable than terser, avoids variable hoisting issues
     // Terser was causing "Cannot access variable before initialization" errors
     minify: 'esbuild',
-    // Target modern browsers for smaller bundles
-    target: 'esnext',
+    // Target modern browsers (ES2020+) to avoid polyfills
+    // This prevents Date.prototype.toISOString and other polyfills from loading
+    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
     // Enable CSS code splitting
     cssCodeSplit: true,
     // Minify CSS

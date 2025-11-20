@@ -4,6 +4,11 @@ import { useAuthContext } from './hooks/useAuthContext';
 // Don't import storageService here - it pulls in Storage dependencies
 // Import dynamically only when needed (after login)
 
+// Lazy load ThemeProvider - only needed after login (saves ~50KB on login page)
+const ThemeProvider = lazy(() => 
+  import('./components/theme-provider').then(m => ({ default: m.ThemeProvider }))
+);
+
 // Lazy load ALL heavy components to reduce initial bundle size
 // LoginForm includes Card, Input, Label, Button - all Radix UI components (~100KB+)
 const LoginForm = lazy(() => import('./components/LoginForm').then(m => ({ default: m.LoginForm })));
@@ -134,6 +139,29 @@ function AppContent() {
         );
 }
 
+// Wrapper component that conditionally loads ThemeProvider only after login
+function ThemedAppContent() {
+  const { user } = useAuthContext();
+  
+  // Only load ThemeProvider after login - saves ~50KB on login page
+  if (!user) {
+    return <AppContent />;
+  }
+  
+  return (
+    <Suspense fallback={<AppContent />}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <AppContent />
+      </ThemeProvider>
+    </Suspense>
+  );
+}
+
 export default function TeacherReports() {
   // Load Toaster only after initial render to avoid blocking critical path
   const [showToaster, setShowToaster] = useState(false);
@@ -151,7 +179,7 @@ export default function TeacherReports() {
   
   return (
     <AuthProvider>
-      <AppContent />
+      <ThemedAppContent />
       {showToaster && (
         <Suspense fallback={null}>
           <Toaster />

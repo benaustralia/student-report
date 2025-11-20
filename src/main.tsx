@@ -1,7 +1,5 @@
-import { startTransition } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
-import { ThemeProvider } from './components/theme-provider'
 
 // Hide critical content once React is ready
 const hideCriticalContent = () => {
@@ -51,34 +49,20 @@ setTimeout(loadNonCriticalResources, 5000);
 const rootElement = document.getElementById('root')!;
 const root = createRoot(rootElement);
 
-// Break up React hydration into smaller chunks to avoid long main-thread tasks
-// Use setTimeout(0) to yield to browser between operations, keeping main thread responsive
+// Simplified hydration - ThemeProvider is lazy-loaded in App.tsx
+// This prevents next-themes from loading on login page
 const hydrateApp = () => {
-  // Use startTransition to mark this as non-urgent work
-  startTransition(() => {
-    // Yield to browser before rendering
-    setTimeout(() => {
-      root.render(
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <App />
-        </ThemeProvider>
-      );
-    }, 0);
-  });
+  root.render(<App />);
 };
 
-// Defer hydration until browser is idle or after a delay
-// This allows the static HTML to be fully painted before React takes over
-if ('requestIdleCallback' in window) {
-  requestIdleCallback(hydrateApp, { timeout: 200 });
+// Defer hydration slightly to let initial paint complete
+// Use scheduler.postTask if available for better task scheduling
+if ('scheduler' in window && 'postTask' in window.scheduler) {
+  (window.scheduler as any).postTask(hydrateApp, { priority: 'user-blocking' });
+} else if ('requestIdleCallback' in window) {
+  requestIdleCallback(hydrateApp, { timeout: 100 });
 } else {
-  // Fallback: delay to let initial paint complete
-  setTimeout(hydrateApp, 50);
+  setTimeout(hydrateApp, 0);
 }
 
 // Mark body as ready after React renders - this hides critical content
