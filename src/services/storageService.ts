@@ -90,8 +90,9 @@ export const buildStudentFolderName = (
 /**
  * Get a fresh download URL from a Firebase Storage URL
  * Useful when the old download token has expired
+ * Returns null if the file doesn't exist (object-not-found)
  */
-export const refreshDownloadURL = async (urlOrPath: string): Promise<string> => {
+export const refreshDownloadURL = async (urlOrPath: string): Promise<string | null> => {
   try {
     // Lazy load Firebase Storage only when needed
     const { ref, getDownloadURL } = await import('firebase/storage');
@@ -102,23 +103,88 @@ export const refreshDownloadURL = async (urlOrPath: string): Promise<string> => 
     let path = '';
     if (/^https?:\/\//i.test(urlOrPath)) {
       const urlObj = new URL(urlOrPath);
-      path = decodeURIComponent(urlObj.pathname.split('/o/')[1]?.split('?')[0] || '');
+      // Extract path from Firebase Storage URL format:
+      // https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media&token=...
+      const pathMatch = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
+      if (pathMatch) {
+        path = decodeURIComponent(pathMatch[1]);
+      } else {
+        // Fallback: try the old method
+        path = decodeURIComponent(urlObj.pathname.split('/o/')[1]?.split('?')[0] || '');
+      }
     } else {
       path = urlOrPath.replace(/^\/+/, '');
     }
     
     if (!path) {
+      console.error('Invalid storage URL - could not extract path:', urlOrPath);
       throw new Error('Invalid storage URL');
     }
+    
+    // Log the extracted path for debugging
+    console.log('Refreshing download URL - extracted path:', path, 'from URL:', urlOrPath.substring(0, 100));
     
     // Create reference and get fresh download URL
     const storageRef = ref(storage, path);
     const freshURL = await getDownloadURL(storageRef);
     
     return freshURL;
-  } catch (error) {
+  } catch (error: any) {
+    // Handle object-not-found gracefully - file doesn't exist
+    if (error?.code === 'storage/object-not-found' || error?.message?.includes('object-not-found')) {
+      console.warn(`Storage object not found. Original URL: ${urlOrPath.substring(0, 100)}... Error:`, error);
+      // Try to find the file with alternative path formats
+      // Sometimes the path might be stored differently (e.g., with/without 'students/' prefix)
+      if (/^https?:\/\//i.test(urlOrPath)) {
+        const urlObj = new URL(urlOrPath);
+        let extractedPath = '';
+        const pathMatch = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
+        if (pathMatch) {
+          extractedPath = decodeURIComponent(pathMatch[1]);
+        }
+        
+        // Try alternative paths if the original doesn't work
+        if (extractedPath) {
+          // If path starts with 'student-reports/students/', try without 'students/'
+          if (extractedPath.startsWith('student-reports/students/')) {
+            const altPath = extractedPath.replace('student-reports/students/', 'student-reports/');
+            console.log('Trying alternative path (without students/):', altPath);
+            try {
+              const { ref, getDownloadURL } = await import('firebase/storage');
+              const { getStorageInstance } = await import('../config/firebaseStorage');
+              const storage = await getStorageInstance();
+              const altRef = ref(storage, altPath);
+              const altURL = await getDownloadURL(altRef);
+              console.log('Found file with alternative path!');
+              return altURL;
+            } catch (altError) {
+              console.warn('Alternative path also failed:', altError);
+            }
+          }
+          // If path doesn't start with 'student-reports/students/', try adding it
+          else if (extractedPath.startsWith('student-reports/') && !extractedPath.startsWith('student-reports/students/')) {
+            const altPath = extractedPath.replace('student-reports/', 'student-reports/students/');
+            console.log('Trying alternative path (with students/):', altPath);
+            try {
+              const { ref, getDownloadURL } = await import('firebase/storage');
+              const { getStorageInstance } = await import('../config/firebaseStorage');
+              const storage = await getStorageInstance();
+              const altRef = ref(storage, altPath);
+              const altURL = await getDownloadURL(altRef);
+              console.log('Found file with alternative path!');
+              return altURL;
+            } catch (altError) {
+              console.warn('Alternative path also failed:', altError);
+            }
+          }
+        }
+      }
+      return null;
+    }
+    
+    // For other errors, log and return null (don't break the app)
     console.error('Error refreshing download URL:', error);
-    throw new Error(`Failed to refresh download URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return null;
   }
 };
 

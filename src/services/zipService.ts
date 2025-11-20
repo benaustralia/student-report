@@ -30,6 +30,9 @@ const downloadPDFFromStorage = async (pdfUrl: string): Promise<Blob | null> => {
   try {
     if (DEBUG) console.log('[zip] downloadPDFFromStorage:fetch', { pdfUrl });
     const refreshed = await refreshDownloadURL(pdfUrl);
+    if (!refreshed) {
+      throw new Error('Failed to refresh PDF URL - file may not exist');
+    }
     const res = await fetch(refreshed, { method: 'GET' });
     if (!res.ok) {
       if (DEBUG) console.warn('[zip] downloadPDFFromStorage:http', { status: res.status, url: refreshed });
@@ -139,7 +142,10 @@ export const generateClassZIP = async (
       }
       if (hasImage) {
         try {
-          await refreshDownloadURL(report.artwork!);
+          const refreshed = await refreshDownloadURL(report.artwork!);
+          if (!refreshed) {
+            console.warn('Could not refresh artwork URL for report');
+          }
         } catch (error) {
           if (error instanceof Error && error.message.includes('object-not-found')) {
             skippedCount++;

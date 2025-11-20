@@ -152,7 +152,7 @@ export const useImageUploadV2 = ({
       try {
         const needsRefresh = !/^https?:\/\//i.test(raw) || (!raw.includes('token=') && !raw.includes('alt=media'));
         // refreshDownloadURL is now statically imported
-        const url = needsRefresh ? await refreshDownloadURL(raw) : raw;
+        const url = needsRefresh ? (await refreshDownloadURL(raw)) || raw : raw;
         setCurrentImageUrl(url);
         setPreview(url);
       } catch {

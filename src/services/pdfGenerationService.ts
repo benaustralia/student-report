@@ -81,11 +81,17 @@ const tryAlternateArtworkPath = async (url: string): Promise<string> => {
   const swapped = url
     .replace(/\/students\//, '/student/')
     .replace(/%2Fstudents%2F/g, '%2Fstudent%2F');
-  if (swapped !== url) return await refreshDownloadURL(swapped);
+  if (swapped !== url) {
+    const result = await refreshDownloadURL(swapped);
+    if (result) return result;
+  }
   const swappedBack = url
     .replace(/\/student\//, '/students/')
     .replace(/%2Fstudent%2F/g, '%2Fstudents%2F');
-  if (swappedBack !== url) return await refreshDownloadURL(swappedBack);
+  if (swappedBack !== url) {
+    const result = await refreshDownloadURL(swappedBack);
+    if (result) return result;
+  }
   throw new Error('Alternate artwork path not applicable');
 };
 

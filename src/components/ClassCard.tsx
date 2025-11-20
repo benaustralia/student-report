@@ -198,6 +198,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           try {
             // refreshDownloadURL is now statically imported
             const url = await refreshDownloadURL(pdfUrl);
+            if (!url) return false;
             const res = await fetch(url, { method: 'HEAD' });
             return res.ok;
           } catch { return false; }
@@ -270,6 +271,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
         try {
           // refreshDownloadURL is now statically imported
           const url = await refreshDownloadURL(pdfUrl);
+          if (!url) return false;
           const res = await fetch(url, { method: 'HEAD' });
           return res.ok;
         } catch { return false; }

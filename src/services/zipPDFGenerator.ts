@@ -29,6 +29,9 @@ const getFunctionUrl = (): string => {
 
 const convertArtworkToDataUrl = async (url: string): Promise<string> => {
   const freshUrl = await refreshDownloadURL(url);
+  if (!freshUrl) {
+    throw new Error('Failed to refresh artwork URL - file may not exist');
+  }
   if (DEBUG) console.log('[zip-gen] artwork:refreshed', { url: freshUrl });
   return new Promise((resolve, reject) => {
     const img = new Image();

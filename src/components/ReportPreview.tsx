@@ -57,7 +57,12 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
     if (isFirebaseStorage) {
       try {
         // Try to get a fresh download URL in case the current one has expired
-        url = await refreshDownloadURL(url);
+        const refreshed = await refreshDownloadURL(url);
+        if (refreshed) {
+          url = refreshed;
+        } else {
+          console.warn('Could not refresh download URL, using original URL');
+        }
       } catch (error) {
         console.warn('Could not refresh download URL, trying original URL:', error);
       }
@@ -267,14 +272,20 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
       // Add artwork if present - REQUIRED when provided
       if (artworkUrl) {
         // Always refresh the URL to ensure it's valid and not expired
-          const freshUrl = await refreshDownloadURL(artworkUrl);
-          
+        const freshUrl = await refreshDownloadURL(artworkUrl);
+        
+        // If file doesn't exist, try using the original URL (might still be valid)
+        if (!freshUrl) {
+          console.warn('Artwork image not found in storage, trying original URL:', artworkUrl.substring(0, 100));
+          // Try using the original URL - it might still be valid even if refresh failed
+          // Continue without artwork - preview can still show text
+        } else {
           // Load image and convert to data URL to embed in SVG
-        // Always use crossOrigin='anonymous' to avoid CORS tainting
-        const artworkDataUrl = await new Promise<string>((resolve, reject) => {
-          // Always use crossOrigin='anonymous' to avoid tainted canvas
-          // Set it BEFORE setting src, otherwise it's ignored
-          const artworkImg = new Image();
+          // Always use crossOrigin='anonymous' to avoid CORS tainting
+          const artworkDataUrl = await new Promise<string>((resolve, reject) => {
+            // Always use crossOrigin='anonymous' to avoid tainted canvas
+            // Set it BEFORE setting src, otherwise it's ignored
+            const artworkImg = new Image();
             artworkImg.crossOrigin = 'anonymous';
           
             artworkImg.onload = () => {
@@ -289,31 +300,44 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 canvas.height = artworkImg.naturalHeight;
                 ctx.drawImage(artworkImg, 0, 0);
               
-              // Try to export canvas - should work if crossOrigin was set correctly
-              try {
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                resolve(dataUrl);
-              } catch (error) {
-                // If canvas is tainted, we can't convert to data URL
-                // Fallback: use the Firebase URL directly in SVG (same as PDF generation)
-                // The browser should be able to load it when converting SVG to PNG
-                console.warn('Canvas tainted despite crossOrigin, will use Firebase URL directly in SVG:', error);
-                resolve(freshUrl); // Return URL instead of data URL
-              }
-            } catch (error) { 
-              console.error('Canvas conversion failed:', error);
+                // Try to export canvas - should work if crossOrigin was set correctly
+                try {
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                  resolve(dataUrl);
+                } catch (error) {
+                  // If canvas is tainted, we can't convert to data URL
+                  // Fallback: use the Firebase URL directly in SVG (same as PDF generation)
+                  // The browser should be able to load it when converting SVG to PNG
+                  console.warn('Canvas tainted despite crossOrigin, will use Firebase URL directly in SVG:', error);
+                  resolve(freshUrl); // Return URL instead of data URL
+                }
+              } catch (error) { 
+                console.error('Canvas conversion failed:', error);
                 reject(error);
               }
             };
           
-          artworkImg.onerror = (error) => {
-            console.error('Image failed to load with crossOrigin:', freshUrl, error);
-            reject(new Error(`Artwork image could not be loaded. Please check CORS configuration or re-upload the image. URL: ${freshUrl.substring(0, 100)}...`));
-          };
+            artworkImg.onerror = (error) => {
+              console.error('Image failed to load with crossOrigin:', freshUrl, error);
+              reject(new Error(`Artwork image could not be loaded. Please check CORS configuration or re-upload the image. URL: ${freshUrl.substring(0, 100)}...`));
+            };
           
-          // Set src AFTER crossOrigin to ensure it takes effect
+            // Set src AFTER crossOrigin to ensure it takes effect
             artworkImg.src = freshUrl;
           });
+          
+          // Verify the data URL or URL is valid
+          if (!artworkDataUrl) {
+            console.error('Invalid artwork URL/data URL');
+            throw new Error('Failed to create valid URL for artwork');
+          }
+          
+          // Log whether we're using data URL or direct URL
+          if (artworkDataUrl.startsWith('data:image')) {
+            console.log('Artwork data URL created successfully, length:', artworkDataUrl.length);
+          } else {
+            console.log('Using Firebase URL directly in SVG (fallback due to CORS):', artworkDataUrl.substring(0, 100));
+          }
           
           // Add to SVG
           const artworkElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
@@ -324,17 +348,6 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
           artworkElement.setAttribute('height', '250');
           artworkElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
           svgClone.appendChild(artworkElement);
-        
-        // Verify the data URL or URL is valid
-        if (!artworkDataUrl) {
-          console.error('Invalid artwork URL/data URL');
-          throw new Error('Failed to create valid URL for artwork');
-        }
-        // Log whether we're using data URL or direct URL
-        if (artworkDataUrl.startsWith('data:image')) {
-          console.log('Artwork data URL created successfully, length:', artworkDataUrl.length);
-        } else {
-          console.log('Using Firebase URL directly in SVG (fallback due to CORS):', artworkDataUrl.substring(0, 100));
         }
       }
 
@@ -744,56 +757,65 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
                 // Refresh the URL to ensure it's valid
                 const freshUrl = await refreshDownloadURL(artworkUrl);
                 
-                // Convert to data URL (same approach as preview)
-                const artworkDataUrl = await new Promise<string>((resolve, reject) => {
-                  const artworkImg = new Image();
-                  artworkImg.crossOrigin = 'anonymous'; // Always use crossOrigin to avoid tainted canvas
-                  
-                  artworkImg.onload = () => {
-                    try {
-                      const canvas = document.createElement('canvas');
-                      const ctx = canvas.getContext('2d');
-                      if (!ctx) { 
-                        reject(new Error('Could not get canvas context'));
-                        return; 
-                      }
-                      canvas.width = artworkImg.naturalWidth;
-                      canvas.height = artworkImg.naturalHeight;
-                      ctx.drawImage(artworkImg, 0, 0);
-                      
+                // If file doesn't exist, try using the original URL (might still be valid)
+                // If that also fails, PDF generation will continue without image
+                if (!freshUrl) {
+                  console.warn('Artwork image not found in storage, trying original URL for PDF:', artworkUrl.substring(0, 100));
+                  // Try using the original URL - it might still be valid even if refresh failed
+                  // Continue without artwork - PDF can still be generated with text only
+                } else {
+                  // Convert to data URL (same approach as preview)
+                  const artworkDataUrl = await new Promise<string>((resolve, reject) => {
+                    const artworkImg = new Image();
+                    artworkImg.crossOrigin = 'anonymous'; // Always use crossOrigin to avoid tainted canvas
+                    
+                    artworkImg.onload = () => {
                       try {
-                        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                        resolve(dataUrl);
-                      } catch (error) {
-                        // If canvas is tainted, fallback to URL (server might be able to fetch it)
-                        console.warn('Canvas tainted, using Firebase URL directly:', error);
-                        resolve(freshUrl);
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) { 
+                          reject(new Error('Could not get canvas context'));
+                          return; 
+                        }
+                        canvas.width = artworkImg.naturalWidth;
+                        canvas.height = artworkImg.naturalHeight;
+                        ctx.drawImage(artworkImg, 0, 0);
+                        
+                        try {
+                          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                          resolve(dataUrl);
+                        } catch (error) {
+                          // If canvas is tainted, fallback to URL (server might be able to fetch it)
+                          console.warn('Canvas tainted, using Firebase URL directly:', error);
+                          resolve(freshUrl);
+                        }
+                      } catch (error) { 
+                        console.error('Canvas conversion failed:', error);
+                        reject(error);
                       }
-                    } catch (error) { 
-                      console.error('Canvas conversion failed:', error);
-                      reject(error);
-                    }
-                  };
+                    };
+                    
+                    artworkImg.onerror = (error) => {
+                      console.error('Image failed to load with crossOrigin:', freshUrl, error);
+                      reject(new Error(`Artwork image could not be loaded: ${freshUrl.substring(0, 100)}...`));
+                    };
+                    
+                    artworkImg.src = freshUrl;
+                  });
                   
-                  artworkImg.onerror = (error) => {
-                    console.error('Image failed to load with crossOrigin:', freshUrl, error);
-                    reject(new Error(`Artwork image could not be loaded: ${freshUrl.substring(0, 100)}...`));
-                  };
-                  
-                  artworkImg.src = freshUrl;
-                });
-                
-                const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
-                imageElement.setAttribute('href', artworkDataUrl);
-                imageElement.setAttribute('x', '97.64');
-                imageElement.setAttribute('y', '308.45');
-                imageElement.setAttribute('width', '400');
-                imageElement.setAttribute('height', '250');
-                imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-                svgClone.appendChild(imageElement);
+                  const imageElement = svgDoc.createElementNS('http://www.w3.org/2000/svg', 'image');
+                  imageElement.setAttribute('href', artworkDataUrl);
+                  imageElement.setAttribute('x', '97.64');
+                  imageElement.setAttribute('y', '308.45');
+                  imageElement.setAttribute('width', '400');
+                  imageElement.setAttribute('height', '250');
+                  imageElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                  svgClone.appendChild(imageElement);
+                }
               } catch (error) { 
                 console.error('Failed to load artwork image for PDF:', error); 
-                throw new Error('Artwork image is required for PDF. Please re-upload the image.');
+                // Don't throw - allow PDF to generate without image
+                console.warn('PDF will be generated without artwork image');
               }
             }
             

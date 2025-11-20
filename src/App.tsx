@@ -43,6 +43,10 @@ function AppContent() {
           const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
           if (isFirebaseStorageUrl(url)) {
             const fresh = await refreshDownloadURL(url);
+            if (!fresh) {
+              console.warn('Could not refresh URL, using original:', url.substring(0, 100));
+              return originalFetch(url, init);
+            }
             return originalFetch(fresh, init);
           }
         } catch {}
