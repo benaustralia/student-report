@@ -172,6 +172,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           getTeacherByEmail(classData.teacherEmail)
         ]);
         // Heal artworkUrl fields to tokened URLs to avoid raw unauthenticated GETs
+        // Suppress 404 errors - they're expected for missing files
         await Promise.all(
           reports.map(async (r) => {
             try {
@@ -180,9 +181,18 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                 const fresh = await refreshDownloadURL(r.artworkUrl);
                 if (fresh && fresh !== r.artworkUrl) {
                   await updateReport(r.id, { artworkUrl: fresh });
+                } else if (!fresh) {
+                  // File doesn't exist - clear the invalid URL (updateDocById will handle undefined -> deleteField)
+                  await updateReport(r.id, { artworkUrl: undefined });
                 }
               }
-            } catch {}
+            } catch (error: any) {
+              // Silently handle expected errors (404s, object-not-found)
+              // Only log unexpected errors in debug mode
+              if (DEBUG && error?.code !== 'storage/object-not-found' && !error?.message?.includes('404')) {
+                console.warn('[class] maybePrepare:artwork-refresh-error', { reportId: r.id, error });
+              }
+            }
           })
         );
         const effectiveTeacher = teacher || {
@@ -198,11 +208,20 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           if (!pdfUrl) return false;
           try {
             // refreshDownloadURL is now statically imported
+            // Suppress 404 errors - they're expected for missing files
             const url = await refreshDownloadURL(pdfUrl);
-            if (!url) return false;
+            if (!url) return false; // File doesn't exist
             const res = await fetch(url, { method: 'HEAD' });
             return res.ok;
-          } catch { return false; }
+          } catch (error: any) {
+            // Silently handle 404s and other expected errors for missing files
+            if (error?.code === 'storage/object-not-found' || error?.message?.includes('404')) {
+              return false;
+            }
+            // Only log unexpected errors
+            if (DEBUG) console.warn('[class] checkPdfExists:unexpected-error', error);
+            return false;
+          }
         };
         const existence = await Promise.all(reports.map(r => checkPdfExists(r.pdfUrl)));
         const total = reports.length;

@@ -132,8 +132,14 @@ const withRetry = <T extends (...args: any[]) => Promise<any>>(fn: T) =>
   };
 
 const updateDocById = withRetry(async (collectionName: string, id: string, updates: Record<string, unknown>) => {
-  const { updateDoc, doc, db } = await ensureFirestore();
-  return updateDoc(doc(db, collectionName, id), { ...updates, updatedAt: new Date() });
+  const { updateDoc, doc, deleteField, db } = await ensureFirestore();
+  // Replace undefined values with deleteField() for Firestore compatibility
+  const cleanedUpdates = Object.fromEntries(
+    Object.entries(updates).map(([key, value]) => 
+      value === undefined ? [key, deleteField()] : [key, value]
+    )
+  );
+  return updateDoc(doc(db, collectionName, id), { ...cleanedUpdates, updatedAt: new Date() });
 });
 
 const deleteDocById = withRetry(async (collectionName: string, id: string) => {

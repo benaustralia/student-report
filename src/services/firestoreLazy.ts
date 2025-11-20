@@ -47,6 +47,7 @@ const ensureFirestore = async () => {
     doc: firestoreModule.doc,
     updateDoc: firestoreModule.updateDoc,
     deleteDoc: firestoreModule.deleteDoc,
+    deleteField: firestoreModule.deleteField,
     writeBatch: firestoreModule.writeBatch,
     setDoc: firestoreModule.setDoc,
     // DB instance
