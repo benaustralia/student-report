@@ -399,61 +399,7 @@ export const removeAdminUserByEmail = async (email: string): Promise<boolean> =>
 
 export const getUniqueTeacherCount = () => getAllTeachers().then(teachers => teachers.length);
 export const getTeacherUserCount = () => getAllTeachers().then(teachers => teachers.length);
-export const getTeacherByEmail = async (email: string) => {
-  const DEBUG_TEACHER_LOOKUP = true; // Enable for debugging
-  if (DEBUG_TEACHER_LOOKUP) {
-    console.log('[teacher-lookup] start', { 
-      searchedEmail: email,
-      emailType: typeof email,
-      emailLength: email?.length,
-      emailTrimmed: email?.trim(),
-      emailLowercase: email?.toLowerCase()
-    });
-  }
-  
-  try {
-    const results = await teachers.getBy('email', email);
-    if (DEBUG_TEACHER_LOOKUP) {
-      console.log('[teacher-lookup] query-result', {
-        searchedEmail: email,
-        resultsCount: results?.length || 0,
-        results: results?.map((t: any) => ({
-          id: t?.id,
-          email: t?.email,
-          firstName: t?.firstName,
-          lastName: t?.lastName,
-          emailMatch: t?.email === email,
-          emailMatchCaseInsensitive: t?.email?.toLowerCase() === email?.toLowerCase()
-        })) || []
-      });
-    }
-    
-    const teacher = results?.[0] || null;
-    
-    if (!teacher && DEBUG_TEACHER_LOOKUP) {
-      // Try to get all teachers to see what's in the database
-      const allTeachers = await getAllTeachers();
-      console.warn('[teacher-lookup] not-found', {
-        searchedEmail: email,
-        totalTeachersInDB: allTeachers.length,
-        allTeacherEmails: allTeachers.map((t: any) => ({
-          email: t.email,
-          firstName: t.firstName,
-          lastName: t.lastName,
-          matchesSearched: t.email === email,
-          matchesCaseInsensitive: t.email?.toLowerCase() === email?.toLowerCase()
-        }))
-      });
-    }
-    
-    return teacher;
-  } catch (error) {
-    if (DEBUG_TEACHER_LOOKUP) {
-      console.error('[teacher-lookup] error', { searchedEmail: email, error });
-    }
-    return null;
-  }
-};
+export const getTeacherByEmail = (email: string) => teachers.getBy('email', email).then((teachers: any) => teachers[0] || null);
 
 // Ultra-compact teacher stats + function merging
 export const getTeacherReportCounts = async (): Promise<Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>> => {

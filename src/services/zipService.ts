@@ -155,16 +155,10 @@ export const generateClassZIP = async (
         }
       }
       if (!report.pdfUrl) {
-        if (DEBUG) console.warn('[zip] skip: no pdfUrl', { student: report.studentName, date: report.date, teacher: report.teacher });
+        if (DEBUG) console.warn('[zip] skip: no pdfUrl', { student: report.studentName, date: report.date });
         skippedCount++;
         continue;
       }
-      if (DEBUG) console.log('[zip] using-pre-generated-pdf', { 
-        student: report.studentName, 
-        date: report.date, 
-        teacher: report.teacher,
-        pdfUrl: report.pdfUrl.substring(0, 100) + '...'
-      });
       const pdfBlob = await downloadPDFFromStorage(report.pdfUrl);
       if (pdfBlob?.size) {
         folder.file(`${report.studentName.replace(/\s+/g, '_')}_${report.date.replace(/\//g, '-')}.pdf`, pdfBlob);
