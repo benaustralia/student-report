@@ -23,7 +23,7 @@ interface ClassCardProps {
 }
 
 export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, selectedStudentId, onStudentSelected, isOpen: externalIsOpen, onToggle }) => {
-  const DEBUG = true;
+  const DEBUG = false;
   const [students, setStudents] = useState<Student[]>([]);
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
