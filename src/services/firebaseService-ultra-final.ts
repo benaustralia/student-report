@@ -400,17 +400,6 @@ export const removeAdminUserByEmail = async (email: string): Promise<boolean> =>
 export const getUniqueTeacherCount = () => getAllTeachers().then(teachers => teachers.length);
 export const getTeacherUserCount = () => getAllTeachers().then(teachers => teachers.length);
 export const getTeacherByEmail = async (email: string) => {
-  const DEBUG_TEACHER_LOOKUP = true; // Enable for debugging
-  if (DEBUG_TEACHER_LOOKUP) {
-    console.log('[teacher-lookup] start', { 
-      searchedEmail: email,
-      emailType: typeof email,
-      emailLength: email?.length,
-      emailTrimmed: email?.trim(),
-      emailLowercase: email?.toLowerCase()
-    });
-  }
-  
   if (!email || !email.trim()) {
     return null;
   }
@@ -422,68 +411,14 @@ export const getTeacherByEmail = async (email: string) => {
     // Try exact match first (case-sensitive)
     let results = await teachers.getBy('email', email);
     
-    if (DEBUG_TEACHER_LOOKUP) {
-      console.log('[teacher-lookup] query-result', {
-        searchedEmail: email,
-        resultsCount: results?.length || 0,
-        results: results?.map((t: any) => ({
-          id: t?.id,
-          email: t?.email,
-          firstName: t?.firstName,
-          lastName: t?.lastName,
-          emailMatch: t?.email === email,
-          emailMatchCaseInsensitive: t?.email?.toLowerCase() === email?.toLowerCase()
-        })) || []
-      });
-    }
-    
     // If no exact match, try case-insensitive lookup by fetching all and filtering
     if (results.length === 0) {
-      if (DEBUG_TEACHER_LOOKUP) {
-        console.log('[teacher-lookup] trying-case-insensitive', { normalizedEmail });
-      }
       const allTeachers = await getAllTeachers();
       results = allTeachers.filter(t => t.email?.toLowerCase().trim() === normalizedEmail);
-      
-      if (DEBUG_TEACHER_LOOKUP) {
-        console.log('[teacher-lookup] case-insensitive-result', {
-          searchedEmail: email,
-          normalizedEmail,
-          resultsCount: results?.length || 0,
-          results: results?.map((t: any) => ({
-            id: t?.id,
-            email: t?.email,
-            firstName: t?.firstName,
-            lastName: t?.lastName
-          })) || []
-        });
-      }
     }
     
-    const teacher = results?.[0] || null;
-    
-    if (!teacher && DEBUG_TEACHER_LOOKUP) {
-      // Log all teachers for debugging
-      const allTeachers = await getAllTeachers();
-      console.warn('[teacher-lookup] not-found', {
-        searchedEmail: email,
-        normalizedEmail,
-        totalTeachersInDB: allTeachers.length,
-        allTeacherEmails: allTeachers.map((t: any) => ({
-          email: t.email,
-          firstName: t.firstName,
-          lastName: t.lastName,
-          matchesSearched: t.email === email,
-          matchesCaseInsensitive: t.email?.toLowerCase().trim() === normalizedEmail
-        }))
-      });
-    }
-    
-    return teacher;
+    return results?.[0] || null;
   } catch (error) {
-    if (DEBUG_TEACHER_LOOKUP) {
-      console.error('[teacher-lookup] error', { searchedEmail: email, error });
-    }
     return null;
   }
 };

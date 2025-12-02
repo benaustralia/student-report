@@ -159,18 +159,6 @@ const generateSVGFromReport = async (
   const studentName = `${student.firstName} ${student.lastName}`;
   const teacherName = `${teacher.firstName} ${teacher.lastName}`;
   
-  if (DEBUG) {
-    console.log('[pdf] generateSVGFromReport:teacher-info', {
-      reportId: report.id,
-      teacherId: teacher.id,
-      teacherEmail: teacher.email,
-      teacherFirstName: teacher.firstName,
-      teacherLastName: teacher.lastName,
-      teacherName,
-      isFallbackTeacher: teacher.id === 'unknown'
-    });
-  }
-  
   // Safely format date with validation (same logic as ClassCard.tsx)
   const date = (() => {
     const timestamp = report.createdAt;

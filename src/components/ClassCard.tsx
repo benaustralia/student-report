@@ -167,24 +167,11 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     const maybePrepare = async () => {
       if (!isOpen || !hasLoadedStudents) return;
       try {
-        if (DEBUG) console.log('[class] maybePrepare:start', { classId: classData.id, teacherEmail: classData.teacherEmail });
+        if (DEBUG) console.log('[class] maybePrepare:start', { classId: classData.id });
         const [reports, teacher] = await Promise.all([
           getReportsForClass(classData.id),
           getTeacherByEmail(classData.teacherEmail)
         ]);
-        if (DEBUG) {
-          console.log('[class] maybePrepare:teacher-lookup', {
-            searchedEmail: classData.teacherEmail,
-            foundTeacher: teacher ? {
-              id: teacher.id,
-              email: teacher.email,
-              firstName: teacher.firstName,
-              lastName: teacher.lastName
-            } : null,
-            classTeacherFirstName: classData.teacherFirstName,
-            classTeacherLastName: classData.teacherLastName
-          });
-        }
         // Clean up invalid artworkUrl fields - aggressively clean up invalid URLs
         // This prevents 404 errors on subsequent loads by removing invalid URLs from database
         await Promise.all(
@@ -248,24 +235,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
           createdAt: new Date(),
           updatedAt: new Date()
         };
-        if (!teacher && DEBUG) {
-          console.warn('[class] maybePrepare:teacher-fallback', {
-            email: classData.teacherEmail,
-            fallbackTeacher: {
-              firstName: effectiveTeacher.firstName,
-              lastName: effectiveTeacher.lastName,
-              fullName: `${effectiveTeacher.firstName} ${effectiveTeacher.lastName}`
-            },
-            reason: 'Teacher lookup returned null - using fallback from email/classData'
-          });
-        }
-        if (DEBUG && teacher) {
-          console.log('[class] maybePrepare:using-real-teacher', {
-            firstName: teacher.firstName,
-            lastName: teacher.lastName,
-            fullName: `${teacher.firstName} ${teacher.lastName}`
-          });
-        }
+        if (!teacher && DEBUG) console.log('[class] maybePrepare:teacher-fallback', { email: classData.teacherEmail });
         const checkPdfExists = async (pdfUrl?: string) => {
           if (!pdfUrl) return false;
           try {
@@ -437,18 +407,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
         .forEach((r) => {
           const student = students.find(s => s.id === r.studentId);
           if (student && teacher) {
-            if (DEBUG) console.log('[class] download:generating-pdf', {
-              reportId: r.id,
-              studentName: `${student.firstName} ${student.lastName}`,
-              teacherName: `${teacher.firstName} ${teacher.lastName}`
-            });
             generatePDFInBackground(r, student, classData, teacher);
-          } else if (student && !teacher) {
-            if (DEBUG) console.warn('[class] download:skipping-pdf-no-teacher', {
-              reportId: r.id,
-              studentName: `${student.firstName} ${student.lastName}`,
-              teacherEmail: classData.teacherEmail
-            });
           }
         });
       
