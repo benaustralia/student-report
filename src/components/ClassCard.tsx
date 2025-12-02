@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StatisticItem } from '@/components/ui/statistic-item';
-import { ChevronDown, ChevronRight, Users, Download, UserPlus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, Download, UserPlus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses, updateReport } from '@/services/firebaseService-ultra-final';
 import { refreshDownloadURL } from '@/services/storageService';
@@ -28,6 +28,7 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [studentCount, setStudentCount] = useState<number | null>(null);
   const [hasLoadedStudents, setHasLoadedStudents] = useState(false);
   const [showStudentModal, setShowStudentModal] = useState(false);
@@ -334,6 +335,70 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
     maybePrepare();
   }, [isOpen, hasLoadedStudents, classData, students]);
 
+  const handleRegeneratePDFs = async () => {
+    setIsRegenerating(true);
+    const toastId = toast.loading('Regenerating PDFs...', {
+      description: 'This may take a moment'
+    });
+    
+    try {
+      const reports = await getReportsForClass(classData.id);
+      const students = await getStudentsForClass(classData.id);
+      const teacher = await getTeacherByEmail(classData.teacherEmail);
+      
+      if (!teacher) {
+        toast.error('Teacher not found', {
+          id: toastId,
+          description: 'Cannot regenerate PDFs without teacher information'
+        });
+        setIsRegenerating(false);
+        return;
+      }
+      
+      let regenerated = 0;
+      let skipped = 0;
+      
+      await Promise.all(
+        reports.map(async (report) => {
+          if (!isReportReadyForPDF(report)) {
+            skipped++;
+            return;
+          }
+          
+          const student = students.find(s => s.id === report.studentId);
+          if (!student) {
+            skipped++;
+            return;
+          }
+          
+          // Clear pdfUrl to force regeneration
+          try {
+            await updateReport(report.id, { pdfUrl: undefined });
+            // Trigger regeneration
+            await generatePDFInBackground(report, student, classData, teacher);
+            regenerated++;
+          } catch (error) {
+            console.error(`Failed to regenerate PDF for report ${report.id}:`, error);
+            skipped++;
+          }
+        })
+      );
+      
+      toast.success(`Regenerated ${regenerated} PDF${regenerated === 1 ? '' : 's'}`, {
+        id: toastId,
+        description: skipped > 0 ? `${skipped} report${skipped === 1 ? '' : 's'} skipped` : 'All PDFs regenerated'
+      });
+    } catch (error) {
+      console.error('Error regenerating PDFs:', error);
+      toast.error('Failed to regenerate PDFs', {
+        id: toastId,
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   const handleDownloadClass = async () => {
     setIsDownloading(true);
     const toastId = toast.loading('Preparing ZIP download...', {
@@ -620,16 +685,31 @@ export const ClassCard: React.FC<ClassCardProps> = React.memo(({ classData, sele
                     +/- Students
                   </Button>
                   {students.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDownloadClass}
-                      disabled={isDownloading}
-                      aria-label={`Download ZIP file for ${classData.classLevel} class`}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {isDownloading ? 'Downloading...' : 'Download ZIP'}
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRegeneratePDFs();
+                        }}
+                        disabled={isRegenerating}
+                        aria-label={`Regenerate PDFs for ${classData.classLevel} class`}
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
+                        {isRegenerating ? 'Regenerating...' : 'Regenerate PDFs'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadClass}
+                        disabled={isDownloading}
+                        aria-label={`Download ZIP file for ${classData.classLevel} class`}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {isDownloading ? 'Downloading...' : 'Download ZIP'}
+                      </Button>
+                    </>
                   )}
                 </CardFooter>
               </>

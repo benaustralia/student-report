@@ -411,8 +411,17 @@ export const getTeacherByEmail = async (email: string) => {
     });
   }
   
+  if (!email || !email.trim()) {
+    return null;
+  }
+  
+  // Normalize email for lookup (lowercase, trim)
+  const normalizedEmail = email.toLowerCase().trim();
+  
   try {
-    const results = await teachers.getBy('email', email);
+    // Try exact match first (case-sensitive)
+    let results = await teachers.getBy('email', email);
+    
     if (DEBUG_TEACHER_LOOKUP) {
       console.log('[teacher-lookup] query-result', {
         searchedEmail: email,
@@ -428,20 +437,44 @@ export const getTeacherByEmail = async (email: string) => {
       });
     }
     
+    // If no exact match, try case-insensitive lookup by fetching all and filtering
+    if (results.length === 0) {
+      if (DEBUG_TEACHER_LOOKUP) {
+        console.log('[teacher-lookup] trying-case-insensitive', { normalizedEmail });
+      }
+      const allTeachers = await getAllTeachers();
+      results = allTeachers.filter(t => t.email?.toLowerCase().trim() === normalizedEmail);
+      
+      if (DEBUG_TEACHER_LOOKUP) {
+        console.log('[teacher-lookup] case-insensitive-result', {
+          searchedEmail: email,
+          normalizedEmail,
+          resultsCount: results?.length || 0,
+          results: results?.map((t: any) => ({
+            id: t?.id,
+            email: t?.email,
+            firstName: t?.firstName,
+            lastName: t?.lastName
+          })) || []
+        });
+      }
+    }
+    
     const teacher = results?.[0] || null;
     
     if (!teacher && DEBUG_TEACHER_LOOKUP) {
-      // Try to get all teachers to see what's in the database
+      // Log all teachers for debugging
       const allTeachers = await getAllTeachers();
       console.warn('[teacher-lookup] not-found', {
         searchedEmail: email,
+        normalizedEmail,
         totalTeachersInDB: allTeachers.length,
         allTeacherEmails: allTeachers.map((t: any) => ({
           email: t.email,
           firstName: t.firstName,
           lastName: t.lastName,
           matchesSearched: t.email === email,
-          matchesCaseInsensitive: t.email?.toLowerCase() === email?.toLowerCase()
+          matchesCaseInsensitive: t.email?.toLowerCase().trim() === normalizedEmail
         }))
       });
     }
