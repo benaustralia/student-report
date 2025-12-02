@@ -3,7 +3,7 @@ import { refreshDownloadURL, toPublicURL, buildStudentFolderName } from './stora
 import { updateReport } from './firebaseService-ultra-final';
 // Firebase Storage is lazy-loaded - don't import here
 
-const DEBUG = true; // flip to false to silence logs
+const DEBUG = false; // flip to false to silence logs
 
 export const isReportReadyForPDF = (report: ReportData): boolean =>
   !!(report.artworkUrl?.trim() && report.reportText?.trim());

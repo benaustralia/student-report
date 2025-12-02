@@ -3,7 +3,7 @@ import { refreshDownloadURL } from './storageService';
 import { isReportReadyForPDF } from './pdfGenerationService';
 import { generatePDFBlob, type ClassReport } from './zipPDFGenerator';
 
-const DEBUG = true;
+const DEBUG = false;
 
 const getJSZip = async () => (await import('jszip')).default;
 

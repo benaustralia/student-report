@@ -1,6 +1,6 @@
 import { refreshDownloadURL } from './storageService';
 
-const DEBUG = true;
+const DEBUG = false;
 
 export interface ClassReport {
   studentName: string;

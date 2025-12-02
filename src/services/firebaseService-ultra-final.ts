@@ -399,7 +399,29 @@ export const removeAdminUserByEmail = async (email: string): Promise<boolean> =>
 
 export const getUniqueTeacherCount = () => getAllTeachers().then(teachers => teachers.length);
 export const getTeacherUserCount = () => getAllTeachers().then(teachers => teachers.length);
-export const getTeacherByEmail = (email: string) => teachers.getBy('email', email).then((teachers: any) => teachers[0] || null);
+export const getTeacherByEmail = async (email: string) => {
+  if (!email || !email.trim()) {
+    return null;
+  }
+  
+  // Normalize email for lookup (lowercase, trim)
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  try {
+    // Try exact match first (case-sensitive)
+    let results = await teachers.getBy('email', email);
+    
+    // If no exact match, try case-insensitive lookup by fetching all and filtering
+    if (results.length === 0) {
+      const allTeachers = await getAllTeachers();
+      results = allTeachers.filter(t => t.email?.toLowerCase().trim() === normalizedEmail);
+    }
+    
+    return results?.[0] || null;
+  } catch (error) {
+    return null;
+  }
+};
 
 // Ultra-compact teacher stats + function merging
 export const getTeacherReportCounts = async (): Promise<Record<string, { teacherName: string; teacherEmail: string; reportCount: number; studentCount: number }>> => {
