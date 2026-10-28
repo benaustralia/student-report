@@ -1,3 +1,7 @@
+> **Moved (28 Oct 2026).** This app now lives in `benaustralia/newstarart-web` under `studentreports/`, branch
+> `studentreports`, and is served at newstarart.com/studentreports. That copy of `plan.md`, `MIGRATION.md` and
+> `prompts/phase-0.md` is the live one; this repo's branches are kept for history only.
+
 # Plan: NSA Student Reports off Firebase — v2
 
 Branch `neon-migration-v2` (from `neon-migration`). Read this top to bottom once, then dispatch the phases.
