@@ -97,27 +97,6 @@ export default defineConfig({
               return 'react-vendor';
             }
             
-            // Firebase - split by feature
-            // firebase/app is small and needed early, keep it separate
-            if (id.includes('firebase/app')) {
-              return 'firebase-core';
-            }
-            // firebase/auth is lazy-loaded, keep it separate to avoid loading iframe
-            if (id.includes('firebase/auth')) {
-              return 'firebase-auth';
-            }
-            if (id.includes('firebase/firestore')) {
-              return 'firebase-firestore';
-            }
-            if (id.includes('firebase/storage')) {
-              return 'firebase-storage';
-            }
-            
-            // Google OAuth - lazy loaded
-            if (id.includes('@react-oauth/google')) {
-              return 'google-oauth';
-            }
-            
             // ZIP library
             if (id.includes('jszip')) {
               return 'zip-vendor';

@@ -1,204 +1,73 @@
-// Firebase Storage is lazy-loaded - only import when needed
-// Don't import getStorageInstance here - import dynamically in functions
+// Artwork and PDFs are stored in Netlify Blobs behind /api/files/<key>. URLs never expire,
+// so "refreshing" a URL is now just an existence check (HEAD).
+import { api } from './http';
 
-/**
- * Simple Firebase Storage service for images
- */
-export const uploadImageToStorage = async (
-  file: File, 
-  path: string
-): Promise<string> => {
-  try {
-    // Lazy load Firebase Storage only when needed
-    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-    const { getStorageInstance } = await import('../config/firebaseStorage');
-    const storage = await getStorageInstance();
-    
-    // Create a reference to the file location
-    const storageRef = ref(storage, path);
-    
-    // Upload the file - this is atomic (either succeeds or fails)
-    await uploadBytes(storageRef, file);
-    
-    // Get the download URL - verify it's valid before returning
-    const downloadURL = await getDownloadURL(storageRef);
-    
-    // Validate the URL format
-    if (!downloadURL || (!downloadURL.includes('firebasestorage.googleapis.com') && !downloadURL.includes('firebasestorage.app'))) {
-      throw new Error('Invalid download URL returned from Firebase Storage');
-    }
-    
-    return downloadURL;
-  } catch (error) {
-    console.error('Error uploading to Firebase Storage:', error);
-    throw new Error(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+const API_PREFIX = '/api/files/';
+export const isApiFileUrl = (url: string) => url.startsWith(API_PREFIX) || url.includes(`${window.location.origin}${API_PREFIX}`);
+
+const encodeKey = (key: string) => key.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/');
+
+/** Turns a storage key (student-reports/students/…/file.jpg) into its /api/files URL. */
+export const urlForKey = (key: string) => `${API_PREFIX}${encodeKey(key)}`;
+
+export const uploadImageToStorage = async (file: File, path: string): Promise<string> => {
+  const { url } = await api<{ url: string }>(urlForKey(path), { method: 'PUT', body: file, headers: { 'content-type': file.type || 'application/octet-stream' } });
+  return url;
+};
+
+export const uploadFileToStorage = async (blob: Blob, path: string, contentType: string): Promise<string> => {
+  const { url } = await api<{ url: string }>(urlForKey(path), { method: 'PUT', body: blob, headers: { 'content-type': contentType } });
+  return url;
 };
 
 export const deleteImageFromStorage = async (url: string): Promise<void> => {
-  try {
-    // Lazy load Firebase Storage only when needed
-    const { ref, deleteObject } = await import('firebase/storage');
-    const { getStorageInstance } = await import('../config/firebaseStorage');
-    const storage = await getStorageInstance();
-    
-    // Extract the path from the URL
-    const urlObj = new URL(url);
-    const path = decodeURIComponent(urlObj.pathname.split('/o/')[1]?.split('?')[0] || '');
-    
-    if (!path) {
-      throw new Error('Invalid storage URL');
-    }
-    
-    // Create reference and delete
-    const storageRef = ref(storage, path);
-    await deleteObject(storageRef);
-  } catch (error: any) {
-    // Handle specific Firebase Storage errors
-    if (error?.code === 'storage/object-not-found') {
-      // File doesn't exist - this is fine, just return silently
-      return;
-    }
-    
-    // For other errors, log them but don't throw
-    console.error('Error deleting from Firebase Storage:', error);
-    // Don't throw - deletion failures shouldn't break the app
-  }
+  if (!isApiFileUrl(url)) return; // not ours (e.g. a leftover Firebase URL) — nothing to delete
+  try { await api(toPath(url), { method: 'DELETE' }); }
+  catch (error) { console.error('Error deleting file:', error); }
 };
 
+export const deleteFileFromStorage = deleteImageFromStorage;
+
 export const generateImagePath = (studentId: string, filename: string): string => {
-  // studentId should already be normalized (from buildStudentFolderName via StudentCard)
-  // Just sanitize the filename to ensure no invalid characters
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-  // Ensure studentId doesn't have leading/trailing slashes
   const cleanPath = studentId.replace(/^\/+|\/+$/g, '');
-  return `student-reports/${cleanPath}/profile_${sanitizedFilename}`;
+  return `student-reports/students/${cleanPath}/profile_${sanitizedFilename}`;
 };
 
 // Shared folder naming to keep artwork and PDFs in the same place
-export const buildStudentFolderName = (
-  firstName: string,
-  lastName: string | undefined,
-  classDay: string | undefined
-): string => {
+export const buildStudentFolderName = (firstName: string, lastName: string | undefined, classDay: string | undefined): string => {
   const base = `${firstName || ''} ${lastName || ''}`.trim();
   const day = (classDay || 'Unknown').trim();
-  const combined = `${base}-${day}`;
-  return combined
-    .replace(/[()]/g, '') // drop parentheses to avoid duplicate variants
-    .replace(/[\n\r\t\/]+/g, ' ')
+  return `${base}-${day}`
+    .replace(/[()]/g, '')
+    .replace(/[\n\r\t/]+/g, ' ')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .trim();
 };
 
+const toPath = (urlOrPath: string): string => {
+  if (/^https?:\/\//i.test(urlOrPath)) return new URL(urlOrPath).pathname;
+  return urlOrPath.startsWith('/') ? urlOrPath : urlForKey(urlOrPath);
+};
+
 /**
- * Get a fresh download URL from a Firebase Storage URL
- * Useful when the old download token has expired
- * Returns null if the file doesn't exist (object-not-found)
+ * Returns a usable URL for the file, or null if it no longer exists.
+ * Anything that is not one of our /api/files URLs is returned untouched — the app must not
+ * clear a report's artwork just because a legacy URL could not be checked.
  */
 export const refreshDownloadURL = async (urlOrPath: string): Promise<string | null> => {
+  const path = toPath(urlOrPath);
+  if (!path.startsWith(API_PREFIX)) return urlOrPath;
   try {
-    // Lazy load Firebase Storage only when needed
-    const { ref, getDownloadURL } = await import('firebase/storage');
-    const { getStorageInstance } = await import('../config/firebaseStorage');
-    const storage = await getStorageInstance();
-    
-    // Accept either a full download URL or a storage path
-    let path = '';
-    if (/^https?:\/\//i.test(urlOrPath)) {
-      const urlObj = new URL(urlOrPath);
-      // Extract path from Firebase Storage URL format:
-      // https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media&token=...
-      const pathMatch = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
-      if (pathMatch) {
-        path = decodeURIComponent(pathMatch[1]);
-      } else {
-        // Fallback: try the old method
-        path = decodeURIComponent(urlObj.pathname.split('/o/')[1]?.split('?')[0] || '');
-      }
-    } else {
-      path = urlOrPath.replace(/^\/+/, '');
-    }
-    
-    if (!path) {
-      console.error('Invalid storage URL - could not extract path:', urlOrPath);
-      throw new Error('Invalid storage URL');
-    }
-    
-    // Create reference and get fresh download URL
-    const storageRef = ref(storage, path);
-    const freshURL = await getDownloadURL(storageRef);
-    
-    return freshURL;
-  } catch (error: any) {
-    // Handle object-not-found gracefully - file doesn't exist
-    if (error?.code === 'storage/object-not-found' || error?.message?.includes('object-not-found')) {
-      // Try to find the file with alternative path formats
-      // Only try valid alternatives based on storage rules:
-      // - student-reports/students/ (public read)
-      // - student-reports/student/ (auth required, legacy)
-      if (/^https?:\/\//i.test(urlOrPath)) {
-        const urlObj = new URL(urlOrPath);
-        let extractedPath = '';
-        const pathMatch = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
-        if (pathMatch) {
-          extractedPath = decodeURIComponent(pathMatch[1]);
-        }
-        
-        // Try alternative paths if the original doesn't work
-        if (extractedPath && extractedPath.startsWith('student-reports/')) {
-          // Try swapping students/ <-> student/ (both are valid paths in storage rules)
-          if (extractedPath.startsWith('student-reports/students/')) {
-            const altPath = extractedPath.replace('student-reports/students/', 'student-reports/student/');
-            try {
-              const { ref, getDownloadURL } = await import('firebase/storage');
-              const { getStorageInstance } = await import('../config/firebaseStorage');
-              const storage = await getStorageInstance();
-              const altRef = ref(storage, altPath);
-              const altURL = await getDownloadURL(altRef);
-              return altURL;
-            } catch (altError: any) {
-              // Silently fail - file doesn't exist at alternative path either
-            }
-          } else if (extractedPath.startsWith('student-reports/student/')) {
-            const altPath = extractedPath.replace('student-reports/student/', 'student-reports/students/');
-            try {
-              const { ref, getDownloadURL } = await import('firebase/storage');
-              const { getStorageInstance } = await import('../config/firebaseStorage');
-              const storage = await getStorageInstance();
-              const altRef = ref(storage, altPath);
-              const altURL = await getDownloadURL(altRef);
-              return altURL;
-            } catch (altError: any) {
-              // Silently fail - file doesn't exist at alternative path either
-            }
-          }
-        }
-      }
-      // File doesn't exist - this is expected for missing files
-      // Don't log warnings for expected 404s to reduce console noise
-      return null;
-    }
-    
-    // For other errors, log and return null (don't break the app)
-    console.error('Error refreshing download URL:', error);
-    return null;
+    const res = await fetch(path, { method: 'HEAD', credentials: 'same-origin' });
+    if (res.status === 404) return null;
+    return path;
+  } catch (error) {
+    console.error('Error checking file:', error);
+    return path; // network blip: keep the URL rather than wiping it
   }
 };
 
-/** Build a public, tokenless download URL (works when rules allow public read). */
-export const toPublicURL = (urlOrPath: string): string => {
-  let path = '';
-  if (/^https?:\/\//i.test(urlOrPath)) {
-    const urlObj = new URL(urlOrPath);
-    const maybe = urlObj.pathname.split('/o/')[1]?.split('?')[0] || '';
-    path = decodeURIComponent(maybe);
-  } else {
-    path = urlOrPath.replace(/^\/+/, '');
-  }
-  if (!path) throw new Error('Invalid storage URL or path');
-  // Use hardcoded bucket name to avoid loading Storage module
-  const bucket = 'student-reports-final.firebasestorage.app';
-  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
-};
+/** Same-origin URLs are already public to a signed-in user; nothing to rewrite. */
+export const toPublicURL = (urlOrPath: string): string => toPath(urlOrPath);

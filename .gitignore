@@ -44,3 +44,7 @@ auth-state.json
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Firebase export produced by scripts/migrate-from-firebase.ts
+migration-dump
+firebase-service-account.json

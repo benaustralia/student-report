@@ -6,8 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle, Users, ChevronDown, ChevronRight, GraduationCap } from 'lucide-react';
 import { DataBuilder } from './DataBuilder';
 import { StatisticsBar } from './StatisticsBar';
-import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports, getUserDisplayName, getAllReports } from '@/services/firebaseService-ultra-final';
-import type { User } from 'firebase/auth';
+import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, isUserAdmin, getTeacherReportCounts, getIncompleteReports, getUserDisplayName, getAllReports } from '@/services/api';
+import type { User } from '@/types';
 import type { Class, Student, AdminUser, Teacher, ReportData } from '@/types';
 
 interface AdminPanelProps { 

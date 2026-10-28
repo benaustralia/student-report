@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { AdminUser, Class, Student, Teacher, Request } from '@/types';
-import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, getAllRequests } from '@/services/firebaseService-ultra-final';
+import { getAllUsers, getAllClasses, getAllStudents, getAllTeachers, getAllRequests } from '@/services/api';
 
 type DataType = 'requests' | 'users' | 'classes' | 'students' | 'teachers';
 type ItemType = AdminUser | Class | Student | Teacher | Request;

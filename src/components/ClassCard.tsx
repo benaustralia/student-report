@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { StatisticItem } from '@/components/ui/statistic-item';
 import { ChevronDown, ChevronRight, Users, Download, UserPlus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses, updateReport } from '@/services/firebaseService-ultra-final';
+import { getStudentsForClass, getReportsForClass, getTeacherByEmail, getStudentCountsForClasses, updateReport } from '@/services/api';
 import { refreshDownloadURL } from '@/services/storageService';
 import { formatStudentName } from '@/lib/utils';
 import type { Class, Student } from '@/types';

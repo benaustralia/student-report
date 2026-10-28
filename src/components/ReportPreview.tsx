@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import reportTemplateSvg from '@/assets/report-template.svg?url';
 import nsalogoPng from '@/assets/NSALogo.png?url';
 // WebP version available at: @/assets/NSALogo.webp (27KB vs 108KB PNG)
-import { getTeacherByEmail } from '@/services/firebaseService-ultra-final';
+import { getTeacherByEmail } from '@/services/api';
 import { refreshDownloadURL } from '@/services/storageService';
 import { isReportReadyForPDF } from '@/services/pdfGenerationService';
 import { formatStudentName } from '@/lib/utils';
@@ -396,7 +396,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({
           throw new Error('Failed to add artwork to SVG');
         }
         // Check if artwork (data URL or URL) is in the serialized SVG
-        const hasArtwork = svgData.includes('data:image') || svgData.includes('firebasestorage');
+        const hasArtwork = svgData.includes('data:image') || svgData.includes('/api/files/') || svgData.includes('firebasestorage');
         if (!hasArtwork) {
           console.error('SVG does not contain artwork after serialization');
           const imageIdx = svgData.indexOf('<image');

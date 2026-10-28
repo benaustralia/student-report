@@ -1,3 +1,11 @@
+// The signed-in person, as /api/me reports them. Replaces firebase/auth's User.
+export interface User {
+  uid: string;
+  email: string;
+  displayName: string | null;
+  role: 'admin' | 'teacher' | 'none';
+}
+
 // Legacy types (keeping for compatibility)
 export interface Report {
   id: number;
@@ -58,7 +66,7 @@ export interface ReportData {
   teacherEmail: string;
   reportText: string;
   artworkUrl?: string;
-  pdfUrl?: string;  // URL of pre-generated PDF in Firebase Storage
+  pdfUrl?: string;  // URL of the pre-generated PDF (/api/files/…)
   studentName?: string;  // Added for simplified import structure
   createdAt: Date;
   updatedAt: Date;

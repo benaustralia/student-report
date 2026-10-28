@@ -2,7 +2,7 @@
 // Import React directly - this file is guaranteed to be in react-vendor
 // so React will be available when this module loads
 import { createContext } from 'react';
-import type { User } from 'firebase/auth';
+import type { User } from '@/types';
 
 export interface AuthContextType {
   user: User | null;

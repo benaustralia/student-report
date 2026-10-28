@@ -1,7 +1,9 @@
+# Everything under /api is the single Netlify Function in netlify/functions/api.mts
+/api/*  /.netlify/functions/api  200
+
 # Serve static assets with correct MIME types
 /assets/* 200
 
 # SPA fallback - only redirect if file doesn't exist
 # Note: robots.txt in public/ will be served automatically by Netlify
 /*    /index.html   200
-

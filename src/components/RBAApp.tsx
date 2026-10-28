@@ -6,10 +6,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Skeleton } from '@/components/ui/skeleton';
 import { TypographyH1, TypographyMuted, TypographySmall } from '@/components/ui/typography';
 import { Loader2, Users, LogOut, ChevronDown, ChevronRight, GraduationCap, Database } from 'lucide-react';
-import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData, getStudentsForClass } from '@/services/firebaseService-ultra-final';
-import { preloadFirestore } from '@/services/firestoreLazy';
+import { getAllClasses, isUserAdmin, getUserDisplayName, prefetchCriticalData, getStudentsForClass } from '@/services/api';
 import type { Class } from '@/types';
-import type { User } from 'firebase/auth';
+import type { User } from '@/types';
 import { ThemeToggle } from './theme-toggle';
 import { useAuthContext } from '@/hooks/useAuthContext';
 import { ClassCard } from './ClassCard';
@@ -190,13 +189,6 @@ export const RBAApp: React.FC<RBAAppProps> = ({ user }) => {
   }, [user.email]);
 
   useEffect(() => {
-    // Preload Firestore immediately when user is authenticated (parallel with render)
-    // This prevents waterfall delay when getAllClasses() is called
-    // Don't await - let it load in background while we render
-    preloadFirestore().catch(() => {
-      // Silently fail - Firestore will load when needed anyway
-    });
-    
     // Defer data loading to allow initial render to complete first
     // This improves FCP by showing skeleton/UI structure immediately
     // Use scheduler.postTask if available for better task scheduling

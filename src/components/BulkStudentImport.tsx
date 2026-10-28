@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, Upload, CheckCircle, XCircle, Users } from 'lucide-react';
-import { importStudents, getStudentsForClass } from '@/services/firebaseService-ultra-final';
+import { importStudents, getStudentsForClass } from '@/services/api';
 import { toast } from 'sonner';
 import type { Class, Student } from '@/types';
 

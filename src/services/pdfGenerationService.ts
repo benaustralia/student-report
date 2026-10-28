@@ -1,7 +1,6 @@
 import type { ReportData, Student, Class, Teacher } from '@/types';
-import { refreshDownloadURL, toPublicURL, buildStudentFolderName } from './storageService';
-import { updateReport } from './firebaseService-ultra-final';
-// Firebase Storage is lazy-loaded - don't import here
+import { refreshDownloadURL, toPublicURL, buildStudentFolderName, uploadFileToStorage, deleteFileFromStorage } from './storageService';
+import { updateReport } from './api';
 
 const DEBUG = false; // flip to false to silence logs
 
@@ -318,55 +317,14 @@ const uploadPDFToStorage = async (
   student: Student,
   classData: Class
 ): Promise<string> => {
-  const folder = buildStudentFolderName(
-    student.firstName,
-    student.lastName,
-    classData.classDay
-  );
-  const basePath = `student-reports/students/${folder}`;
-  const fileName = `${folder}.pdf`;
-  const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-  // Lazy load Firebase Storage only when needed
-  const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-  const { getStorageInstance } = await import('../config/firebaseStorage');
-  const storage = await getStorageInstance();
-  const storageRef = ref(storage, `${basePath}/${fileName}`);
-  if (DEBUG) console.log('[pdf] uploadPDFToStorage:path', { basePath, fileName, reportId: _reportId });
-  try {
-    await uploadBytes(storageRef, file);
-  } catch (e: any) {
-    console.error('[pdf] uploadPDFToStorage:upload-error', {
-      message: e?.message,
-      code: e?.code
-    });
-    throw e;
-  }
-  let url: string;
-  try {
-    url = await getDownloadURL(storageRef);
-  } catch (e: any) {
-    console.error('[pdf] uploadPDFToStorage:url-error', {
-      message: e?.message,
-      code: e?.code
-    });
-    throw e;
-  }
-  if (DEBUG) console.log('[pdf] uploadPDFToStorage:url', url);
-  return url;
+  const folder = buildStudentFolderName(student.firstName, student.lastName, classData.classDay);
+  const key = `student-reports/students/${folder}/${folder}.pdf`;
+  if (DEBUG) console.log('[pdf] uploadPDFToStorage:path', { key, reportId: _reportId });
+  return uploadFileToStorage(pdfBlob, key, 'application/pdf');
 };
 
 export const deletePDFFromStorage = async (pdfUrl: string): Promise<void> => {
-  try {
-    const path = decodeURIComponent(new URL(pdfUrl).pathname.split('/o/')[1]?.split('?')[0] || '');
-    if (!path) throw new Error('Invalid storage URL');
-    // Lazy load Firebase Storage only when needed
-    const { ref, deleteObject } = await import('firebase/storage');
-    const { getStorageInstance } = await import('../config/firebaseStorage');
-    const storage = await getStorageInstance();
-    await deleteObject(ref(storage, path));
-  } catch (error: any) {
-    if (error?.code !== 'storage/object-not-found') console.error('Error deleting PDF:', error);
-  }
+  await deleteFileFromStorage(pdfUrl);
 };
 
 export const generateAndStorePDF = async (

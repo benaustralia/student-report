@@ -7,7 +7,7 @@ import {
   updateUser, updateClass, updateStudent, updateTeacher, updateRequest,
   deleteUser, deleteClass, deleteStudent, deleteTeacher, deleteRequest,
   approveRequest, declineRequest
-} from '@/services/firebaseService-ultra-final';
+} from '@/services/api';
 
 export type DataType = 'requests' | 'users' | 'classes' | 'students' | 'teachers';
 export type ItemType = AdminUser | Class | Student | Teacher | Request;

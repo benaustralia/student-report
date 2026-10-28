@@ -62,7 +62,7 @@ export const useImageUploadV2 = ({
     setError(null);
 
     try {
-      // Delete old image from Firebase Storage if there's one
+      // Delete the old image if there is one
       const currentUrl = currentImageUrlRef.current;
       if (currentUrl) {
         await deleteImageFromStorage(currentUrl);
@@ -75,10 +75,10 @@ export const useImageUploadV2 = ({
       // Generate storage path
       const storagePath = generateImagePath(userId, file.name);
       
-      // Upload to Firebase Storage
+      // Upload
       const downloadURL = await uploadImageToStorage(compressedFile, storagePath);
       
-      // Update state with the Firebase URL
+      // Update state with the stored URL
       setCurrentImageUrl(downloadURL);
       setPreview(downloadURL);
       
@@ -104,7 +104,7 @@ export const useImageUploadV2 = ({
     setError(null);
 
     try {
-      // Delete from Firebase Storage if there's a current image
+      // Delete the current image if there is one
       const currentUrl = currentImageUrlRef.current;
       if (currentUrl) {
         await deleteImageFromStorage(currentUrl);

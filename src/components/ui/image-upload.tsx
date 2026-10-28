@@ -30,7 +30,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const [displaySrc, setDisplaySrc] = useState<string | null>(value || null);
   const [triedAlt, setTriedAlt] = useState(false);
 
-  // Resolve Firebase Storage URLs to public alt=media (no token) for display
+  // Normalise whatever URL form we were given to the displayable path
   useEffect(() => {
     let cancelled = false;
     const resolve = async () => {

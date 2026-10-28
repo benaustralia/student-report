@@ -1,8 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuthContext } from './hooks/useAuthContext';
-// Don't import storageService here - it pulls in Storage dependencies
-// Import dynamically only when needed (after login)
 
 // Lazy load ThemeProvider - only needed after login (saves ~50KB on login page)
 const ThemeProvider = lazy(() => 
@@ -24,59 +22,9 @@ function AppContent() {
   const { user, loading, error } = useAuthContext();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // (removed) Global Image.src interceptor; now using public URLs instead
-
-  // Global guard: rewrite fetch requests to Firebase Storage without tokens
-  // Only set up after login to avoid loading Storage on login page
-  useEffect(() => {
-    if (!user) return; // Don't set up on login page
-    
-    const setupStorageInterceptor = async () => {
-      const { refreshDownloadURL } = await import('@/services/storageService');
-      const isFirebaseStorageUrl = (url: string) =>
-        /^https?:\/\//i.test(url) && url.includes('firebasestorage.googleapis.com') && !url.includes('token=') && !url.includes('alt=media');
-
-      // Wrap fetch
-      const originalFetch = window.fetch;
-      window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-        try {
-          const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-          if (isFirebaseStorageUrl(url)) {
-            const fresh = await refreshDownloadURL(url);
-            if (!fresh) {
-              console.warn('Could not refresh URL, using original:', url.substring(0, 100));
-              return originalFetch(url, init);
-            }
-            return originalFetch(fresh, init);
-          }
-        } catch {}
-        return originalFetch(input as any, init);
-      };
-
-      return () => {
-        window.fetch = originalFetch;
-      };
-    };
-    
-    const cleanup = setupStorageInterceptor();
-    return () => {
-      cleanup.then(cleanupFn => cleanupFn?.());
-    };
-  }, [user]);
-
   // Reset signing in state when user changes
   useEffect(() => {
-    if (!user) {
-      setIsSigningIn(false);
-    } else {
-      // Preload Firestore immediately when user is authenticated
-      // This starts loading in parallel with RBAApp render, reducing waterfall delay
-      import('@/services/firestoreLazy').then(({ preloadFirestore }) => {
-        preloadFirestore().catch(() => {
-          // Silently fail - Firestore will load when needed anyway
-        });
-      });
-    }
+    if (!user) setIsSigningIn(false);
   }, [user]);
 
   const handleSignIn = () => {
@@ -98,16 +46,6 @@ function AppContent() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <div className="border-destructive border rounded-lg bg-card p-4 text-destructive">
-          <p>Authentication Error: {error}</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -120,6 +58,7 @@ function AppContent() {
             onSignIn={handleSignIn}
             isSigningIn={isSigningIn}
             setIsSigningIn={setIsSigningIn}
+            error={error}
           />
         </Suspense>
       </div>

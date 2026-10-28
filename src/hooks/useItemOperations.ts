@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import type { AdminUser, Class, Student, Teacher, Request } from '@/types';
-import { importUsers, importClasses, importStudents, importTeachers, importRequests, updateUser, updateClass, updateStudent, updateTeacher, updateRequest, deleteUser, deleteClass, deleteStudent, deleteTeacher, deleteRequest } from '@/services/firebaseService-ultra-final';
+import { importUsers, importClasses, importStudents, importTeachers, importRequests, updateUser, updateClass, updateStudent, updateTeacher, updateRequest, deleteUser, deleteClass, deleteStudent, deleteTeacher, deleteRequest } from '@/services/api';
 
 type DataType = 'requests' | 'users' | 'classes' | 'students' | 'teachers';
 type ItemType = AdminUser | Class | Student | Teacher | Request;
